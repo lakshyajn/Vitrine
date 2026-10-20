@@ -1,0 +1,20 @@
+[
+  {
+    "canonical_domain": "atelierterraloom.example.com",
+    "expected_tier": "qualified",
+    "expected_category_fit": "high",
+    "is_duplicate": false
+  },
+  {
+    "canonical_domain": "massmarket-wholesale.example.com",
+    "expected_tier": "unqualified",
+    "expected_category_fit": "low",
+    "is_duplicate": false
+  },
+  {
+    "canonical_domain": "atelierterraloom-clone.example.com",
+    "expected_tier": "qualified",
+    "expected_category_fit": "high",
+    "is_duplicate": true
+  }
+]
