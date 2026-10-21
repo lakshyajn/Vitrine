@@ -317,12 +317,87 @@ async def test_research_runs_endpoints_stub():
         hypos = [MarketHypothesis.model_validate(h) for h in hypo_res.json()]
         assert len(hypos) >= 1
 
+        # Await Phase 2 runner completion to prevent background task bleeding into next test
+        for _ in range(50):
+            r_check = await client.get(f"/api/v1/research-runs/{run_id}", headers=headers)
+            if r_check.json().get("status") in ("completed", "failed"):
+                break
+            await asyncio.sleep(0.05)
+
 
 @pytest.mark.asyncio
 async def test_leads_and_evidence_endpoints_stub():
     """Verify leads listing, detail, patch, and evidence endpoints return valid models."""
-    headers = make_auth_header()
+    user_id = uuid4()
+    headers = make_auth_header(user_id=user_id)
     lead_id = uuid4()
+    run_id = uuid4()
+    prod_id = uuid4()
+
+    from backend.app.db.models import LeadEvidenceModel, LeadModel, ProductModel, ResearchRunModel
+    from backend.app.db.session import async_session_maker
+
+    async with async_session_maker() as session:
+        session.add(
+            ProductModel(
+                id=prod_id,
+                owner_id=user_id,
+                name="Test Linen Runner",
+                category="Table Linens",
+                description="Test description.",
+                moq=1,
+            )
+        )
+        session.add(
+            ResearchRunModel(
+                id=run_id,
+                owner_id=user_id,
+                product_id=prod_id,
+                status="completed",
+                stage="done",
+            )
+        )
+        session.add(
+            LeadModel(
+                id=lead_id,
+                owner_id=user_id,
+                run_id=run_id,
+                product_id=prod_id,
+                name="Atelier Living & Design",
+                website="https://atelierlivingdemo.com",
+                canonical_domain="atelierlivingdemo.com",
+                location={"city": "Amsterdam", "region": "North Holland", "country": "Netherlands"},
+                retailer_type="Independent Home Decor Boutique",
+                website_verified=True,
+                tier="qualified",
+                scores={
+                    "category_fit": 100.0,
+                    "aesthetic_fit": 100.0,
+                    "evidence_quality": 80.0,
+                    "seller_compat": 60.0,
+                    "overall": 88.0,
+                    "completeness": 1.0,
+                    "tier_reasons": ["Verified site"],
+                },
+                review_status="new",
+                notes="High priority target.",
+                is_demo=True,
+            )
+        )
+        session.add(
+            LeadEvidenceModel(
+                id=uuid4(),
+                owner_id=user_id,
+                lead_id=lead_id,
+                url="https://atelierlivingdemo.com/about",
+                excerpt="Artisanal home goods and table linens.",
+                source_type="official_site",
+                domain_matches_lead=True,
+                provenance="verified_fact",
+                is_demo=True,
+            )
+        )
+        await session.commit()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         # 1. GET /leads (D7 pagination envelope)
@@ -361,23 +436,76 @@ async def test_leads_and_evidence_endpoints_stub():
 @pytest.mark.asyncio
 async def test_outreach_endpoints_stub():
     """Verify outreach draft endpoints return valid OutreachDraft models."""
-    headers = make_auth_header()
+    user_id = uuid4()
+    headers = make_auth_header(user_id=user_id)
     lead_id = uuid4()
-    draft_id = uuid4()
+    prod_id = uuid4()
+    run_id = uuid4()
+
+    from backend.app.db.models import LeadEvidenceModel, LeadModel, ProductModel, ResearchRunModel
+    from backend.app.db.session import async_session_maker
+
+    async with async_session_maker() as session:
+        session.add(
+            ProductModel(
+                id=prod_id,
+                owner_id=user_id,
+                name="Test Linen Runner",
+                category="Table Linens",
+                description="Test description.",
+                moq=1,
+            )
+        )
+        session.add(
+            ResearchRunModel(
+                id=run_id,
+                owner_id=user_id,
+                product_id=prod_id,
+                status="completed",
+                stage="done",
+            )
+        )
+        session.add(
+            LeadModel(
+                id=lead_id,
+                owner_id=user_id,
+                run_id=run_id,
+                product_id=prod_id,
+                name="Atelier Living & Design",
+                website="https://atelierlivingdemo.com",
+                canonical_domain="atelierlivingdemo.com",
+                tier="qualified",
+                review_status="new",
+            )
+        )
+        session.add(
+            LeadEvidenceModel(
+                id=uuid4(),
+                owner_id=user_id,
+                lead_id=lead_id,
+                url="https://atelierlivingdemo.com/about",
+                excerpt="Artisanal home goods and table linens.",
+                source_type="official_site",
+                domain_matches_lead=True,
+                provenance="verified_fact",
+            )
+        )
+        await session.commit()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # 1. GET /outreach-drafts (D17)
-        list_res = await client.get("/api/v1/outreach-drafts", headers=headers)
-        assert list_res.status_code == 200
-        drafts = [OutreachDraft.model_validate(d) for d in list_res.json()]
-        assert len(drafts) >= 1
-
-        # 2. POST /leads/{id}/outreach-drafts
+        # 1. POST /leads/{id}/outreach-drafts
         create_res = await client.post(f"/api/v1/leads/{lead_id}/outreach-drafts", headers=headers)
         assert create_res.status_code == 201
         draft = OutreachDraft.model_validate(create_res.json())
         assert draft.lead_id == lead_id
         assert draft.version == 1
+        draft_id = draft.id
+
+        # 2. GET /outreach-drafts (D17)
+        list_res = await client.get("/api/v1/outreach-drafts", headers=headers)
+        assert list_res.status_code == 200
+        drafts = [OutreachDraft.model_validate(d) for d in list_res.json()]
+        assert len(drafts) >= 1
 
         # 3. GET /leads/{id}/outreach-drafts
         lead_drafts_res = await client.get(f"/api/v1/leads/{lead_id}/outreach-drafts", headers=headers)
@@ -400,4 +528,4 @@ async def test_outreach_endpoints_stub():
         assert regen_res.status_code == 201
         new_version_draft = OutreachDraft.model_validate(regen_res.json())
         assert new_version_draft.version == 2
-        assert new_version_draft.parent_draft_id is not None
+        assert new_version_draft.parent_draft_id == draft_id

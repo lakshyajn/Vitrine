@@ -1,18 +1,23 @@
 """
 Buyer Leads & Evidence API Router (/api/v1/leads).
-Handles lead inspection, pagination (D7), review status updates, and evidence lookup.
+Handles lead inspection, filtering, pagination (DECISION-D7), review status updates, and evidence lookup.
+Enforces strict per-user isolation (owner_id == current_user.id).
 """
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+import logging
 from typing import Literal
-from uuid import UUID, uuid4
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import String, and_, cast, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from contracts.schemas import (
     CulturalAffinity,
-    DimensionAssessment,
-    DimensionLabel,
+    ErrorCode,
     EvidenceItem,
     EvidenceSourceType,
     Lead,
@@ -26,98 +31,98 @@ from contracts.schemas import (
     UpdateLeadRequest,
 )
 from backend.app.auth.deps import CurrentUser, current_user
+from backend.app.core.errors import AppError
+from backend.app.db.models import LeadEvidenceModel, LeadModel
+from backend.app.db.session import get_db_session
+
+logger = logging.getLogger(__name__)
 
 leads_router = APIRouter(prefix="/leads", tags=["Leads"])
 
 
-def _stub_evidence(lead_id: UUID, user_id: UUID) -> list[EvidenceItem]:
-    return [
-        EvidenceItem(
-            id=uuid4(),
-            owner_id=user_id,
-            lead_id=lead_id,
-            url="https://atelierlivingdemo.com/about",
-            excerpt="Independent design store featuring handcrafted botanical textiles, table linens, and artisan ceramics.",
-            source_type=EvidenceSourceType.OFFICIAL_SITE,
-            domain_matches_lead=True,
-            provenance=ProvenanceTag.VERIFIED_FACT,
-            is_demo=True,
-        ),
-        EvidenceItem(
-            id=uuid4(),
-            owner_id=user_id,
-            lead_id=lead_id,
-            url="https://atelierlivingdemo.com/collections/table-linens",
-            excerpt="Hand block-printed cotton table runners with natural terracotta and indigo botanical motifs.",
-            source_type=EvidenceSourceType.PRODUCT_PAGE,
-            domain_matches_lead=True,
-            provenance=ProvenanceTag.VERIFIED_FACT,
-            is_demo=True,
-        ),
-    ]
+def _lead_model_to_schema(model: LeadModel) -> Lead:
+    """Convert SQLAlchemy LeadModel to Contract v0.2 Lead schema."""
+    location_obj = (
+        LeadLocation.model_validate(model.location)
+        if model.location and isinstance(model.location, dict)
+        else None
+    )
+    scores_obj = (
+        LeadScores.model_validate(model.scores)
+        if model.scores and isinstance(model.scores, dict)
+        else LeadScores()
+    )
+    assessment_obj = (
+        LeadAssessment.model_validate(model.assessment)
+        if model.assessment and isinstance(model.assessment, dict)
+        else None
+    )
+    cultural_obj = (
+        CulturalAffinity.model_validate(model.cultural_affinity)
+        if model.cultural_affinity and isinstance(model.cultural_affinity, dict)
+        else None
+    )
 
-
-def _stub_lead(user_id: UUID, lead_id: UUID | None = None) -> Lead:
-    lid = lead_id or uuid4()
-    run_id = uuid4()
-    product_id = uuid4()
-    evidence_items = _stub_evidence(lid, user_id)
-    ev_ids = [e.id for e in evidence_items]
+    tier_val = (
+        LeadTier(model.tier)
+        if model.tier in LeadTier._value2member_map_
+        else LeadTier.NEEDS_REVIEW
+    )
+    review_val = (
+        LeadReviewStatus(model.review_status)
+        if model.review_status in LeadReviewStatus._value2member_map_
+        else LeadReviewStatus.NEW
+    )
 
     return Lead(
-        id=lid,
-        owner_id=user_id,
-        run_id=run_id,
-        product_id=product_id,
-        name="Atelier Living & Design",
-        website="https://atelierlivingdemo.com",
-        canonical_domain="atelierlivingdemo.com",
-        location=LeadLocation(city="Amsterdam", region="North Holland", country="Netherlands"),
-        retailer_type="Independent Home Decor Boutique",
-        website_verified=True,
-        tier=LeadTier.QUALIFIED,
-        scores=LeadScores(
-            category_fit=100.0,
-            aesthetic_fit=100.0,
-            evidence_quality=80.0,
-            seller_compat=60.0,
-            overall=88.0,
-            completeness=1.0,
-            tier_reasons=[
-                "Website verified via HTTP 200",
-                "Official site and product page evidence items present",
-                "Category fit is high",
-                "Evidence quality score >= 40",
-            ],
-        ),
-        assessment=LeadAssessment(
-            category_fit=DimensionAssessment(
-                label=DimensionLabel.HIGH,
-                reasons=["Carries curated table linens and handcrafted home decor."],
-                evidence_ids=ev_ids[:1],
-            ),
-            aesthetic_fit=DimensionAssessment(
-                label=DimensionLabel.HIGH,
-                reasons=["Visual identity matches botanical motifs and natural dyes."],
-                evidence_ids=ev_ids[1:],
-            ),
-            seller_compat=DimensionAssessment(
-                label=DimensionLabel.MEDIUM,
-                reasons=["Price points align with mid-premium wholesale pricing."],
-                evidence_ids=ev_ids[:1],
-            ),
-            summary="Exceptional fit for block-printed table runners.",
-            unknowns=["Direct buyer contact email not listed publicly"],
-            model_id="fixture-stub",
-        ),
-        cultural_affinity=CulturalAffinity(
-            provider="mock",
-            is_demo=True,
-            signals=[{"type": "aesthetic_overlap", "text": "High alignment with European artisan textile trends"}],
-        ),
-        review_status=LeadReviewStatus.NEW,
-        notes="High priority target for initial outreach.",
-        is_demo=True,
+        id=model.id,
+        owner_id=model.owner_id,
+        run_id=model.run_id,
+        product_id=model.product_id,
+        name=model.name,
+        website=model.website,
+        canonical_domain=model.canonical_domain,
+        location=location_obj,
+        retailer_type=model.retailer_type,
+        website_verified=model.website_verified,
+        website_checked_at=model.website_checked_at,
+        tier=tier_val,
+        scores=scores_obj,
+        assessment=assessment_obj,
+        cultural_affinity=cultural_obj,
+        review_status=review_val,
+        notes=model.notes,
+        duplicate_of=model.duplicate_of,
+        is_demo=model.is_demo,
+        created_at=model.created_at,
+    )
+
+
+def _evidence_model_to_schema(model: LeadEvidenceModel) -> EvidenceItem:
+    """Convert SQLAlchemy LeadEvidenceModel to Contract v0.2 EvidenceItem schema."""
+    st = (
+        EvidenceSourceType(model.source_type)
+        if model.source_type in EvidenceSourceType._value2member_map_
+        else EvidenceSourceType.OFFICIAL_SITE
+    )
+    prov = (
+        ProvenanceTag(model.provenance)
+        if model.provenance in ProvenanceTag._value2member_map_
+        else ProvenanceTag.VERIFIED_FACT
+    )
+
+    return EvidenceItem(
+        id=model.id,
+        owner_id=model.owner_id,
+        lead_id=model.lead_id,
+        url=model.url,
+        excerpt=model.excerpt,
+        source_type=st,
+        retrieved_at=model.retrieved_at,
+        published_at=model.published_at,
+        domain_matches_lead=model.domain_matches_lead,
+        provenance=prov,
+        is_demo=model.is_demo,
     )
 
 
@@ -134,21 +139,74 @@ async def list_leads(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     user: CurrentUser = Depends(current_user),
+    session: AsyncSession = Depends(get_db_session),
 ) -> LeadPagedResponse:
-    """List buyer leads with filtering, sorting, and pagination (DECISION-D7)."""
-    lead = _stub_lead(user.id)
-    if run_id:
-        lead.run_id = run_id
-    if product_id:
-        lead.product_id = product_id
-    if review_status:
-        lead.review_status = review_status
-    if tier:
-        lead.tier = tier
+    """
+    List buyer leads with filtering, sorting, and pagination (DECISION-D7).
+    Enforces strict user isolation: owner_id == user.id.
+    """
+    conditions = [LeadModel.owner_id == user.id]
+
+    if run_id is not None:
+        conditions.append(LeadModel.run_id == run_id)
+    if product_id is not None:
+        conditions.append(LeadModel.product_id == product_id)
+    if review_status is not None:
+        r_val = review_status.value if hasattr(review_status, "value") else str(review_status)
+        conditions.append(LeadModel.review_status == r_val)
+    if tier is not None:
+        t_val = tier.value if hasattr(tier, "value") else str(tier)
+        conditions.append(LeadModel.tier == t_val)
+    if q and q.strip():
+        search_term = f"%{q.strip()}%"
+        conditions.append(
+            or_(
+                LeadModel.name.ilike(search_term),
+                LeadModel.canonical_domain.ilike(search_term),
+            )
+        )
+    if location and location.strip():
+        loc_term = f"%{location.strip()}%"
+        conditions.append(cast(LeadModel.location, String).ilike(loc_term))
+
+    if min_score is not None:
+        # DECISION-D7: When min_score is set, leads with overall == null are excluded
+        conditions.append(
+            and_(
+                LeadModel.scores["overall"].as_float().is_not(None),
+                LeadModel.scores["overall"].as_float() >= min_score,
+            )
+        )
+
+    # Count total matching records
+    count_stmt = select(func.count(LeadModel.id)).where(*conditions)
+    total = (await session.execute(count_stmt)).scalar_one()
+
+    # Determine deterministic sort order
+    if sort == "name":
+        order_clauses = [LeadModel.name.asc(), LeadModel.id.asc()]
+    elif sort == "newest":
+        order_clauses = [LeadModel.created_at.desc(), LeadModel.id.asc()]
+    else:  # score_desc (default)
+        order_clauses = [
+            LeadModel.scores["overall"].as_float().desc().nulls_last(),
+            LeadModel.id.asc(),
+        ]
+
+    offset_val = (page - 1) * page_size
+    query_stmt = (
+        select(LeadModel)
+        .where(*conditions)
+        .order_by(*order_clauses)
+        .offset(offset_val)
+        .limit(page_size)
+    )
+    models = (await session.execute(query_stmt)).scalars().all()
+    items = [_lead_model_to_schema(m) for m in models]
 
     return LeadPagedResponse(
-        items=[lead],
-        total=1,
+        items=items,
+        total=total,
         page=page,
         page_size=page_size,
     )
@@ -158,9 +216,18 @@ async def list_leads(
 async def get_lead(
     id: UUID,
     user: CurrentUser = Depends(current_user),
+    session: AsyncSession = Depends(get_db_session),
 ) -> Lead:
-    """Retrieve details, scores, and assessment for a single lead."""
-    return _stub_lead(user.id, lead_id=id)
+    """Retrieve details, scores, and assessment for a single lead owned by the user."""
+    stmt = select(LeadModel).where(LeadModel.id == id, LeadModel.owner_id == user.id)
+    lead = (await session.execute(stmt)).scalar_one_or_none()
+    if not lead:
+        raise AppError(
+            code=ErrorCode.NOT_FOUND,
+            message=f"Lead with id '{id}' not found",
+            status_code=404,
+        )
+    return _lead_model_to_schema(lead)
 
 
 @leads_router.patch("/{id}", response_model=Lead)
@@ -168,20 +235,53 @@ async def update_lead(
     id: UUID,
     payload: UpdateLeadRequest,
     user: CurrentUser = Depends(current_user),
+    session: AsyncSession = Depends(get_db_session),
 ) -> Lead:
     """Update lead review status (new/saved/rejected/contacted) and notes."""
-    lead = _stub_lead(user.id, lead_id=id)
+    stmt = select(LeadModel).where(LeadModel.id == id, LeadModel.owner_id == user.id)
+    lead = (await session.execute(stmt)).scalar_one_or_none()
+    if not lead:
+        raise AppError(
+            code=ErrorCode.NOT_FOUND,
+            message=f"Lead with id '{id}' not found",
+            status_code=404,
+        )
+
     if payload.review_status is not None:
-        lead.review_status = payload.review_status
+        lead.review_status = (
+            payload.review_status.value
+            if hasattr(payload.review_status, "value")
+            else str(payload.review_status)
+        )
     if payload.notes is not None:
         lead.notes = payload.notes
-    return lead
+
+    lead.updated_at = datetime.now(timezone.utc)
+    await session.commit()
+    await session.refresh(lead)
+    return _lead_model_to_schema(lead)
 
 
 @leads_router.get("/{id}/evidence", response_model=list[EvidenceItem])
 async def get_lead_evidence(
     id: UUID,
     user: CurrentUser = Depends(current_user),
+    session: AsyncSession = Depends(get_db_session),
 ) -> list[EvidenceItem]:
-    """Retrieve verified evidence items for a lead."""
-    return _stub_evidence(id, user.id)
+    """Retrieve verified evidence items for a lead owned by the user."""
+    lead_stmt = select(LeadModel).where(LeadModel.id == id, LeadModel.owner_id == user.id)
+    lead = (await session.execute(lead_stmt)).scalar_one_or_none()
+    if not lead:
+        raise AppError(
+            code=ErrorCode.NOT_FOUND,
+            message=f"Lead with id '{id}' not found",
+            status_code=404,
+        )
+
+    ev_stmt = (
+        select(LeadEvidenceModel)
+        .where(LeadEvidenceModel.lead_id == id, LeadEvidenceModel.owner_id == user.id)
+        .order_by(LeadEvidenceModel.created_at.asc())
+    )
+    models = (await session.execute(ev_stmt)).scalars().all()
+    return [_evidence_model_to_schema(e) for e in models]
