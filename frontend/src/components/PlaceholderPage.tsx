@@ -11,36 +11,45 @@ interface PipelineStep {
   path: string;
   icon: typeof Package;
   description: string;
+  actionLabel: string;
   statusText: string;
 }
 
 const PIPELINE_STEPS: readonly PipelineStep[] = [
   {
     title: "Product Passport",
-    path: "/products",
+    path: "/app/products",
     icon: Package,
-    description: "Catalog craft materials, dimensions, wholesale pricing, MOQ, and monthly capacity.",
+    description:
+      "Catalog craft materials, physical dimensions, wholesale vs. retail pricing, MOQ, and studio lead times.",
+    actionLabel: "Configure passport",
     statusText: "0 products cataloged",
   },
   {
     title: "Market Discovery",
-    path: "/discovery",
+    path: "/app/discovery",
     icon: Compass,
-    description: "Run automated retailer scans across regions and evaluate cultural taste anchors.",
+    description:
+      "Scan independent boutiques across global design hubs (Tokyo, London, Copenhagen) with cultural taste anchors.",
+    actionLabel: "Start research run",
     statusText: "No runs initiated",
   },
   {
     title: "Buyer Leads",
-    path: "/leads",
+    path: "/app/leads",
     icon: Users,
-    description: "Screen vetted stockists with category, aesthetic, and store activity evidence.",
+    description:
+      "Screen vetted stockists with verified store presence, carried lines, and explicit evidence citations.",
+    actionLabel: "View lead matches",
     statusText: "0 leads collected",
   },
   {
     title: "Outreach Studio",
-    path: "/outreach",
+    path: "/app/outreach",
     icon: Mail,
-    description: "Draft personalized wholesale pitches citing verified facts with manual status tracking.",
+    description:
+      "Draft personalized wholesale letters citing verified boutique details with manual review and status tracking.",
+    actionLabel: "Open studio drafts",
     statusText: "0 drafts prepared",
   },
 ];
@@ -49,18 +58,26 @@ export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
   const isDashboard = title === "Dashboard";
 
   return (
-    <div data-ui className="mx-auto max-w-6xl px-6 py-8 sm:px-10 sm:py-10">
+    <div data-ui className="mx-auto max-w-6xl px-6 py-8 sm:px-10 sm:py-10 animate-page-enter">
       {/* Page Header */}
       <header className="pb-8 border-b border-border">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-          {title}
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base max-w-3xl">
-          {description ||
-            (isDashboard
-              ? "Wholesale stockist discovery and evidence-backed outreach for independent craft makers."
-              : `Manage your ${title.toLowerCase()} workflow within the Vitrine wholesale workspace.`)}
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
+          <div>
+            <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-normal tracking-tight text-ink">
+              {title}
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base max-w-3xl">
+              {description ||
+                (isDashboard
+                  ? "An evidence-led wholesale discovery workspace for independent craft makers and design studios."
+                  : `Manage your ${title.toLowerCase()} workflow within the Vitrine wholesale workspace.`)}
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-1.5 self-start rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted shadow-xs">
+            <span className="size-2 rounded-full bg-emerald-600" />
+            Studio Workspace Active
+          </span>
+        </div>
       </header>
 
       {/* Dashboard View: 4-Stage Wholesale Pipeline Overview */}
@@ -69,11 +86,11 @@ export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
           {/* Pipeline Grid */}
           <section aria-labelledby="pipeline-heading">
             <div className="flex items-center justify-between mb-4">
-              <h2 id="pipeline-heading" className="font-display text-base font-semibold text-ink">
-                Wholesale Discovery Pipeline
+              <h2 id="pipeline-heading" className="text-xs font-medium text-muted">
+                Wholesale Discovery Pipeline · 4 Stages
               </h2>
-              <span className="text-xs font-medium text-subtle">
-                4-Stage Workflow
+              <span className="text-xs text-subtle">
+                Evidence Contract v0.2
               </span>
             </div>
 
@@ -84,18 +101,18 @@ export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
                   <Link
                     key={step.path}
                     to={step.path}
-                    className="group relative flex flex-col justify-between rounded-xl border border-border bg-surface p-5 transition-colors duration-150 hover:border-accent hover:bg-surface-hover"
+                    className="group relative flex flex-col justify-between rounded-xl border border-border bg-surface p-5 shadow-xs transition-[border-color,box-shadow] duration-150 hover:border-primary/40 hover:shadow-card"
                   >
                     <div>
                       <div className="flex items-center justify-between">
-                        <span className="grid size-9 place-items-center rounded-lg bg-accent-light text-accent">
+                        <span className="grid size-9 place-items-center rounded-lg bg-surface-subtle text-primary border border-border-subtle group-hover:border-primary/30 transition-colors">
                           <Icon size={18} strokeWidth={2} />
                         </span>
-                        <span className="text-[11px] font-medium text-subtle">
+                        <span className="text-[11px] text-muted">
                           {step.statusText}
                         </span>
                       </div>
-                      <p className="mt-4 font-display text-sm font-semibold text-ink group-hover:text-accent transition-colors">
+                      <p className="mt-4 font-serif text-lg font-normal text-ink group-hover:text-primary transition-colors">
                         {step.title}
                       </p>
                       <p className="mt-1.5 text-xs leading-relaxed text-muted">
@@ -103,8 +120,8 @@ export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
                       </p>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-border-subtle flex items-center justify-between text-xs font-medium text-accent">
-                      <span>Open section</span>
+                    <div className="mt-4 pt-3 border-t border-border-subtle flex items-center justify-between text-xs font-semibold text-primary">
+                      <span>{step.actionLabel}</span>
                       <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
                     </div>
                   </Link>
@@ -116,47 +133,62 @@ export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
           {/* Getting Started Guide */}
           <section
             aria-labelledby="guide-heading"
-            className="rounded-xl border border-border bg-surface p-6 sm:p-8"
+            className="rounded-xl border border-border bg-surface p-6 sm:p-8 shadow-xs"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h2 id="guide-heading" className="font-display text-base font-semibold text-ink">
-                  Getting Started in Vitrine
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+              <div className="max-w-2xl">
+                <span className="text-xs font-medium text-brass">
+                  Recommended First Step
+                </span>
+                <h2 id="guide-heading" className="mt-1 font-serif text-xl sm:text-2xl font-normal text-ink">
+                  Configure Your First Product Passport
                 </h2>
-                <p className="mt-1 text-sm text-muted max-w-2xl">
-                  Wholesale discovery begins with your craft profile. Configure your first product in Product Passport to establish style keywords, materials, wholesale pricing, and target retailer types.
+                <p className="mt-2 text-sm text-muted leading-relaxed">
+                  Wholesale discovery begins with your studio&apos;s trade specifications. Catalog your physical craft dimensions, material provenance, wholesale pricing, and MOQ to enable market discovery matching.
                 </p>
               </div>
               <Link
-                to="/products"
-                className="pressable inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent whitespace-nowrap"
+                to="/app/products"
+                className="pressable inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary whitespace-nowrap"
               >
-                Go to Product Passport
+                <span>Go to Product Passport</span>
+                <ArrowRight size={15} />
               </Link>
             </div>
           </section>
         </div>
       ) : (
-        /* Specific Feature Empty State */
+        /* Specific Feature Honest Empty State */
         <div className="mt-8">
           <section
             aria-label={`${title} workspace status`}
-            className="rounded-xl border border-border bg-surface p-8 sm:p-12 text-center"
+            className="rounded-xl border border-border bg-surface p-8 sm:p-12 text-center shadow-xs"
           >
             <div className="mx-auto max-w-md">
-              <p className="font-display text-base font-semibold text-ink">
+              <span className="inline-flex size-10 items-center justify-center rounded-full bg-surface-subtle text-primary border border-border-subtle">
+                <Package size={20} />
+              </span>
+              <h2 className="mt-4 font-serif text-xl font-normal text-ink">
                 No active records
-              </p>
+              </h2>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                This workspace will populate as you catalog products, run stockist searches, and prepare outreach.
+                No {title.toLowerCase()} records found. This workbench will populate as you configure your craft catalog, initiate regional stockist scans, and prepare outreach letters.
               </p>
-              <div className="mt-6 flex items-center justify-center gap-3">
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <Link
-                  to="/"
-                  className="pressable inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  to="/app"
+                  className="pressable inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-ink shadow-xs hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   Return to Dashboard
                 </Link>
+                {title !== "Product Passport" && (
+                  <Link
+                    to="/app/products"
+                    className="pressable inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    Open Product Passport
+                  </Link>
+                )}
               </div>
             </div>
           </section>

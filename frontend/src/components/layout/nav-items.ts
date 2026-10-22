@@ -11,29 +11,28 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   {
     label: "Dashboard",
-    path: "/",
+    path: "/app",
     icon: LayoutDashboard,
     exact: true,
   },
   {
     label: "Product Passport",
-    path: "/products",
+    path: "/app/products",
     icon: Package,
   },
   {
     label: "Market Discovery",
-    path: "/discovery",
+    path: "/app/discovery",
     icon: Compass,
   },
   {
     label: "Buyer Leads",
-    path: "/leads",
+    path: "/app/leads",
     icon: Users,
   },
   {
     label: "Outreach Studio",
-    path: "/outreach",
+    path: "/app/outreach",
     icon: Mail,
   },
 ] as const;
-

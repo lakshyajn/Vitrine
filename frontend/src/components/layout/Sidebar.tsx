@@ -78,7 +78,7 @@ export function Sidebar() {
         className="flex-1 overflow-y-auto px-3 py-4"
         aria-label="Primary"
       >
-        <div className="mb-2.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">
+        <div className="mb-2.5 px-3 text-[11px] font-medium text-sidebar-muted">
           Workspace
         </div>
         <ul role="list" className="space-y-1.5">

@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" aria-label="Handcrafted stoneware ceramic vessels in an artisan studio with soft natural light">
+  <defs>
+    <!-- Studio Ambient Gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F5F2EB" />
+      <stop offset="50%" stop-color="#EBE6DC" />
+      <stop offset="100%" stop-color="#DCD6C8" />
+    </linearGradient>
+
+    <!-- Raking Morning Light -->
+    <linearGradient id="light-beam" x1="0%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.6" />
+      <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Stone Pedestal Plinth -->
+    <linearGradient id="pedestal-top" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#E2DDD2" />
+      <stop offset="50%" stop-color="#EEEAE1" />
+      <stop offset="100%" stop-color="#D5CFC2" />
+    </linearGradient>
+    <linearGradient id="pedestal-front" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#C5BEB0" />
+      <stop offset="100%" stop-color="#A8A090" />
+    </linearGradient>
+
+    <!-- Primary Ceramic Vessel Gradient (Warm Ochre / Stoneware) -->
+    <linearGradient id="vessel-body" x1="25%" y1="20%" x2="90%" y2="85%">
+      <stop offset="0%" stop-color="#F2EBE0" />
+      <stop offset="35%" stop-color="#D4C4B0" />
+      <stop offset="70%" stop-color="#9C8570" />
+      <stop offset="100%" stop-color="#4A3C30" />
+    </linearGradient>
+
+    <!-- Ceramic Glaze Rim -->
+    <linearGradient id="rim-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#8B1E3F" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#2D221A" />
+    </linearGradient>
+
+    <!-- Secondary Low Bowl (Oxblood Clay) -->
+    <linearGradient id="bowl-body" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#B8425F" />
+      <stop offset="45%" stop-color="#8B1E3F" />
+      <stop offset="85%" stop-color="#4F0E22" />
+      <stop offset="100%" stop-color="#24050E" />
+    </linearGradient>
+
+    <!-- Cast Shadows -->
+    <filter id="soft-shadow" x="-20%" y="-20%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="28" />
+    </filter>
+    <filter id="contact-shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feGaussianBlur stdDeviation="8" />
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1200" height="900" fill="url(#bg-grad)" />
+
+  <!-- Raking Architectural Window Light Beam -->
+  <polygon points="0,0 720,0 480,900 0,900" fill="url(#light-beam)" opacity="0.8" />
+
+  <!-- Background Wall Shadow Line -->
+  <line x1="0" y1="580" x2="1200" y2="580" stroke="#C5BEB0" stroke-width="1.5" stroke-dasharray="4 8" opacity="0.4" />
+
+  <!-- Stone Pedestal Plinth -->
+  <g id="pedestal">
+    <!-- Pedestal Shadow -->
+    <ellipse cx="600" cy="790" rx="460" ry="40" fill="#29241E" opacity="0.18" filter="url(#soft-shadow)" />
+    <!-- Pedestal Front Face -->
+    <polygon points="160,650 1040,650 1040,760 160,760" fill="url(#pedestal-front)" />
+    <!-- Pedestal Top Surface -->
+    <polygon points="220,560 980,560 1040,650 160,650" fill="url(#pedestal-top)" />
+    <!-- Edge Highlight -->
+    <line x1="160" y1="650" x2="1040" y2="650" stroke="#FFFFFF" stroke-width="1" opacity="0.6" />
+  </g>
+
+  <!-- Deep Vessel Cast Shadow on Pedestal -->
+  <ellipse cx="510" cy="625" rx="140" ry="24" fill="#1C1814" opacity="0.32" filter="url(#soft-shadow)" />
+  <ellipse cx="500" cy="620" rx="90" ry="12" fill="#120F0C" opacity="0.45" filter="url(#contact-shadow)" />
+
+  <!-- Primary Tall Ceramic Vessel (Stoneware Fluted Amphora) -->
+  <g id="primary-vessel">
+    <!-- Vessel Silhouette -->
+    <!-- Base is at cy=615, height=360 -->
+    <path d="M 430,615 
+             C 410,560 380,480 395,400 
+             C 405,340 435,300 450,260 
+             C 455,245 455,235 450,230 
+             L 550,230 
+             C 545,235 545,245 550,260 
+             C 565,300 595,340 605,400 
+             C 620,480 590,560 570,615 
+             Z" 
+          fill="url(#vessel-body)" />
+
+    <!-- Glaze Texture Subtle Raking Ribs -->
+    <path d="M 465,260 C 450,330 430,420 450,580" stroke="#FFF" stroke-width="2" stroke-opacity="0.25" fill="none" />
+    <path d="M 485,250 C 475,340 460,430 480,600" stroke="#FFF" stroke-width="3" stroke-opacity="0.35" fill="none" />
+    <path d="M 500,240 C 495,330 485,440 500,612" stroke="#FFF" stroke-width="2" stroke-opacity="0.4" fill="none" />
+    <path d="M 525,250 C 530,340 535,430 525,600" stroke="#2D221A" stroke-width="2" stroke-opacity="0.2" fill="none" />
+    <path d="M 550,270 C 565,350 575,440 550,580" stroke="#1A120B" stroke-width="4" stroke-opacity="0.4" fill="none" />
+
+    <!-- Vessel Rim Ellipse -->
+    <ellipse cx="500" cy="230" rx="50" ry="12" fill="url(#rim-grad)" stroke="#FFFFFF" stroke-width="0.8" stroke-opacity="0.7" />
+    <ellipse cx="500" cy="230" rx="42" ry="8" fill="#241B14" />
+  </g>
+
+  <!-- Secondary Shallow Vessel (Oxblood Glaze Catchall) -->
+  <g id="secondary-vessel">
+    <!-- Bowl Cast Shadow -->
+    <ellipse cx="730" cy="640" rx="100" ry="20" fill="#1C1814" opacity="0.3" filter="url(#soft-shadow)" />
+    <ellipse cx="725" cy="638" rx="60" ry="10" fill="#120F0C" opacity="0.4" filter="url(#contact-shadow)" />
+
+    <!-- Bowl Outer Curve -->
+    <path d="M 640,610
+             C 650,650 810,650 820,610
+             Z"
+          fill="url(#bowl-body)" />
+
+    <!-- Bowl Rim Lip -->
+    <ellipse cx="730" cy="610" rx="90" ry="18" fill="#A83250" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.6" />
+    <ellipse cx="730" cy="611" rx="82" ry="14" fill="#3D0B1B" />
+  </g>
+
+  <!-- Maker Studio Annotation Metadata Overlay -->
+  <g id="spec-annotations" opacity="0.85">
+    <!-- Thin Architectural Lead-in Lines -->
+    <line x1="395" y1="400" x2="310" y2="360" stroke="#12100E" stroke-width="1" stroke-opacity="0.5" />
+    <line x1="310" y1="360" x2="220" y2="360" stroke="#12100E" stroke-width="1" stroke-opacity="0.5" />
+    <circle cx="395" cy="400" r="3" fill="#8B1E3F" />
+
+    <text x="220" y="348" font-family="'Inter', sans-serif" font-size="11" font-weight="600" letter-spacing="1" fill="#8B1E3F">SERIES 04 · STONEWARE</text>
+    <text x="220" y="380" font-family="'Inter', sans-serif" font-size="12" font-weight="400" fill="#57534E">Fluted Amphora · Hand-thrown</text>
+    <text x="220" y="398" font-family="'Inter', sans-serif" font-size="11" font-weight="500" fill="#78716C">H: 38cm · MOQ: 6 units</text>
+
+    <!-- Secondary Annotation for Glaze -->
+    <line x1="820" y1="610" x2="890" y2="580" stroke="#12100E" stroke-width="1" stroke-opacity="0.5" />
+    <line x1="890" y1="580" x2="980" y2="580" stroke="#12100E" stroke-width="1" stroke-opacity="0.5" />
+    <circle cx="820" cy="610" r="3" fill="#854D0E" />
+
+    <text x="890" y="568" font-family="'Inter', sans-serif" font-size="11" font-weight="600" letter-spacing="1" fill="#854D0E">FINISH · OXBLOOD GLAZE</text>
+    <text x="890" y="600" font-family="'Inter', sans-serif" font-size="12" font-weight="400" fill="#57534E">Reduction Fired 1280°C</text>
+    <text x="890" y="618" font-family="'Inter', sans-serif" font-size="11" font-weight="500" fill="#78716C">Wholesale: $48 · RRP: $120</text>
+  </g>
+</svg>
+
