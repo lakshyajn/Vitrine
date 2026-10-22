@@ -1,0 +1,191 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..800;1,14..32,300..800&family=Space+Grotesk:wght@400..700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  --font-display:
+    "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+
+  /* Premium Obsidian Sidebar Chrome */
+  --color-sidebar: #0b0f19;
+  --color-sidebar-border: #1e293b;
+  --color-sidebar-surface: #131a29;
+  --color-sidebar-hover: #162032;
+  --color-sidebar-active: #1e293b;
+  --color-sidebar-text: #ffffff;
+  --color-sidebar-label: #f1f5f9;
+  --color-sidebar-muted: #94a3b8;
+
+  /* Architectural Canvas & Inset White Working Surfaces */
+  --color-canvas: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f8fafc;
+  --color-surface-subtle: #f1f5f9;
+
+  /* High-Contrast Typographic Ink Hierarchy */
+  --color-ink: #0f172a;
+  --color-muted: #475569;
+  --color-subtle: #64748b;
+
+  /* Crisp 1px Structural Rules & Boundaries */
+  --color-border: #e2e8f0;
+  --color-border-subtle: #f1f5f9;
+  --color-border-strong: #cbd5e1;
+  --color-line: #e2e8f0;
+
+  /* Brand Accents */
+  --color-accent: #0284c7;
+  --color-accent-hover: #0369a1;
+  --color-accent-light: #e0f2fe;
+  --color-accent-border: #bae6fd;
+
+  /* Accessible Primary Action (>=4.5:1 with white text) */
+  --color-primary: #0369a1;
+  --color-primary-hover: #075985;
+  --color-primary-active: #0c4a6e;
+
+  /* Persimmon Accent (Reserved for active review & attention items) */
+  --color-persimmon: #ea580c;
+  --color-persimmon-hover: #c2410c;
+  --color-persimmon-light: #ffedd5;
+  --color-persimmon-border: #fed7aa;
+
+  /* Status Colors: Success, Warning, Destructive, Neutral/Demo */
+  --color-status-success: #065f46;
+  --color-status-success-bg: #ecfdf5;
+  --color-status-success-border: #a7f3d0;
+
+  --color-status-warning: #9a3412;
+  --color-status-warning-bg: #ffedd5;
+  --color-status-warning-border: #fed7aa;
+
+  --color-status-error: #991b1b;
+  --color-status-error-bg: #fef2f2;
+  --color-status-error-border: #fecaca;
+
+  --color-status-demo: #1e293b;
+  --color-status-demo-bg: #e2e8f0;
+  --color-status-demo-border: #cbd5e1;
+
+  /* Surface Shadows — restrained and subtle */
+  --shadow-card:
+    0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.03);
+  --shadow-elevated:
+    0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(15, 23, 42, 0.03);
+  --shadow-drawer:
+    0 20px 25px -5px rgba(11, 15, 25, 0.35), 0 8px 10px -6px rgba(11, 15, 25, 0.2);
+}
+
+:root {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background-color: var(--color-canvas);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Motion Tokens */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-press: cubic-bezier(0.2, 0, 0, 1);
+
+  --t-press: 100ms;
+  --t-micro: 160ms;
+  --t-ui: 220ms;
+  --t-panel: 280ms;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100dvh;
+  margin: 0;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+/* Accessible focus ring */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Keyframes */
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-page-enter {
+  animation: enter-up var(--t-ui) var(--ease-out) both;
+}
+
+.animate-fade-in {
+  animation: fade-in var(--t-micro) var(--ease-out) both;
+}
+
+/* Microinteraction tactile press */
+.pressable {
+  transition:
+    transform var(--t-press) var(--ease-press),
+    background-color var(--t-micro) ease,
+    border-color var(--t-micro) ease,
+    color var(--t-micro) ease;
+}
+
+.pressable:active {
+  transform: scale(0.98);
+}
+
+/* Accessible reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    transform: none !important;
+  }
+}
