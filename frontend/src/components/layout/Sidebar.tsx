@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/config/brand";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
@@ -54,7 +54,10 @@ export function Sidebar() {
       aria-label="Workspace navigation"
     >
       {/* Brand Header */}
-      <div className="flex h-16 flex-shrink-0 items-center justify-between border-b border-sidebar-border px-5">
+      <Link
+        to="/app"
+        className="flex h-16 flex-shrink-0 items-center justify-between border-b border-sidebar-border px-5 focus-visible:outline-2 focus-visible:outline-primary"
+      >
         <div className="flex items-center gap-3">
           <span
             className="grid size-8 place-items-center rounded-lg bg-accent/15 text-accent border border-accent/25 shadow-xs"
@@ -71,7 +74,7 @@ export function Sidebar() {
             </span>
           </div>
         </div>
-      </div>
+      </Link>
 
       {/* Primary Navigation */}
       <nav

@@ -1,135 +1,174 @@
-import { AlertCircle, CheckCircle2, Flame, Layers, Lock, Sparkles } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, Flame, Lock, ShieldCheck, Sparkles } from "lucide-react";
 
 export function EvidenceSection() {
   return (
     <section
-      id="evidence-philosophy"
-      aria-labelledby="philosophy-heading"
+      id="evidence-standard"
+      aria-labelledby="evidence-heading"
       className="scroll-mt-16 border-b border-border bg-surface px-6 py-20 sm:px-8 sm:py-28 lg:px-12"
     >
       <div className="mx-auto max-w-7xl">
         {/* Section Header */}
         <div className="max-w-3xl">
-          <span className="text-xs font-medium text-brass">
-            Our data-truth standard
+          <span className="text-xs font-semibold text-accent">
+            Our Data-Truth Standard
           </span>
           <h2
-            id="philosophy-heading"
-            className="mt-3 font-serif text-3xl sm:text-4xl lg:text-5xl font-normal tracking-tight text-ink"
+            id="evidence-heading"
+            className="mt-3 font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-ink"
           >
-            Why Evidence Beats Speculation in Wholesale
+            Why Evidence Beats Speculation in Fashion Wholesale
           </h2>
           <p className="mt-4 text-base sm:text-lg leading-relaxed text-muted">
-            Most B2B platforms rely on aggressive web scrapers that invent fit percentages and encourage makers to send generic mass pitches. Vitrine is built on an ethical, evidence-first contract.
+            Independent boutique buyers are discerning curators who ignore mass cold emails. Most B2B platforms rely on aggressive bots that invent fake match percentages. Vitrine is built on strict data honesty.
           </p>
         </div>
 
-        {/* 4 Pillars of the Evidence Pledge */}
-        <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:gap-12">
-          {/* Pillar 1 */}
-          <div data-ui className="flex flex-col rounded-xl border border-border bg-canvas p-6 sm:p-8 shadow-xs">
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-lg bg-surface text-primary border border-border shadow-xs">
-                <AlertCircle size={20} />
-              </span>
-              <div>
-                <h3 className="text-base font-semibold text-ink">
-                  Missing Evidence Is Never Coerced to Zero
-                </h3>
-                <p className="text-xs text-muted">Integrity of unknown states</p>
-              </div>
-            </div>
-            <p className="mt-4 text-sm leading-relaxed text-muted">
-              If we cannot independently verify whether a boutique currently accepts new wholesale accounts, we display <strong className="text-ink">“Not enough evidence”</strong>. We never punish an aligned stockist with a zero score or hallucinate a fake intake status.
+        {/* The Three Epistemic States: A Visual Comparison Breakdown */}
+        <div className="mt-16 rounded-2xl border border-border bg-canvas p-6 sm:p-10 shadow-xs">
+          <div className="pb-6 border-b border-border">
+            <h3 className="font-display text-xl font-bold text-ink">
+              The Three-State Truth Standard
+            </h3>
+            <p className="mt-1 text-sm text-muted">
+              How Vitrine categorizes retail information so you never pitch a stockist based on fabricated data.
             </p>
-            <div className="mt-5 rounded-md border border-border-subtle bg-surface p-3 text-xs text-ink">
-              <code>unknown → null → &quot;Not enough evidence&quot;</code>
-            </div>
           </div>
 
-          {/* Pillar 2 */}
-          <div data-ui className="flex flex-col rounded-xl border border-border bg-canvas p-6 sm:p-8 shadow-xs">
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-lg bg-surface text-brass border border-border shadow-xs">
-                <Layers size={20} />
-              </span>
+          <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
+            {/* State 1: Verified Fact */}
+            <div data-ui className="flex flex-col justify-between rounded-xl border border-emerald-200 bg-emerald-50/40 p-6">
               <div>
-                <h3 className="text-base font-semibold text-ink">
-                  Separating Hypotheses from Verified Facts
-                </h3>
-                <p className="text-xs text-muted">Strict epistemic boundaries</p>
+                <div className="flex items-center justify-between">
+                  <span className="grid size-9 place-items-center rounded-lg bg-emerald-100 text-emerald-800">
+                    <ShieldCheck size={18} />
+                  </span>
+                  <span className="rounded bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                    Verified Fact
+                  </span>
+                </div>
+                <h4 className="mt-4 font-display text-base font-bold text-emerald-950">
+                  Source-Supported Store Evidence
+                </h4>
+                <p className="mt-2 text-xs leading-relaxed text-emerald-900/80">
+                  Concrete, documented retail data: physical street address, regular operating hours, confirmed price ranges, and verified carried designer labels.
+                </p>
               </div>
-            </div>
-            <p className="mt-4 text-sm leading-relaxed text-muted">
-              Cultural affinity and aesthetic resonance are subjective hypotheses. Verified facts—such as physical store presence, carried lines, and retail price tiers—are objectively verified data. Vitrine always keeps them separate in your view.
-            </p>
-            <div className="mt-5 rounded-md border border-border-subtle bg-surface p-3 text-xs text-ink">
-              <code>verified_fact !== aesthetic_hypothesis</code>
-            </div>
-          </div>
 
-          {/* Pillar 3 */}
-          <div data-ui className="flex flex-col rounded-xl border border-border bg-canvas p-6 sm:p-8 shadow-xs">
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-lg bg-surface text-ink border border-border shadow-xs">
-                <Flame size={20} />
-              </span>
-              <div>
-                <h3 className="text-base font-semibold text-ink">
-                  Zero Automated Email Sending or Spam Bots
-                </h3>
-                <p className="text-xs text-muted">Human discretion by design</p>
+              <div className="mt-6 rounded border border-emerald-200/80 bg-white p-3 text-[11px] text-emerald-950">
+                <span className="font-semibold block text-[10px] text-emerald-700">Example:</span>
+                “Physical storefront confirmed: 14 Rue Charlot, Paris 3e. Retail blazer tier $320–$650.”
               </div>
             </div>
-            <p className="mt-4 text-sm leading-relaxed text-muted">
-              Vitrine has no automated &quot;Send Campaign&quot; button and never connects to SMTP bots. Boutique owners value personal relationships. Vitrine prepares the facts and drafts the letter; you review, copy, and send via your own studio email.
-            </p>
-            <div className="mt-5 rounded-md border border-border-subtle bg-surface p-3 text-xs text-ink">
-              <code>draft → review → copy → manual_track</code>
-            </div>
-          </div>
 
-          {/* Pillar 4 */}
-          <div data-ui className="flex flex-col rounded-xl border border-border bg-canvas p-6 sm:p-8 shadow-xs">
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-lg bg-surface text-emerald-800 border border-border shadow-xs">
-                <Lock size={20} />
-              </span>
+            {/* State 2: Aesthetic Hypothesis */}
+            <div data-ui className="flex flex-col justify-between rounded-xl border border-primary-border bg-primary-light/40 p-6">
               <div>
-                <h3 className="text-base font-semibold text-ink">
-                  No Commissions, Gateways, or Take Rates
-                </h3>
-                <p className="text-xs text-muted">Pure studio research instrument</p>
+                <div className="flex items-center justify-between">
+                  <span className="grid size-9 place-items-center rounded-lg bg-primary-light text-primary">
+                    <Eye size={18} />
+                  </span>
+                  <span className="rounded bg-primary-light text-primary border border-primary-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                    Aesthetic Hypothesis
+                  </span>
+                </div>
+                <h4 className="mt-4 font-display text-base font-bold text-ink">
+                  Style &amp; Cultural Alignment
+                </h4>
+                <p className="mt-2 text-xs leading-relaxed text-muted">
+                  Subjective style overlap: silhouettes, color palettes, textile philosophies, and customer demographic alignment. Kept strictly distinct from verified facts.
+                </p>
+              </div>
+
+              <div className="mt-6 rounded border border-primary-border/60 bg-white p-3 text-[11px] text-ink">
+                <span className="font-semibold block text-[10px] text-primary">Example:</span>
+                “Collection alignment: Relaxed unisex tailoring in natural linen matches boutique aesthetic.”
               </div>
             </div>
-            <p className="mt-4 text-sm leading-relaxed text-muted">
-              Vitrine takes zero percentage of your wholesale orders. There are no payment processors, invoices, or hidden transaction fees. Your trade accounts and buyer relationships remain entirely your studio&apos;s direct assets.
-            </p>
-            <div className="mt-5 rounded-md border border-border-subtle bg-surface p-3 text-xs text-ink">
-              <code>0% order fee · independent maker autonomy</code>
+
+            {/* State 3: Unknown Evidence */}
+            <div data-ui className="flex flex-col justify-between rounded-xl border border-border bg-surface p-6">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="grid size-9 place-items-center rounded-lg bg-surface-subtle text-muted">
+                    <AlertCircle size={18} />
+                  </span>
+                  <span className="rounded bg-surface-subtle text-muted border border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                    Unknown State
+                  </span>
+                </div>
+                <h4 className="mt-4 font-display text-base font-bold text-ink">
+                  Missing or Incomplete Signals
+                </h4>
+                <p className="mt-2 text-xs leading-relaxed text-muted">
+                  Information that cannot be verified online. Rendered honestly as <strong className="text-ink">“Not enough evidence”</strong>—never coerced to zero or invented.
+                </p>
+              </div>
+
+              <div className="mt-6 rounded border border-border bg-canvas p-3 text-[11px] text-muted">
+                <span className="font-semibold block text-[10px] text-ink">Example:</span>
+                “Wholesale intake window: Not enough evidence. Buyer intake dates not disclosed online.”
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Certification Callout */}
-        <div data-ui className="mt-12 rounded-xl border border-brass-border bg-brass-light/30 p-6 sm:p-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 size={20} className="text-brass mt-0.5 flex-shrink-0" />
+        {/* Additional Ethical Commitments: Bot Spam & Commissions */}
+        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
+          {/* Commitment 1 */}
+          <div data-ui className="rounded-xl border border-border bg-surface p-6 shadow-xs">
+            <div className="flex items-center gap-3">
+              <span className="grid size-9 place-items-center rounded-lg bg-surface-subtle text-accent border border-border">
+                <Flame size={18} />
+              </span>
               <div>
-                <p className="font-semibold text-ink text-sm sm:text-base">
-                  The Vitrine Commitment to Studio Craftsmanship
-                </p>
-                <p className="mt-1 text-xs sm:text-sm text-muted max-w-2xl">
-                  We never fabricate retailers, cite fictional citations, or generate fake customer testimonials. Every feature is engineered to honor the labor of the artisan and the discernment of the independent buyer.
-                </p>
+                <h4 className="text-sm font-bold text-ink">
+                  Zero Automated Email Sending or Spam Bots
+                </h4>
+                <p className="text-xs text-muted">Human Discretion by Design</p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-md bg-surface px-3 py-1.5 text-xs font-semibold text-ink border border-border shadow-xs">
-              <Sparkles size={13} className="text-primary" />
-              Verified Standard
-            </span>
+            <p className="mt-3 text-xs leading-relaxed text-muted">
+              Boutique owners recognize generic mass mailers and delete them instantly. Vitrine prepares verified collection facts; you review, copy, and send personally from your own designer email.
+            </p>
           </div>
+
+          {/* Commitment 2 */}
+          <div data-ui className="rounded-xl border border-border bg-surface p-6 shadow-xs">
+            <div className="flex items-center gap-3">
+              <span className="grid size-9 place-items-center rounded-lg bg-surface-subtle text-emerald-800 border border-border">
+                <Lock size={18} />
+              </span>
+              <div>
+                <h4 className="text-sm font-bold text-ink">
+                  No Commissions, Gateways, or Take Rates
+                </h4>
+                <p className="text-xs text-muted">Pure Studio Wholesale Instrument</p>
+              </div>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-muted">
+              Vitrine takes zero percent of your wholesale orders. There are no payment processors, invoices, or hidden transaction cuts. Every buyer relationship belongs entirely to your label.
+            </p>
+          </div>
+        </div>
+
+        {/* Standards Certification */}
+        <div data-ui className="mt-10 rounded-xl border border-border bg-canvas p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 size={18} className="text-primary mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-xs sm:text-sm font-semibold text-ink">
+                The Vitrine Anti-Slop Data Guarantee
+              </p>
+              <p className="mt-0.5 text-xs text-muted">
+                We never fabricate stockists, cite fake retailer testimonials, or generate false buyer statistics.
+              </p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-md bg-surface px-3 py-1.5 text-xs font-semibold text-ink border border-border shadow-xs">
+            <Sparkles size={13} className="text-accent" />
+            Verified Standard
+          </span>
         </div>
       </div>
     </section>

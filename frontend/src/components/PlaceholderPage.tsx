@@ -21,16 +21,16 @@ const PIPELINE_STEPS: readonly PipelineStep[] = [
     path: "/app/products",
     icon: Package,
     description:
-      "Catalog craft materials, physical dimensions, wholesale vs. retail pricing, MOQ, and studio lead times.",
+      "Catalog garment specs, fabric GSM, wholesale vs. retail pricing, size curves (XS–XL), and studio lead times.",
     actionLabel: "Configure passport",
-    statusText: "0 products cataloged",
+    statusText: "0 styles cataloged",
   },
   {
     title: "Market Discovery",
     path: "/app/discovery",
     icon: Compass,
     description:
-      "Scan independent boutiques across global design hubs (Tokyo, London, Copenhagen) with cultural taste anchors.",
+      "Scan independent boutiques across global fashion hubs (Paris, Tokyo, London, Copenhagen) with aesthetic anchors.",
     actionLabel: "Start research run",
     statusText: "No runs initiated",
   },
@@ -39,8 +39,8 @@ const PIPELINE_STEPS: readonly PipelineStep[] = [
     path: "/app/leads",
     icon: Users,
     description:
-      "Screen vetted stockists with verified store presence, carried lines, and explicit evidence citations.",
-    actionLabel: "View lead matches",
+      "Screen vetted boutique stockists with verified storefront presence, carried designer lines, and explicit evidence.",
+    actionLabel: "View boutique matches",
     statusText: "0 leads collected",
   },
   {
@@ -63,13 +63,13 @@ export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
       <header className="pb-8 border-b border-border">
         <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
           <div>
-            <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-normal tracking-tight text-ink">
+            <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-ink">
               {title}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base max-w-3xl">
               {description ||
                 (isDashboard
-                  ? "An evidence-led wholesale discovery workspace for independent craft makers and design studios."
+                  ? "An evidence-led wholesale discovery workspace for independent fashion designers and apparel studios."
                   : `Manage your ${title.toLowerCase()} workflow within the Vitrine wholesale workspace.`)}
             </p>
           </div>
@@ -89,7 +89,7 @@ export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
               <h2 id="pipeline-heading" className="text-xs font-medium text-muted">
                 Wholesale Discovery Pipeline · 4 Stages
               </h2>
-              <span className="text-xs text-subtle">
+              <span className="text-xs text-subtle font-mono">
                 Evidence Contract v0.2
               </span>
             </div>
@@ -108,11 +108,11 @@ export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
                         <span className="grid size-9 place-items-center rounded-lg bg-surface-subtle text-primary border border-border-subtle group-hover:border-primary/30 transition-colors">
                           <Icon size={18} strokeWidth={2} />
                         </span>
-                        <span className="text-[11px] text-muted">
+                        <span className="text-[11px] text-muted font-mono">
                           {step.statusText}
                         </span>
                       </div>
-                      <p className="mt-4 font-serif text-lg font-normal text-ink group-hover:text-primary transition-colors">
+                      <p className="mt-4 font-display text-lg font-bold text-ink group-hover:text-primary transition-colors">
                         {step.title}
                       </p>
                       <p className="mt-1.5 text-xs leading-relaxed text-muted">
@@ -137,14 +137,14 @@ export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
               <div className="max-w-2xl">
-                <span className="text-xs font-medium text-brass">
+                <span className="text-xs font-semibold text-accent">
                   Recommended First Step
                 </span>
-                <h2 id="guide-heading" className="mt-1 font-serif text-xl sm:text-2xl font-normal text-ink">
-                  Configure Your First Product Passport
+                <h2 id="guide-heading" className="mt-1 font-display text-xl sm:text-2xl font-bold text-ink">
+                  Configure Your First Collection Line-Sheet
                 </h2>
                 <p className="mt-2 text-sm text-muted leading-relaxed">
-                  Wholesale discovery begins with your studio&apos;s trade specifications. Catalog your physical craft dimensions, material provenance, wholesale pricing, and MOQ to enable market discovery matching.
+                  Wholesale discovery begins with your collection&apos;s trade specifications. Catalog your garment measurements, fabric composition, size curves, wholesale pricing, and MOQ to enable boutique discovery matching.
                 </p>
               </div>
               <Link
@@ -168,11 +168,11 @@ export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
               <span className="inline-flex size-10 items-center justify-center rounded-full bg-surface-subtle text-primary border border-border-subtle">
                 <Package size={20} />
               </span>
-              <h2 className="mt-4 font-serif text-xl font-normal text-ink">
+              <h2 className="mt-4 font-display text-xl font-bold text-ink">
                 No active records
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                No {title.toLowerCase()} records found. This workbench will populate as you configure your craft catalog, initiate regional stockist scans, and prepare outreach letters.
+                No {title.toLowerCase()} records found. This workbench will populate as you configure your collection styles, initiate regional boutique scans, and prepare outreach letters.
               </p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <Link

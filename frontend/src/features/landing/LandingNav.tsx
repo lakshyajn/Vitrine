@@ -4,7 +4,7 @@ import { ArrowRight, Menu, X } from "lucide-react";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/config/brand";
 
 /**
- * Vitrine aperture mark — architectural framing and exhibition glyph.
+ * Vitrine aperture mark — precision architectural framing glyph.
  */
 export function VitrineMark({ className = "size-5" }: { className?: string }) {
   return (
@@ -61,7 +61,7 @@ export function LandingNav() {
             <VitrineMark className="size-5" />
           </span>
           <div className="flex flex-col">
-            <span className="font-serif text-xl font-semibold tracking-tight text-ink leading-none">
+            <span className="font-display text-xl font-bold tracking-tight text-ink leading-none">
               {BRAND_NAME}
             </span>
             <span className="mt-1 text-[11px] font-medium text-muted leading-none">
@@ -76,22 +76,22 @@ export function LandingNav() {
           aria-label="Public navigation"
         >
           <a
-            href="#how-it-works"
+            href="#workflow"
             className="transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            How It Works
+            Workflow
           </a>
           <a
-            href="#evidence-philosophy"
+            href="#walkthrough"
             className="transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            Evidence Philosophy
+            Interactive Walkthrough
           </a>
           <a
-            href="#preview"
+            href="#evidence-standard"
             className="transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            Interactive Preview
+            Evidence Standard
           </a>
         </nav>
 
@@ -107,7 +107,7 @@ export function LandingNav() {
             to="/app"
             className="pressable inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            <span>Open Workspace</span>
+            <span>Explore workspace</span>
             <ArrowRight size={15} aria-hidden="true" />
           </Link>
         </div>
@@ -133,25 +133,25 @@ export function LandingNav() {
         >
           <nav className="flex flex-col space-y-4 text-base font-medium text-ink">
             <a
-              href="#how-it-works"
+              href="#workflow"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 text-muted hover:text-ink"
             >
-              How It Works
+              Workflow
             </a>
             <a
-              href="#evidence-philosophy"
+              href="#walkthrough"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 text-muted hover:text-ink"
             >
-              Evidence Philosophy
+              Interactive Walkthrough
             </a>
             <a
-              href="#preview"
+              href="#evidence-standard"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 text-muted hover:text-ink"
             >
-              Interactive Preview
+              Evidence Standard
             </a>
             <div className="pt-4 border-t border-border flex flex-col gap-3">
               <Link
@@ -166,7 +166,7 @@ export function LandingNav() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-primary-hover"
               >
-                <span>Open Workspace</span>
+                <span>Explore workspace</span>
                 <ArrowRight size={16} aria-hidden="true" />
               </Link>
             </div>
@@ -176,4 +176,3 @@ export function LandingNav() {
     </header>
   );
 }
-

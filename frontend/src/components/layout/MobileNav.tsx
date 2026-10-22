@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/config/brand";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
@@ -70,7 +70,7 @@ export function MobileNav() {
         data-ui
         className="flex h-16 flex-shrink-0 items-center justify-between border-b border-sidebar-border bg-sidebar px-4 text-white"
       >
-        <div className="flex items-center gap-3">
+        <Link to="/app" className="flex items-center gap-3">
           <span
             className="grid size-8 place-items-center rounded-lg bg-accent/15 text-accent border border-accent/25"
             aria-hidden="true"
@@ -85,7 +85,7 @@ export function MobileNav() {
               {BRAND_TAGLINE}
             </span>
           </div>
-        </div>
+        </Link>
 
         {/* Hamburger Toggle Button */}
         <button

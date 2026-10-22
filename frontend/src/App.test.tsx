@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import App from "./App";
@@ -12,14 +13,22 @@ function renderAt(path: string) {
 }
 
 describe("Vitrine — Public Landing Page & Route Architecture", () => {
-  it("renders public landing page at the root route '/'", () => {
+  it("renders public landing page at the root route '/' with apparel headline and CTAs", () => {
     renderAt("/");
-    // Brand name appears in header and hero
+    // Brand name appears in header and footer
     const brands = screen.getAllByText("Vitrine");
     expect(brands.length).toBeGreaterThanOrEqual(1);
 
+    // Fashion editorial headline in Space Grotesk
+    expect(
+      screen.getByRole("heading", {
+        name: /your next collection deserves the right boutiques/i,
+        level: 1,
+      }),
+    ).toBeInTheDocument();
+
     // Primary CTA to workspace
-    const ctas = screen.getAllByRole("link", { name: /workspace/i });
+    const ctas = screen.getAllByRole("link", { name: /explore the workspace|explore workspace/i });
     expect(ctas.length).toBeGreaterThanOrEqual(1);
     expect(ctas[0]).toHaveAttribute("href", "/app");
 
@@ -31,8 +40,33 @@ describe("Vitrine — Public Landing Page & Route Architecture", () => {
 
     // Data-truth philosophy section
     expect(
-      screen.getByRole("heading", { name: /why evidence beats speculation/i }),
+      screen.getByRole("heading", { name: /why evidence beats speculation in fashion wholesale/i }),
     ).toBeInTheDocument();
+  });
+
+  it("supports tab switching in the interactive product walkthrough", async () => {
+    const user = userEvent.setup();
+    renderAt("/");
+
+    // Initially at Stage 1 (Passport)
+    const blazerTitles = screen.getAllByText(/Double-Breasted Belgian Linen Blazer/i);
+    expect(blazerTitles.length).toBeGreaterThanOrEqual(1);
+
+    // Switch to Stage 2 (Discovery)
+    const discoveryTab = screen.getByRole("tab", { name: /discovery/i });
+    await user.click(discoveryTab);
+    expect(screen.getByText(/Target Boutique Hubs/i)).toBeInTheDocument();
+
+    // Switch to Stage 3 (Buyer Leads)
+    const leadsTab = screen.getByRole("tab", { name: /buyer leads/i });
+    await user.click(leadsTab);
+    const leadsMatches = screen.getAllByText(/Boutique L'Ombre/i);
+    expect(leadsMatches.length).toBeGreaterThanOrEqual(1);
+
+    // Switch to Stage 4 (Outreach Studio)
+    const outreachTab = screen.getByRole("tab", { name: /outreach/i });
+    await user.click(outreachTab);
+    expect(screen.getByRole("button", { name: /copy letter text/i })).toBeInTheDocument();
   });
 
   it("renders workspace shell and nav labels at '/app'", () => {
