@@ -1,4 +1,4 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,10 +8,20 @@ __pycache__/
 
 # Environments & secrets
 .env
+.env.*
+!.env.example
+!.env.*.example
 .venv
 env/
 venv/
 ENV/
+
+# JS
+node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
 
 # OS and Editor
 .DS_Store
@@ -19,3 +29,22 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Local third-party AI skills
+/.agents/skills/banner-design/
+/.agents/skills/brand/
+/.agents/skills/design-system/
+/.agents/skills/design-taste-frontend/
+/.agents/skills/design/
+/.agents/skills/slides/
+/.agents/skills/ui-styling/
+/.agents/skills/ui-ux-pro-max/
+
+# Local design review artifacts and skill installer files
+/.taste-skill/
+/skills-lock.json
+
+# Skills accidentally installed inside the frontend directory
+/frontend/.agents/skills/design-taste-frontend/
+/frontend/.claude/skills/design-taste-frontend
+/frontend/skills-lock.json

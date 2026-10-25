@@ -1,0 +1,22 @@
+{
+  "route": "/app/outreach/lead-001",
+  "name": "app-outreach-workspace",
+  "viewport": {
+    "name": "tablet-768",
+    "width": 768,
+    "height": 1024
+  },
+  "httpStatus": 200,
+  "overflow": {
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "hasOverflow": false,
+    "overflowPx": 0
+  },
+  "consoleErrors": [],
+  "consoleWarnings": [],
+  "pageErrors": [],
+  "failedRequests": [],
+  "screenshot": "app-outreach-workspace_tablet-768.png",
+  "timestamp": "2026-10-25T05:52:11.648Z"
+}

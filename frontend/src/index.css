@@ -1,0 +1,294 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..800;1,14..32,300..800&family=Space+Grotesk:wght@400..700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  --font-display:
+    "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+
+  /* Aubergine & Vermilion Chrome: Deep Plum Black */
+  --color-sidebar: #161117;
+  --color-sidebar-border: #2a222c;
+  --color-sidebar-surface: #201a22;
+  --color-sidebar-hover: #2a222c;
+  --color-sidebar-active: #322835;
+  --color-sidebar-text: #ffffff;
+  --color-sidebar-label: #f8f6f7;
+  --color-sidebar-muted: #a399a4;
+
+  /* Canvas, Surfaces & Insets */
+  --color-canvas: #f8f6f7;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f5f0f4;
+  --color-surface-subtle: #f1ecf0;
+
+  /* Typographic Ink Hierarchy */
+  --color-ink: #161117;
+  --color-muted: #574d58;
+  --color-subtle: #796f7a;
+
+  /* Structural Hairlines & 1px Rules */
+  --color-border: #e5dee4;
+  --color-border-subtle: #efe9ee;
+  --color-border-strong: #d2c8d1;
+  --color-line: #e5dee4;
+
+  /* Primary Action: Deep Aubergine (Contrast 14.0:1 with white text) */
+  --color-primary: #4a154b;
+  --color-primary-hover: #370f38;
+  --color-primary-active: #290a2a;
+  --color-primary-fg: #ffffff;
+  --color-primary-light: #faeefa;
+  --color-primary-border: #f0d5f0;
+
+  /* Secondary Accent: Vermilion (Used selectively for meaningful emphasis) */
+  --color-accent: #cf1e1e;
+  --color-accent-hover: #b91a1a;
+  --color-accent-light: #fef2f2;
+  --color-accent-border: #fecaca;
+
+  /* Status Colors: Success, Warning, Error, Demo */
+  --color-status-success: #166534;
+  --color-status-success-bg: #f0fdf4;
+  --color-status-success-border: #bbf7d0;
+
+  --color-status-warning: #9a3412;
+  --color-status-warning-bg: #ffedd5;
+  --color-status-warning-border: #fed7aa;
+
+  --color-status-error: #991b1b;
+  --color-status-error-bg: #fef2f2;
+  --color-status-error-border: #fecaca;
+
+  --color-status-demo: #2a222c;
+  --color-status-demo-bg: #f1ecf0;
+  --color-status-demo-border: #e5dee4;
+
+  /* Restrained Architectural Shadows */
+  --shadow-card:
+    0 1px 3px 0 rgba(22, 17, 23, 0.04), 0 0 0 1px rgba(22, 17, 23, 0.03);
+  --shadow-elevated:
+    0 4px 20px -2px rgba(22, 17, 23, 0.08), 0 0 0 1px rgba(22, 17, 23, 0.04);
+  --shadow-drawer:
+    0 20px 25px -5px rgba(22, 17, 23, 0.45), 0 8px 10px -6px rgba(22, 17, 23, 0.3);
+}
+
+:root {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background-color: var(--color-canvas);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Motion Tokens */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-press: cubic-bezier(0.2, 0, 0, 1);
+
+  --t-press: 100ms;
+  --t-micro: 160ms;
+  --t-ui: 220ms;
+  --t-panel: 280ms;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100dvh;
+  margin: 0;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+/* Accessible focus ring (Aubergine) */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Primary Aubergine Button Contract: Non-negotiable white text in every state */
+.btn-primary,
+.bg-primary,
+[data-btn-primary],
+a.bg-primary,
+button.bg-primary,
+a[data-btn-primary],
+button[data-btn-primary] {
+  background-color: var(--color-primary) !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:hover,
+.bg-primary:hover,
+[data-btn-primary]:hover,
+.hover\:bg-primary-hover:hover,
+a.bg-primary:hover,
+button.bg-primary:hover {
+  background-color: var(--color-primary-hover) !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:active,
+.bg-primary:active,
+[data-btn-primary]:active,
+a.bg-primary:active,
+button.bg-primary:active {
+  background-color: var(--color-primary-active) !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:focus-visible,
+.bg-primary:focus-visible,
+[data-btn-primary]:focus-visible,
+a.bg-primary:focus-visible,
+button.bg-primary:focus-visible {
+  outline: 2px solid #ffffff !important;
+  outline-offset: 2px !important;
+  color: #ffffff !important;
+}
+
+/* Force all text & icon children of primary aubergine buttons to stay white */
+.btn-primary *,
+.bg-primary *,
+[data-btn-primary] *,
+a.bg-primary *,
+button.bg-primary * {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Primary Vermilion Red CTA Contract: Non-negotiable white text in every state */
+.btn-accent,
+.bg-accent,
+[data-btn-accent],
+a.bg-accent,
+button.bg-accent,
+a[data-btn-accent],
+button[data-btn-accent] {
+  background-color: #cf1e1e !important;
+  color: #ffffff !important;
+}
+
+.btn-accent:hover,
+.bg-accent:hover,
+[data-btn-accent]:hover,
+.hover\:bg-accent-hover:hover,
+a.bg-accent:hover,
+button.bg-accent:hover {
+  background-color: #b51818 !important;
+  color: #ffffff !important;
+}
+
+.btn-accent:active,
+.bg-accent:active,
+[data-btn-accent]:active,
+a.bg-accent:active,
+button.bg-accent:active {
+  background-color: #991313 !important;
+  color: #ffffff !important;
+}
+
+.btn-accent:focus-visible,
+.bg-accent:focus-visible,
+[data-btn-accent]:focus-visible,
+a.bg-accent:focus-visible,
+button.bg-accent:focus-visible {
+  outline: 2px solid #ffffff !important;
+  outline-offset: 2px !important;
+  color: #ffffff !important;
+}
+
+/* Force all text & icon children of vermilion buttons to stay white */
+.btn-accent *,
+.bg-accent *,
+[data-btn-accent] *,
+a.bg-accent *,
+button.bg-accent * {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Keyframes */
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+
+.animate-page-enter {
+  animation: enter-up var(--t-ui) var(--ease-out) both;
+}
+
+.animate-fade-in {
+  animation: fade-in var(--t-micro) var(--ease-out) both;
+}
+
+/* Microinteraction tactile press */
+.pressable {
+  transition:
+    transform var(--t-press) var(--ease-press),
+    background-color var(--t-micro) ease,
+    border-color var(--t-micro) ease,
+    color var(--t-micro) ease;
+}
+
+.pressable:active {
+  transform: scale(0.98);
+}
+
+/* Accessible reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    transform: none !important;
+  }
+}

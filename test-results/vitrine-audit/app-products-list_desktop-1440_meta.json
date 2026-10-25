@@ -1,0 +1,22 @@
+{
+  "route": "/app/products",
+  "name": "app-products-list",
+  "viewport": {
+    "name": "desktop-1440",
+    "width": 1440,
+    "height": 900
+  },
+  "httpStatus": 200,
+  "overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "hasOverflow": false,
+    "overflowPx": 0
+  },
+  "consoleErrors": [],
+  "consoleWarnings": [],
+  "pageErrors": [],
+  "failedRequests": [],
+  "screenshot": "app-products-list_desktop-1440.png",
+  "timestamp": "2026-10-25T05:48:33.460Z"
+}

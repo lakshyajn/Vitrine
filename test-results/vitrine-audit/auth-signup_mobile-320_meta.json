@@ -1,0 +1,22 @@
+{
+  "route": "/signup",
+  "name": "auth-signup",
+  "viewport": {
+    "name": "mobile-320",
+    "width": 320,
+    "height": 640
+  },
+  "httpStatus": 200,
+  "overflow": {
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "hasOverflow": false,
+    "overflowPx": 0
+  },
+  "consoleErrors": [],
+  "consoleWarnings": [],
+  "pageErrors": [],
+  "failedRequests": [],
+  "screenshot": "auth-signup_mobile-320.png",
+  "timestamp": "2026-10-25T05:54:17.063Z"
+}

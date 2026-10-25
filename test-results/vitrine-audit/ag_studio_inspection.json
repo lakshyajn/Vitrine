@@ -1,0 +1,13 @@
+{
+  "pageHeading": "AG Studio Insights",
+  "isStudioRendered": true,
+  "isAgentFrameworkActive": true,
+  "hasPromptStarters": false,
+  "renderedCardsCount": 6,
+  "dependenciesInPackageJson": {
+    "agGrid": false,
+    "agStudio": true,
+    "installedVersion": "^3.0.0"
+  },
+  "timestamp": "2026-10-25T05:56:23.927Z"
+}
