@@ -135,6 +135,108 @@ a {
   outline-offset: 2px;
 }
 
+/* Primary Aubergine Button Contract: Non-negotiable white text in every state */
+.btn-primary,
+.bg-primary,
+[data-btn-primary],
+a.bg-primary,
+button.bg-primary,
+a[data-btn-primary],
+button[data-btn-primary] {
+  background-color: var(--color-primary) !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:hover,
+.bg-primary:hover,
+[data-btn-primary]:hover,
+.hover\:bg-primary-hover:hover,
+a.bg-primary:hover,
+button.bg-primary:hover {
+  background-color: var(--color-primary-hover) !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:active,
+.bg-primary:active,
+[data-btn-primary]:active,
+a.bg-primary:active,
+button.bg-primary:active {
+  background-color: var(--color-primary-active) !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:focus-visible,
+.bg-primary:focus-visible,
+[data-btn-primary]:focus-visible,
+a.bg-primary:focus-visible,
+button.bg-primary:focus-visible {
+  outline: 2px solid #ffffff !important;
+  outline-offset: 2px !important;
+  color: #ffffff !important;
+}
+
+/* Force all text & icon children of primary aubergine buttons to stay white */
+.btn-primary *,
+.bg-primary *,
+[data-btn-primary] *,
+a.bg-primary *,
+button.bg-primary * {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Primary Vermilion Red CTA Contract: Non-negotiable white text in every state */
+.btn-accent,
+.bg-accent,
+[data-btn-accent],
+a.bg-accent,
+button.bg-accent,
+a[data-btn-accent],
+button[data-btn-accent] {
+  background-color: #cf1e1e !important;
+  color: #ffffff !important;
+}
+
+.btn-accent:hover,
+.bg-accent:hover,
+[data-btn-accent]:hover,
+.hover\:bg-accent-hover:hover,
+a.bg-accent:hover,
+button.bg-accent:hover {
+  background-color: #b51818 !important;
+  color: #ffffff !important;
+}
+
+.btn-accent:active,
+.bg-accent:active,
+[data-btn-accent]:active,
+a.bg-accent:active,
+button.bg-accent:active {
+  background-color: #991313 !important;
+  color: #ffffff !important;
+}
+
+.btn-accent:focus-visible,
+.bg-accent:focus-visible,
+[data-btn-accent]:focus-visible,
+a.bg-accent:focus-visible,
+button.bg-accent:focus-visible {
+  outline: 2px solid #ffffff !important;
+  outline-offset: 2px !important;
+  color: #ffffff !important;
+}
+
+/* Force all text & icon children of vermilion buttons to stay white */
+.btn-accent *,
+.bg-accent *,
+[data-btn-accent] *,
+a.bg-accent *,
+button.bg-accent * {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
 /* Keyframes */
 @keyframes enter-up {
   from {
@@ -155,6 +257,7 @@ a {
     opacity: 1;
   }
 }
+
 
 .animate-page-enter {
   animation: enter-up var(--t-ui) var(--ease-out) both;

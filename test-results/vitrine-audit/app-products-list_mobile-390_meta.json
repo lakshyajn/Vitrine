@@ -1,0 +1,22 @@
+{
+  "route": "/app/products",
+  "name": "app-products-list",
+  "viewport": {
+    "name": "mobile-390",
+    "width": 390,
+    "height": 844
+  },
+  "httpStatus": 200,
+  "overflow": {
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "hasOverflow": false,
+    "overflowPx": 0
+  },
+  "consoleErrors": [],
+  "consoleWarnings": [],
+  "pageErrors": [],
+  "failedRequests": [],
+  "screenshot": "app-products-list_mobile-390.png",
+  "timestamp": "2026-10-25T05:52:46.129Z"
+}

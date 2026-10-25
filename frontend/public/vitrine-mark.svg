@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" fill="none">
+  <!-- Vitrine Architectural Mark: Atelier Rail & Converging Showcase Aperture -->
+  <!-- Horizontal Atelier Garment Rail / Showcase Lintel -->
+  <rect x="3" y="4" width="26" height="3" rx="1.5" fill="#4A154B" />
+
+  <!-- Converging Architectural Aperture Wings (V) -->
+  <!-- Left Wing in Deep Plum -->
+  <polygon points="5,7 10,7 16,22 16,27" fill="#161117" />
+  
+  <!-- Right Wing in Rich Aubergine -->
+  <polygon points="27,7 22,7 16,22 16,27" fill="#4A154B" />
+
+  <!-- Vermilion Precision Match & Discovery Focal Point -->
+  <polygon points="16,10 19.5,14 16,18 12.5,14" fill="#CF1E1E" />
+</svg>
+

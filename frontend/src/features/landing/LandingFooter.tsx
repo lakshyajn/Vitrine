@@ -5,13 +5,16 @@ import { VitrineMark } from "./LandingNav";
 
 export function LandingFooter() {
   return (
-    <footer className="border-t border-[#2A222C] bg-sidebar text-white" aria-label="Site footer">
-      <div className="mx-auto max-w-7xl px-6 py-16 sm:px-8 sm:py-20 lg:px-12">
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
+    <footer
+      className="border-t border-[#2A222C] bg-sidebar text-white"
+      aria-label="Site footer"
+    >
+      <div className="mx-auto max-w-7xl px-6 py-14 sm:px-8 sm:py-16 lg:px-12">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-14">
           {/* Brand Column */}
           <div className="lg:col-span-5">
             <div className="flex items-center gap-3">
-              <span className="grid size-9 place-items-center rounded-md border border-white/15 bg-white/5 text-stone-200">
+              <span className="grid size-9 place-items-center rounded-lg border border-white/20 bg-[#FAF8F5] shadow-xs">
                 <VitrineMark className="size-5" />
               </span>
               <div className="flex flex-col">
@@ -24,30 +27,25 @@ export function LandingFooter() {
               </div>
             </div>
 
-            <p className="mt-5 max-w-sm text-xs sm:text-sm leading-relaxed text-stone-400">
-              An evidence-led wholesale intelligence workspace designed specifically for independent fashion labels, designer studios, and discerning boutique stockists worldwide.
+            <p className="mt-4 max-w-sm text-xs sm:text-sm leading-relaxed text-stone-400">
+              An evidence-led wholesale intelligence workspace designed specifically for independent fashion labels, designer studios, and boutique stockists worldwide.
             </p>
 
-            <div className="mt-6 flex items-center gap-2 text-xs text-stone-400">
+            <div className="mt-5 flex items-center gap-2 text-xs text-stone-400">
               <span className="size-2 rounded-full bg-emerald-500" />
-              <span>Independent Label Edition · WS1 Frontend Standard</span>
+              <span>Independent Label Edition</span>
             </div>
           </div>
 
           {/* Links Column 1: Platform Architecture */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <p className="text-xs font-semibold text-stone-300">
-              Platform
+              Platform Overview
             </p>
-            <ul className="mt-4 space-y-2.5 text-xs sm:text-sm text-stone-400">
-              <li>
-                <a href="#workflow" className="hover:text-white transition-colors">
-                  Workflow
-                </a>
-              </li>
+            <ul className="mt-3.5 space-y-2 text-xs sm:text-sm text-stone-400">
               <li>
                 <a href="#walkthrough" className="hover:text-white transition-colors">
-                  Interactive Walkthrough
+                  Workflow &amp; Workbench
                 </a>
               </li>
               <li>
@@ -59,11 +57,11 @@ export function LandingFooter() {
           </div>
 
           {/* Links Column 2: Studio Workspace */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-4">
             <p className="text-xs font-semibold text-stone-300">
               {WORKSPACE_NAME}
             </p>
-            <ul className="mt-4 space-y-2.5 text-xs sm:text-sm text-stone-400">
+            <ul className="mt-3.5 space-y-2 text-xs sm:text-sm text-stone-400">
               <li>
                 <Link to="/app" className="inline-flex items-center gap-1 hover:text-white transition-colors">
                   <span>Studio Dashboard</span>
@@ -92,33 +90,19 @@ export function LandingFooter() {
               </li>
             </ul>
           </div>
-
-          {/* Links Column 3: Access */}
-          <div className="lg:col-span-2">
-            <p className="text-xs font-semibold text-stone-300">
-              Access
-            </p>
-            <ul className="mt-4 space-y-2.5 text-xs sm:text-sm text-stone-400">
-              <li>
-                <Link to="/login" className="hover:text-white transition-colors">
-                  Sign in
-                </Link>
-              </li>
-              <li>
-                <Link to="/signup" className="hover:text-white transition-colors">
-                  Create account
-                </Link>
-              </li>
-            </ul>
-          </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-[#2A222C] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-stone-400">
-          <p>© {new Date().getFullYear()} {BRAND_NAME}. Dedicated to independent apparel craftsmanship and honest retail partnerships.</p>
-          <p className="text-[11px] text-stone-400">
-            No payment gateways · Zero email blast spam · Strict epistemic truth
-          </p>
+        <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-stone-400">
+          <p>© {new Date().getFullYear()} Vitrine. Evidence-backed boutique discovery.</p>
+          <div className="flex items-center gap-6">
+            <Link to="/login" className="hover:text-white transition-colors">
+              Sign in
+            </Link>
+            <Link to="/signup" className="hover:text-white transition-colors">
+              Create account
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

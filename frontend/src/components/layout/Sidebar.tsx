@@ -9,40 +9,14 @@ import { NAV_ITEMS } from "./nav-items";
  */
 function VitrineMark({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+    <img
+      src="/vitrine-mark.svg"
+      alt="Vitrine mark"
       className={className}
+      width={24}
+      height={24}
       aria-hidden="true"
-    >
-      <rect
-        x="3"
-        y="3"
-        width="18"
-        height="18"
-        rx="3"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
-      <path
-        d="M3 9H21"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeOpacity="0.4"
-      />
-      <rect
-        x="7"
-        y="12"
-        width="10"
-        height="6"
-        rx="1.5"
-        fill="currentColor"
-        fillOpacity="0.2"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-    </svg>
+    />
   );
 }
 
@@ -60,7 +34,7 @@ export function Sidebar() {
       >
         <div className="flex items-center gap-3">
           <span
-            className="grid size-8 place-items-center rounded-lg bg-accent/15 text-accent border border-accent/25 shadow-xs"
+            className="grid size-8 place-items-center rounded-lg bg-[#FAF8F5] border border-white/20 shadow-xs"
             aria-hidden="true"
           >
             <VitrineMark className="size-5" />
@@ -141,7 +115,7 @@ export function Sidebar() {
             <span className="flex size-2 rounded-full bg-emerald-500" aria-label="System operational" />
           </div>
           <p className="mt-1 text-[11px] text-sidebar-muted">
-            Independent Maker Edition
+            Independent Label Edition
           </p>
         </div>
       </div>

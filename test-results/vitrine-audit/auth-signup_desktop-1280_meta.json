@@ -1,0 +1,22 @@
+{
+  "route": "/signup",
+  "name": "auth-signup",
+  "viewport": {
+    "name": "desktop-1280",
+    "width": 1280,
+    "height": 800
+  },
+  "httpStatus": 200,
+  "overflow": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "hasOverflow": false,
+    "overflowPx": 0
+  },
+  "consoleErrors": [],
+  "consoleWarnings": [],
+  "pageErrors": [],
+  "failedRequests": [],
+  "screenshot": "auth-signup_desktop-1280.png",
+  "timestamp": "2026-10-25T05:49:45.619Z"
+}

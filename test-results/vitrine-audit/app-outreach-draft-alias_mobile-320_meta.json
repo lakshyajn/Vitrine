@@ -1,0 +1,22 @@
+{
+  "route": "/app/outreach/draft-001",
+  "name": "app-outreach-draft-alias",
+  "viewport": {
+    "name": "mobile-320",
+    "width": 320,
+    "height": 640
+  },
+  "httpStatus": 200,
+  "overflow": {
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "hasOverflow": false,
+    "overflowPx": 0
+  },
+  "consoleErrors": [],
+  "consoleWarnings": [],
+  "pageErrors": [],
+  "failedRequests": [],
+  "screenshot": "app-outreach-draft-alias_mobile-320.png",
+  "timestamp": "2026-10-25T05:55:27.897Z"
+}

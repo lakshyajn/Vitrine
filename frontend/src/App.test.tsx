@@ -6,7 +6,10 @@ import App from "./App";
 
 function renderAt(path: string) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter
+      initialEntries={[path]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <App />
     </MemoryRouter>,
   );
@@ -33,15 +36,26 @@ describe("Vitrine — Public Landing Page & Route Architecture", () => {
     expect(ctas[0]).toHaveAttribute("href", "/app");
 
     // All four pipeline stages are introduced on the landing page
-    expect(screen.getByText("Product Passport")).toBeInTheDocument();
-    expect(screen.getByText("Market Discovery")).toBeInTheDocument();
-    expect(screen.getByText("Buyer Leads")).toBeInTheDocument();
-    expect(screen.getByText("Outreach Studio")).toBeInTheDocument();
+    expect(screen.getAllByText("Product Passport").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Market Discovery").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Buyer Leads").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Outreach Studio").length).toBeGreaterThanOrEqual(1);
 
     // Data-truth philosophy section
     expect(
       screen.getByRole("heading", { name: /why evidence beats speculation in fashion wholesale/i }),
     ).toBeInTheDocument();
+
+    // Restrained evidence claims (no unsupported 100% verified claims)
+    expect(screen.getAllByText(/evidence-backed boutique discovery/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/100% verified boutique retailer evidence/i)).toBeNull();
+
+    // Prominent illustrative demo data labels
+    expect(screen.getAllByText(/illustrative demo data/i).length).toBeGreaterThanOrEqual(1);
+
+    // Curated collection hero image with representative alt text
+    const heroImage = screen.getByAltText(/curated independent fashion collection/i);
+    expect(heroImage).toBeInTheDocument();
   });
 
   it("supports tab switching in the interactive product walkthrough", async () => {
@@ -53,9 +67,9 @@ describe("Vitrine — Public Landing Page & Route Architecture", () => {
     expect(blazerTitles.length).toBeGreaterThanOrEqual(1);
 
     // Switch to Stage 2 (Discovery)
-    const discoveryTab = screen.getByRole("tab", { name: /discovery/i });
+    const discoveryTab = screen.getByRole("tab", { name: /market discovery/i });
     await user.click(discoveryTab);
-    expect(screen.getByText(/Target Boutique Hubs/i)).toBeInTheDocument();
+    expect(screen.getByText(/Districts Targeted/i)).toBeInTheDocument();
 
     // Switch to Stage 3 (Buyer Leads)
     const leadsTab = screen.getByRole("tab", { name: /buyer leads/i });
@@ -64,7 +78,7 @@ describe("Vitrine — Public Landing Page & Route Architecture", () => {
     expect(leadsMatches.length).toBeGreaterThanOrEqual(1);
 
     // Switch to Stage 4 (Outreach Studio)
-    const outreachTab = screen.getByRole("tab", { name: /outreach/i });
+    const outreachTab = screen.getByRole("tab", { name: /outreach studio/i });
     await user.click(outreachTab);
     expect(screen.getByRole("button", { name: /copy letter text/i })).toBeInTheDocument();
   });
@@ -156,6 +170,22 @@ describe("Vitrine — Public Landing Page & Route Architecture", () => {
     expect(
       screen.queryByRole("navigation", { name: "Workspace navigation" }),
     ).toBeNull();
+  });
+
+  it("shows AG Studio Insights on '/app/insights'", async () => {
+    renderAt("/app/insights");
+    expect(
+      await screen.findByRole("heading", { name: /ag studio insights/i, level: 1 }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/qualification yield/i)).toBeInTheDocument();
+  });
+
+  it("shows Product form on '/app/products/new'", async () => {
+    renderAt("/app/products/new");
+    expect(
+      await screen.findByRole("heading", { name: /new product passport/i, level: 1 }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/ai extract from spec/i)).toBeInTheDocument();
   });
 
   it("shows 404 page for unknown routes with navigation back to workspace and home", () => {

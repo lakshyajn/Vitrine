@@ -1,0 +1,22 @@
+{
+  "route": "/app/discovery/runs/run-002",
+  "name": "app-discovery-run-awaiting-review-alias",
+  "viewport": {
+    "name": "desktop-1440",
+    "width": 1440,
+    "height": 900
+  },
+  "httpStatus": 200,
+  "overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "hasOverflow": false,
+    "overflowPx": 0
+  },
+  "consoleErrors": [],
+  "consoleWarnings": [],
+  "pageErrors": [],
+  "failedRequests": [],
+  "screenshot": "app-discovery-run-awaiting-review-alias_desktop-1440.png",
+  "timestamp": "2026-10-25T05:48:59.185Z"
+}
