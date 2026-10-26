@@ -3,6 +3,11 @@ type ErrorBody = { error?: { code?: string; message?: string; details?: unknown;
 type AccessTokenProvider = () => Promise<string | null>;
 let accessTokenProvider: AccessTokenProvider | undefined;
 export function setAccessTokenProvider(provider: AccessTokenProvider | undefined) { accessTokenProvider = provider; }
+
+// Vitrine dev/test JWT for local testing against APP_ENV=dev backend (owner_id: 00000000-0000-0000-0000-000000000001)
+const DEV_DEFAULT_TOKEN =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ2aXRyaW5lLWRldiIsInN1YiI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMSIsImVtYWlsIjoiYXJ0aXNhbkBzYW1wbGVzZWxsZXIudGVzdCIsInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYXVkIjoiYXV0aGVudGljYXRlZCIsImV4cCI6NDEwMjQ0NDgwMH0.cgbjgLbCuFgPEq55-qbzpCx02__jln1Olibvby614-g";
+
 export class ApiError extends Error {
   readonly code: string; readonly status: number; readonly requestId?: string; readonly details?: unknown;
   constructor(args: { message: string; code: string; status: number; requestId?: string; details?: unknown }) {
@@ -11,7 +16,11 @@ export class ApiError extends Error {
   get isRetryable() { return ["upstream_timeout", "upstream_unavailable", "rate_limited"].includes(this.code); }
 }
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const headers = new Headers(init.headers); const token = await accessTokenProvider?.();
+  const headers = new Headers(init.headers);
+  let token = await accessTokenProvider?.();
+  if (!token && (import.meta.env.DEV || import.meta.env.VITE_USE_MOCK !== "true")) {
+    token = DEV_DEFAULT_TOKEN;
+  }
   if (token) headers.set("Authorization", "Bearer " + token);
   if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   let response: Response;

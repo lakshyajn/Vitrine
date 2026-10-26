@@ -40,6 +40,7 @@ from contracts.schemas import (
 from backend.app.auth.deps import CurrentUser, current_user
 from backend.app.core.config import get_settings
 from backend.app.core.errors import AppError
+from backend.app.core.rate_limit import research_runs_rate_limiter
 from backend.app.db.models import (
     MarketHypothesisModel,
     ProductModel,
@@ -142,6 +143,7 @@ async def create_research_run(
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     user: CurrentUser = Depends(current_user),
     session: AsyncSession = Depends(get_db_session),
+    _rate_limit: None = Depends(research_runs_rate_limiter),
 ) -> ResearchRunActionResponse:
     """
     Create and queue a new research run.

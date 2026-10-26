@@ -52,11 +52,21 @@ def _lead_model_to_schema(model: LeadModel) -> Lead:
         if model.scores and isinstance(model.scores, dict)
         else LeadScores()
     )
-    assessment_obj = (
-        LeadAssessment.model_validate(model.assessment)
-        if model.assessment and isinstance(model.assessment, dict)
-        else None
-    )
+    assessment_obj = None
+    if model.assessment and isinstance(model.assessment, dict):
+        try:
+            assessment_obj = LeadAssessment.model_validate(model.assessment)
+        except Exception:
+            try:
+                assessment_obj = LeadAssessment(
+                    category_fit=model.assessment.get("category_fit") or {"label": "unknown", "reasons": []},
+                    aesthetic_fit=model.assessment.get("aesthetic_fit") or {"label": "unknown", "reasons": []},
+                    seller_compat=model.assessment.get("seller_compat") or {"label": "unknown", "reasons": []},
+                    summary=model.assessment.get("summary", ""),
+                    unknowns=model.assessment.get("unknowns", []),
+                )
+            except Exception:
+                assessment_obj = None
     cultural_obj = (
         CulturalAffinity.model_validate(model.cultural_affinity)
         if model.cultural_affinity and isinstance(model.cultural_affinity, dict)

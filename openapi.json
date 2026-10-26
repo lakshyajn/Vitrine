@@ -62,7 +62,7 @@
           "Profile"
         ],
         "summary": "Get Profile",
-        "description": "Retrieve the seller profile (auto-creates default profile if none exists).",
+        "description": "Retrieve the seller profile.\nAuto-creates an empty profile row if none exists (DECISION-D16).",
         "operationId": "get_profile_api_v1_profile_get",
         "responses": {
           "200": {
@@ -87,7 +87,7 @@
           "Profile"
         ],
         "summary": "Update Profile",
-        "description": "Update seller profile details.",
+        "description": "Update seller profile details (business_name, country, website, contact_email, about).\nPersists changes to the database.",
         "operationId": "update_profile_api_v1_profile_put",
         "requestBody": {
           "content": {
@@ -134,7 +134,7 @@
           "Products"
         ],
         "summary": "List Products",
-        "description": "List all products belonging to the authenticated seller.",
+        "description": "List all products belonging to the authenticated seller.\nOrdered deterministically by created_at desc, id desc.",
         "operationId": "list_products_api_v1_products_get",
         "responses": {
           "200": {
@@ -163,7 +163,7 @@
           "Products"
         ],
         "summary": "Create Product",
-        "description": "Create a new product record.",
+        "description": "Create a new product record stamped with owner_id = current_user.id.\nValidates price_min <= price_max and moq >= 1.",
         "operationId": "create_product_api_v1_products_post",
         "requestBody": {
           "content": {
@@ -210,7 +210,7 @@
           "Products"
         ],
         "summary": "Get Product",
-        "description": "Retrieve a single product by ID.",
+        "description": "Retrieve a single product by ID.\nEnforces owner_id == current_user.id.\nReturns 404 not_found if not found or belongs to another user.",
         "operationId": "get_product_api_v1_products__id__get",
         "security": [
           {
@@ -257,7 +257,7 @@
           "Products"
         ],
         "summary": "Update Product",
-        "description": "Update a product record.",
+        "description": "Update a product record.\nEnforces owner_id == current_user.id (returns 404 if belongs to another user).\nValidates price_min <= price_max and moq >= 1.",
         "operationId": "update_product_api_v1_products__id__put",
         "security": [
           {
@@ -314,7 +314,7 @@
           "Products"
         ],
         "summary": "Delete Product",
-        "description": "Delete a product record.",
+        "description": "Delete a product record and cascade delete all child records (DECISION-D12).\nEnforces owner_id == current_user.id (returns 404 if belongs to another user).",
         "operationId": "delete_product_api_v1_products__id__delete",
         "security": [
           {
@@ -367,7 +367,7 @@
           "Products"
         ],
         "summary": "Upload Product Image",
-        "description": "Upload an image for a product.\nReturns the updated list of image URLs (DECISION-D18).",
+        "description": "Upload an image for a product.\nValidates MIME type (jpeg, png, webp) and size <= 5MB.\nUploads under per-user path, appends URL to product.images, and returns list[str] (DECISION-D18).\nEnforces owner_id == current_user.id (returns 404 if belongs to another user).",
         "operationId": "upload_product_image_api_v1_products__id__images_post",
         "security": [
           {
@@ -430,7 +430,7 @@
           "Products"
         ],
         "summary": "Extract Product Profile",
-        "description": "AI Task A: Suggest structured product attributes from free-text description.\nDoes NOT persist to database (seller review required).",
+        "description": "AI Task A: Suggest structured product attributes from free-text description.\nCalls get_ai_service().structure_product(description, known).\nDoes NOT persist to database (seller review required).\nMaps ai_output_invalid or timeouts to Appendix A.5 error codes.",
         "operationId": "extract_product_profile_api_v1_products_extract_profile_post",
         "requestBody": {
           "content": {
@@ -477,7 +477,7 @@
           "Research Runs"
         ],
         "summary": "Create Research Run",
-        "description": "Create and queue a new research run.",
+        "description": "Create and queue a new research run.\nVerifies product_id belongs to caller.\nSupports optional Idempotency-Key header to prevent duplicate runs.\nSnapshots provider_modes (ai, search, taste as live or mock).\nTriggers Phase 1 of async runner.",
         "operationId": "create_research_run_api_v1_research_runs_post",
         "security": [
           {
@@ -540,7 +540,7 @@
           "Research Runs"
         ],
         "summary": "List Research Runs",
-        "description": "List all research runs for the authenticated seller.",
+        "description": "List all research runs belonging to the authenticated seller.",
         "operationId": "list_research_runs_api_v1_research_runs_get",
         "security": [
           {
@@ -620,7 +620,7 @@
           "Research Runs"
         ],
         "summary": "Rerun Research Run",
-        "description": "Trigger a rerun for an existing research run.",
+        "description": "Trigger a rerun for an existing research run, copying inputs and merging new inputs.",
         "operationId": "rerun_research_run_api_v1_research_runs__id__rerun_post",
         "security": [
           {
@@ -639,6 +639,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CreateResearchRunRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -779,7 +796,7 @@
           "Research Runs"
         ],
         "summary": "Confirm Run Anchors",
-        "description": "Resume run after reviewing anchors (DECISION-D4).",
+        "description": "Resume run after reviewing anchors (DECISION-D4).\nRequires run to be in awaiting_review state.\nRequires >= 1 confirmed anchor unless proceed_without_anchors is true (returns 422 on failure).\nStores confirmed anchor_ids in run.inputs and transitions run to queued (stage: discovery).\nTriggers Phase 2 of the runner.",
         "operationId": "confirm_run_anchors_api_v1_research_runs__id__confirm_anchors_post",
         "security": [
           {
@@ -893,7 +910,7 @@
           "Taste Anchors"
         ],
         "summary": "Update Taste Anchor",
-        "description": "Confirm, reject, or edit an anchor.",
+        "description": "Confirm, reject, or edit an anchor. Verifies parent run ownership.",
         "operationId": "update_taste_anchor_api_v1_taste_anchors__id__patch",
         "security": [
           {
@@ -952,7 +969,7 @@
           "Leads"
         ],
         "summary": "List Leads",
-        "description": "List buyer leads with filtering, sorting, and pagination (DECISION-D7).",
+        "description": "List buyer leads with filtering, sorting, and pagination (DECISION-D7).\nEnforces strict user isolation: owner_id == user.id.",
         "operationId": "list_leads_api_v1_leads_get",
         "security": [
           {
@@ -1143,7 +1160,7 @@
           "Leads"
         ],
         "summary": "Get Lead",
-        "description": "Retrieve details, scores, and assessment for a single lead.",
+        "description": "Retrieve details, scores, and assessment for a single lead owned by the user.",
         "operationId": "get_lead_api_v1_leads__id__get",
         "security": [
           {
@@ -1249,7 +1266,7 @@
           "Leads"
         ],
         "summary": "Get Lead Evidence",
-        "description": "Retrieve verified evidence items for a lead.",
+        "description": "Retrieve verified evidence items for a lead owned by the user.",
         "operationId": "get_lead_evidence_api_v1_leads__id__evidence_get",
         "security": [
           {
@@ -1349,7 +1366,7 @@
           "Outreach"
         ],
         "summary": "Get Lead Outreach Drafts",
-        "description": "Retrieve all versioned drafts for a lead.",
+        "description": "Retrieve all versioned drafts for a lead ordered by version desc.",
         "operationId": "get_lead_outreach_drafts_api_v1_leads__id__outreach_drafts_get",
         "security": [
           {
@@ -1402,7 +1419,7 @@
           "Outreach"
         ],
         "summary": "List Outreach Drafts",
-        "description": "List outreach drafts across leads (DECISION-D17).",
+        "description": "List outreach drafts across leads with optional filters (DECISION-D17).",
         "operationId": "list_outreach_drafts_api_v1_outreach_drafts_get",
         "security": [
           {
@@ -1495,7 +1512,7 @@
           "Outreach"
         ],
         "summary": "Update Outreach Draft",
-        "description": "Update subject, body, manual status, or followup notes of an outreach draft.",
+        "description": "Update subject, body, manual status, or followup notes of an outreach draft.\nAtomic rule (DECISION-D11): when status is set to contacted, atomically update parent lead review_status.",
         "operationId": "update_outreach_draft_api_v1_outreach_drafts__id__patch",
         "security": [
           {
@@ -1554,7 +1571,7 @@
           "Outreach"
         ],
         "summary": "Regenerate Outreach Draft",
-        "description": "Regenerate a new draft version from an existing draft (inserts new version row).",
+        "description": "Regenerate a new draft version from an existing draft.\nInserts a new row with version = max_version + 1 and parent_draft_id = id (never overwrites).",
         "operationId": "regenerate_outreach_draft_api_v1_outreach_drafts__id__regenerate_post",
         "security": [
           {

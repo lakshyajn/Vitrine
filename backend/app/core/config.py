@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     max_leads_per_run: int = 40
 
     # Network / CORS
-    cors_origins: list[str] = ["http://localhost:5173"]
+    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -58,7 +58,7 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         if isinstance(v, list):
             return [str(origin).strip() for origin in v if str(origin).strip()]
-        return ["http://localhost:5173"]
+        return ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     @property
     def is_ai_live(self) -> bool:
