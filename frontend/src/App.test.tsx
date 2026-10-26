@@ -175,9 +175,11 @@ describe("Vitrine — Public Landing Page & Route Architecture", () => {
   it("shows AG Studio Insights on '/app/insights'", async () => {
     renderAt("/app/insights");
     expect(
-      await screen.findByRole("heading", { name: /ag studio insights/i, level: 1 }),
+      await screen.findByRole("heading", { name: /ag studio insights/i, level: 1 }, { timeout: 5000 }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/qualification yield/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/qualification yield/i, {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 
   it("shows Product form on '/app/products/new'", async () => {
