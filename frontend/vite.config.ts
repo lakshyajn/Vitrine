@@ -9,11 +9,14 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: { "@": path.resolve(rootDir, "src") } },
   test: {
-  globals: false,
-  environment: "jsdom",
-  setupFiles: ["./src/test/setup.ts"],
-  clearMocks: true,
-  include: ["src/**/*.{test,spec}.{ts,tsx}"],
-  exclude: [...configDefaults.exclude, "e2e/**"],
-},
+    globals: false,
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup.ts"],
+    clearMocks: true,
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    exclude: [...configDefaults.exclude, "e2e/**"],
+    env: {
+      VITE_USE_MOCK: "true",
+    },
+  },
 });
