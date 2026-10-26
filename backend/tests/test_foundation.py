@@ -34,9 +34,9 @@ class SampleValidationModel(BaseModel):
 @pytest.fixture
 def clean_env(monkeypatch):
     """Fixture ensuring a clean environment without real provider keys."""
-    monkeypatch.delenv("QLOO_API_KEY", raising=False)
-    monkeypatch.delenv("NEBIUS_API_KEY", raising=False)
-    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+    monkeypatch.setenv("QLOO_API_KEY", "")
+    monkeypatch.setenv("NEBIUS_API_KEY", "")
+    monkeypatch.setenv("TAVILY_API_KEY", "")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

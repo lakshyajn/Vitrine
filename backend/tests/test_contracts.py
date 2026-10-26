@@ -216,7 +216,8 @@ class TestErrorEnvelope:
 class TestWS3FactoryStubs:
     """Tests verifying WS3 factory stubs can be called asynchronously without API keys."""
 
-    async def test_get_ai_service_stub(self):
+    async def test_get_ai_service_stub(self, monkeypatch):
+        monkeypatch.setenv("NEBIUS_API_KEY", "")
         service = get_ai_service()
         product = Product(
             owner_id=uuid4(),
@@ -236,7 +237,9 @@ class TestWS3FactoryStubs:
         assert isinstance(attrs, ProductAttributes)
         assert attrs.category == "Home Textiles"
 
-    async def test_get_research_pipeline_stub(self):
+    async def test_get_research_pipeline_stub(self, monkeypatch):
+        monkeypatch.setenv("TAVILY_API_KEY", "")
+        monkeypatch.setenv("NEBIUS_API_KEY", "")
         pipeline = get_research_pipeline()
         product = Product(
             owner_id=uuid4(),
@@ -259,7 +262,8 @@ class TestWS3FactoryStubs:
         assert all(isinstance(c, LeadCandidate) for c in candidates)
         assert candidates[0].evidence[0].is_demo is True
 
-    async def test_get_taste_provider_stub(self):
+    async def test_get_taste_provider_stub(self, monkeypatch):
+        monkeypatch.setenv("QLOO_API_KEY", "")
         provider = get_taste_provider()
         assert provider.name == "mock"
         assert provider.is_demo is True

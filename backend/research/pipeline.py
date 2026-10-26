@@ -31,6 +31,8 @@ from contracts.schemas import (
 
 
 class ResearchPipeline(Protocol):
+    is_demo: bool
+
     async def run(
         self,
         product: Product,
@@ -43,6 +45,9 @@ class ResearchPipeline(Protocol):
 
 class FixtureResearchPipeline:
     """Fixture-backed ResearchPipeline returning realistic deduplicated candidates with 0 API keys."""
+
+    name: str = "fixture"
+    is_demo: bool = True
 
     async def run(
         self,
@@ -119,6 +124,9 @@ class LiveResearchPipeline:
     Live Tavily Search + Deterministic Evidence Validation + Deduplication Pipeline (WS3 Section 4).
     Never fabricates retailers if search results are empty.
     """
+
+    name: str = "tavily"
+    is_demo: bool = False
 
     def __init__(self, client: TavilyClient, lead_cap: int = 40) -> None:
         self.client = client
@@ -212,6 +220,9 @@ class LiveResearchPipeline:
 
 def get_research_pipeline() -> ResearchPipeline:
     """Factory returning LiveResearchPipeline if TAVILY_API_KEY is set, else FixtureResearchPipeline."""
+    if "TAVILY_API_KEY" in os.environ and not os.environ["TAVILY_API_KEY"].strip():
+        return FixtureResearchPipeline()
+
     api_key = os.environ.get("TAVILY_API_KEY", "").strip()
     try:
         from backend.app.core.config import settings

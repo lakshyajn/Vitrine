@@ -300,11 +300,25 @@ class LiveAIService:
     """
     Live Nebius/Nemotron AIService with strict schema validation,
     evidence citation post-checks, and single-repair retry (WS3 Section 3.2 & 3.3).
+
+    Dual-Model Routing Architecture:
+    - Primary Model (nvidia/nemotron-3-ultra-550b-a55b):
+      Deep strategic reasoning for Task B (plan_research) and high-touch Task D (draft_outreach).
+    - Fast Model (nvidia/nemotron-3.5-super-vl-120b-a12b):
+      High-throughput vision/language extraction for Task A (structure_product) and
+      rapid per-lead assessment for Task C (assess_lead) across discovery candidates.
+    Cross-model fallback ensures resilient operation if either endpoint experiences upstream issues.
     """
 
-    def __init__(self, client: NebiusClient) -> None:
+    def __init__(
+        self,
+        client: NebiusClient,
+        fast_client: NebiusClient | None = None,
+    ) -> None:
         self.client = client
+        self.fast_client = fast_client or client
         self.model_id = client.model_id
+        self.fast_model_id = self.fast_client.model_id
 
     async def structure_product(
         self, description: str, known: ProductInput | None = None
@@ -320,32 +334,42 @@ class LiveAIService:
                     data[key] = val
             return ProductAttributes.model_validate(data)
 
-        try:
-            result, t_in, t_out = await execute_with_single_repair(
-                llm_call=lambda msgs: self.client.complete_json(msgs, temperature=0.1),
-                messages=messages,
-                parse_and_validate=_parse,
-            )
-            log_ai_call(
-                task="structure_product",
-                model_id=self.model_id,
-                prompt_version=PROMPT_VERSION,
-                latency_ms=int((time.monotonic() - t0) * 1000),
-                validation_ok=True,
-                tokens_in=t_in,
-                tokens_out=t_out,
-            )
-            return result
-        except AppError as exc:
-            log_ai_call(
-                task="structure_product",
-                model_id=self.model_id,
-                prompt_version=PROMPT_VERSION,
-                latency_ms=int((time.monotonic() - t0) * 1000),
-                validation_ok=False,
-                error_code=str(exc.code),
-            )
-            raise
+        # Fast model (Super VL 120B) first for rapid product structuring, fallback to primary
+        clients_to_try = [self.fast_client]
+        if self.fast_client is not self.client:
+            clients_to_try.append(self.client)
+
+        last_exc: Exception | None = None
+        for active_client in clients_to_try:
+            try:
+                result, t_in, t_out = await execute_with_single_repair(
+                    llm_call=lambda msgs: active_client.complete_json(msgs, temperature=0.1),
+                    messages=messages,
+                    parse_and_validate=_parse,
+                )
+                log_ai_call(
+                    task="structure_product",
+                    model_id=active_client.model_id,
+                    prompt_version=PROMPT_VERSION,
+                    latency_ms=int((time.monotonic() - t0) * 1000),
+                    validation_ok=True,
+                    tokens_in=t_in,
+                    tokens_out=t_out,
+                )
+                return result
+            except AppError as exc:
+                last_exc = exc
+                log_ai_call(
+                    task="structure_product",
+                    model_id=active_client.model_id,
+                    prompt_version=PROMPT_VERSION,
+                    latency_ms=int((time.monotonic() - t0) * 1000),
+                    validation_ok=False,
+                    error_code=str(exc.code),
+                )
+        if last_exc:
+            raise last_exc
+        raise AppError("AI service failed to structure product", code="ai_generation_failed")
 
     async def plan_research(self, product: Product) -> ResearchPlan:
         t0 = time.monotonic()
@@ -356,32 +380,42 @@ class LiveAIService:
             validate_research_plan_claims(plan)
             return plan
 
-        try:
-            result, t_in, t_out = await execute_with_single_repair(
-                llm_call=lambda msgs: self.client.complete_json(msgs, temperature=0.2),
-                messages=messages,
-                parse_and_validate=_parse,
-            )
-            log_ai_call(
-                task="plan_research",
-                model_id=self.model_id,
-                prompt_version=PROMPT_VERSION,
-                latency_ms=int((time.monotonic() - t0) * 1000),
-                validation_ok=True,
-                tokens_in=t_in,
-                tokens_out=t_out,
-            )
-            return result
-        except AppError as exc:
-            log_ai_call(
-                task="plan_research",
-                model_id=self.model_id,
-                prompt_version=PROMPT_VERSION,
-                latency_ms=int((time.monotonic() - t0) * 1000),
-                validation_ok=False,
-                error_code=str(exc.code),
-            )
-            raise
+        # Primary model (Ultra 550B) first for deep reasoning hypotheses, fallback to fast
+        clients_to_try = [self.client]
+        if self.fast_client is not self.client:
+            clients_to_try.append(self.fast_client)
+
+        last_exc: Exception | None = None
+        for active_client in clients_to_try:
+            try:
+                result, t_in, t_out = await execute_with_single_repair(
+                    llm_call=lambda msgs: active_client.complete_json(msgs, temperature=0.2),
+                    messages=messages,
+                    parse_and_validate=_parse,
+                )
+                log_ai_call(
+                    task="plan_research",
+                    model_id=active_client.model_id,
+                    prompt_version=PROMPT_VERSION,
+                    latency_ms=int((time.monotonic() - t0) * 1000),
+                    validation_ok=True,
+                    tokens_in=t_in,
+                    tokens_out=t_out,
+                )
+                return result
+            except AppError as exc:
+                last_exc = exc
+                log_ai_call(
+                    task="plan_research",
+                    model_id=active_client.model_id,
+                    prompt_version=PROMPT_VERSION,
+                    latency_ms=int((time.monotonic() - t0) * 1000),
+                    validation_ok=False,
+                    error_code=str(exc.code),
+                )
+        if last_exc:
+            raise last_exc
+        raise AppError("AI service failed to generate research plan", code="ai_generation_failed")
 
     async def assess_lead(
         self, product: Product, lead: LeadCandidate, evidence: list[EvidenceItem]
@@ -392,38 +426,50 @@ class LiveAIService:
         t0 = time.monotonic()
         messages = build_task_c_prompt(product, lead, evidence)
 
-        def _parse(data: dict[str, Any]) -> LeadAssessment:
-            data["model_id"] = self.model_id
-            assessment = LeadAssessment.model_validate(data)
-            validate_lead_assessment_claims(assessment, evidence)
-            return assessment
+        # Fast model (Super VL 120B) first for fast per-lead assessment across large candidate batches
+        clients_to_try = [self.fast_client]
+        if self.fast_client is not self.client:
+            clients_to_try.append(self.client)
 
-        try:
-            result, t_in, t_out = await execute_with_single_repair(
-                llm_call=lambda msgs: self.client.complete_json(msgs, temperature=0.1),
-                messages=messages,
-                parse_and_validate=_parse,
-            )
-            log_ai_call(
-                task="assess_lead",
-                model_id=self.model_id,
-                prompt_version=PROMPT_VERSION,
-                latency_ms=int((time.monotonic() - t0) * 1000),
-                validation_ok=True,
-                tokens_in=t_in,
-                tokens_out=t_out,
-            )
-            return result
-        except AppError as exc:
-            log_ai_call(
-                task="assess_lead",
-                model_id=self.model_id,
-                prompt_version=PROMPT_VERSION,
-                latency_ms=int((time.monotonic() - t0) * 1000),
-                validation_ok=False,
-                error_code=str(exc.code),
-            )
-            raise
+        last_exc: Exception | None = None
+        for active_client in clients_to_try:
+            current_model = active_client.model_id
+
+            def _parse(data: dict[str, Any]) -> LeadAssessment:
+                data["model_id"] = current_model
+                assessment = LeadAssessment.model_validate(data)
+                validate_lead_assessment_claims(assessment, evidence)
+                return assessment
+
+            try:
+                result, t_in, t_out = await execute_with_single_repair(
+                    llm_call=lambda msgs: active_client.complete_json(msgs, temperature=0.1),
+                    messages=messages,
+                    parse_and_validate=_parse,
+                )
+                log_ai_call(
+                    task="assess_lead",
+                    model_id=active_client.model_id,
+                    prompt_version=PROMPT_VERSION,
+                    latency_ms=int((time.monotonic() - t0) * 1000),
+                    validation_ok=True,
+                    tokens_in=t_in,
+                    tokens_out=t_out,
+                )
+                return result
+            except AppError as exc:
+                last_exc = exc
+                log_ai_call(
+                    task="assess_lead",
+                    model_id=active_client.model_id,
+                    prompt_version=PROMPT_VERSION,
+                    latency_ms=int((time.monotonic() - t0) * 1000),
+                    validation_ok=False,
+                    error_code=str(exc.code),
+                )
+        if last_exc:
+            raise last_exc
+        raise AppError("AI service failed to assess lead", code="ai_generation_failed")
 
     async def draft_outreach(
         self,
@@ -451,54 +497,95 @@ class LiveAIService:
                 is_demo=False,
             )
 
-        try:
-            result, t_in, t_out = await execute_with_single_repair(
-                llm_call=lambda msgs: self.client.complete_json(msgs, temperature=0.35),
-                messages=messages,
-                parse_and_validate=_parse,
-            )
-            log_ai_call(
-                task="draft_outreach",
-                model_id=self.model_id,
-                prompt_version=PROMPT_VERSION,
-                latency_ms=int((time.monotonic() - t0) * 1000),
-                validation_ok=True,
-                tokens_in=t_in,
-                tokens_out=t_out,
-            )
-            return result
-        except AppError as exc:
-            log_ai_call(
-                task="draft_outreach",
-                model_id=self.model_id,
-                prompt_version=PROMPT_VERSION,
-                latency_ms=int((time.monotonic() - t0) * 1000),
-                validation_ok=False,
-                error_code=str(exc.code),
-            )
-            raise
+        # Primary model (Ultra 550B) first for nuanced buyer outreach drafting, fallback to fast
+        clients_to_try = [self.client]
+        if self.fast_client is not self.client:
+            clients_to_try.append(self.fast_client)
+
+        last_exc: Exception | None = None
+        for active_client in clients_to_try:
+            try:
+                result, t_in, t_out = await execute_with_single_repair(
+                    llm_call=lambda msgs: active_client.complete_json(msgs, temperature=0.35),
+                    messages=messages,
+                    parse_and_validate=_parse,
+                )
+                log_ai_call(
+                    task="draft_outreach",
+                    model_id=active_client.model_id,
+                    prompt_version=PROMPT_VERSION,
+                    latency_ms=int((time.monotonic() - t0) * 1000),
+                    validation_ok=True,
+                    tokens_in=t_in,
+                    tokens_out=t_out,
+                )
+                return result
+            except AppError as exc:
+                last_exc = exc
+                log_ai_call(
+                    task="draft_outreach",
+                    model_id=active_client.model_id,
+                    prompt_version=PROMPT_VERSION,
+                    latency_ms=int((time.monotonic() - t0) * 1000),
+                    validation_ok=False,
+                    error_code=str(exc.code),
+                )
+        if last_exc:
+            raise last_exc
+        raise AppError("AI service failed to draft outreach", code="ai_generation_failed")
 
 
 def get_ai_service() -> AIService:
     """Factory returning LiveAIService if NEBIUS_API_KEY is configured, else FixtureAIService."""
+    if "NEBIUS_API_KEY" in os.environ and not os.environ["NEBIUS_API_KEY"].strip():
+        return FixtureAIService()
+
     api_key = os.environ.get("NEBIUS_API_KEY", "").strip()
-    model_id = os.environ.get("NEBIUS_MODEL_ID", "").strip() or "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"
-    base_url = os.environ.get("NEBIUS_BASE_URL", "").strip() or "https://api.studio.nebius.com/v1"
+    model_id = os.environ.get("NEBIUS_MODEL_ID", "").strip() or "nvidia/nemotron-3-ultra-550b-a55b"
+    base_url = os.environ.get("NEBIUS_BASE_URL", "").strip() or "https://integrate.api.nvidia.com/v1"
+
+    fast_api_key = os.environ.get("NEMOTRON_FAST_API_KEY", "").strip()
+    fast_model_id = (
+        os.environ.get("NEMOTRON_FAST_MODEL_ID", "").strip()
+        or "nvidia/nemotron-3.5-super-vl-120b-a12b"
+    )
+    fast_base_url = (
+        os.environ.get("NEMOTRON_FAST_BASE_URL", "").strip()
+        or "https://integrate.api.nvidia.com/v1"
+    )
 
     try:
-        from backend.app.core.config import settings
+        from backend.app.core.config import get_settings
 
-        api_key = getattr(settings, "nebius_api_key", None) or getattr(settings, "NEBIUS_API_KEY", None) or api_key
-        model_id = getattr(settings, "nebius_model_id", None) or getattr(settings, "NEBIUS_MODEL_ID", None) or model_id
+        settings = get_settings()
+        api_key = api_key or getattr(settings, "nebius_api_key", None)
+        model_id = getattr(settings, "nebius_model_id", None) or model_id
+        base_url = getattr(settings, "nebius_base_url", None) or base_url
+
+        fast_api_key = fast_api_key or getattr(settings, "nemotron_fast_api_key", None)
+        fast_model_id = getattr(settings, "nemotron_fast_model_id", None) or fast_model_id
+        fast_base_url = getattr(settings, "nemotron_fast_base_url", None) or fast_base_url
     except Exception:
         pass
 
+    # If primary key is absent but fast key is present, use fast key as primary as well
+    if not api_key and fast_api_key:
+        api_key = fast_api_key
+        model_id = fast_model_id
+        base_url = fast_base_url
+
     if api_key and str(api_key).strip():
-        return LiveAIService(
-            NebiusClient(
-                api_key=str(api_key).strip(),
-                model_id=str(model_id).strip(),
-                base_url=base_url,
-            )
+        primary_client = NebiusClient(
+            api_key=str(api_key).strip(),
+            model_id=str(model_id).strip(),
+            base_url=str(base_url).strip(),
         )
+        fast_client = None
+        if fast_api_key and str(fast_api_key).strip():
+            fast_client = NebiusClient(
+                api_key=str(fast_api_key).strip(),
+                model_id=str(fast_model_id).strip(),
+                base_url=str(fast_base_url).strip(),
+            )
+        return LiveAIService(primary_client, fast_client=fast_client)
     return FixtureAIService()

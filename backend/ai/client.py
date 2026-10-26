@@ -18,9 +18,9 @@ class NebiusClient:
     def __init__(
         self,
         api_key: str,
-        model_id: str = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF",
-        base_url: str = "https://api.studio.nebius.com/v1",
-        timeout_seconds: float = 25.0,
+        model_id: str = "nvidia/nemotron-3-ultra-550b-a55b",
+        base_url: str = "https://integrate.api.nvidia.com/v1",
+        timeout_seconds: float = 75.0,
         max_retries: int = 2,
     ) -> None:
         self.api_key = api_key
@@ -43,6 +43,7 @@ class NebiusClient:
             "model": self.model_id,
             "messages": messages,
             "temperature": temperature,
+            "max_tokens": 2048,
             "response_format": {"type": "json_object"},
         }
 
@@ -53,10 +54,13 @@ class NebiusClient:
 
                 if response.status_code == 200:
                     data = response.json()
-                    content = data["choices"][0]["message"]["content"]
+                    msg = data["choices"][0]["message"]
+                    content = msg.get("content")
+                    if not content and "reasoning_content" in msg:
+                        content = msg["reasoning_content"]
                     usage = data.get("usage") or {}
                     return (
-                        content,
+                        content or "",
                         usage.get("prompt_tokens"),
                         usage.get("completion_tokens"),
                     )

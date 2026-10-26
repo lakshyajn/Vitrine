@@ -11,6 +11,26 @@ from backend.app.db.session import init_db
 
 
 @pytest.fixture(autouse=True)
+def clean_test_env(monkeypatch):
+    """Ensure pytest tests default to fixture/mock stubs to prevent slow live network calls and quota drain."""
+    monkeypatch.setenv("QLOO_API_KEY", "")
+    monkeypatch.setenv("NEBIUS_API_KEY", "")
+    monkeypatch.setenv("NEMOTRON_FAST_API_KEY", "")
+    monkeypatch.setenv("TAVILY_API_KEY", "")
+    try:
+        from backend.app.core.config import get_settings
+        get_settings.cache_clear()
+    except Exception:
+        pass
+    yield
+    try:
+        from backend.app.core.config import get_settings
+        get_settings.cache_clear()
+    except Exception:
+        pass
+
+
+@pytest.fixture(autouse=True)
 async def setup_test_db():
     await init_db()
     yield

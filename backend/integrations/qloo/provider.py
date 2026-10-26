@@ -86,10 +86,186 @@ class MockTasteProvider:
         ]
 
 
+class QlooTasteProvider:
+    """
+    Live Qloo Cultural Taste & Affinity Intelligence Provider.
+    Calls Qloo API (/search and /v2/insights) with real authentication,
+    strict error propagation for orchestrator retry/fallback, and maps
+    real Qloo entities & affinity vectors to TasteEntity and TasteSignal.
+    """
+
+    name: str = "qloo"
+    is_demo: bool = False
+
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = "https://hackathon.api.qloo.com",
+        timeout_seconds: float = 15.0,
+    ) -> None:
+        self.api_key = api_key.strip()
+        self.base_url = (base_url or "https://hackathon.api.qloo.com").rstrip("/")
+        self.timeout_seconds = float(timeout_seconds)
+
+    async def search_entities(self, query: str) -> list[TasteEntity]:
+        import httpx
+
+        clean_q = (query or "").strip()
+        if not clean_q:
+            return []
+
+        headers = {
+            "X-Api-Key": self.api_key,
+            "Accept": "application/json",
+        }
+        params = {"query": clean_q}
+
+        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+            response = await client.get(
+                f"{self.base_url}/search",
+                params=params,
+                headers=headers,
+            )
+
+        if response.status_code == 200:
+            data = response.json()
+            raw_results = data.get("results") or []
+            entities: list[TasteEntity] = []
+
+            for item in raw_results:
+                eid = item.get("entity_id")
+                name = item.get("name")
+                if not eid or not name:
+                    continue
+
+                types = [str(t).lower() for t in (item.get("types") or [])]
+                if any("place" in t for t in types):
+                    etype = "place"
+                elif any("brand" in t for t in types):
+                    etype = "brand"
+                else:
+                    etype = "brand"
+
+                props = item.get("properties") or {}
+                category = (
+                    props.get("industry")
+                    or props.get("category_description")
+                    or props.get("description")
+                    or "Home Decor & Living"
+                )
+
+                entities.append(
+                    TasteEntity(
+                        id=str(eid),
+                        name=str(name),
+                        entity_type=etype,
+                        metadata={
+                            "category": str(category)[:150],
+                            "address": props.get("address"),
+                            "is_demo": False,
+                        },
+                    )
+                )
+
+            return entities
+
+        # Propagate status error so QlooOrchestrator can handle retry or fallback
+        response.raise_for_status()
+        return []
+
+    async def get_insights(self, entity_id: str, options: InsightOptions) -> list[TasteSignal]:
+        import httpx
+
+        eid = (entity_id or "").strip()
+        if not eid:
+            return []
+
+        headers = {
+            "X-Api-Key": self.api_key,
+            "Accept": "application/json",
+        }
+        params = {
+            "filter.type": "urn:entity:brand",
+            "entity_ids": eid,
+        }
+
+        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+            response = await client.get(
+                f"{self.base_url}/v2/insights",
+                params=params,
+                headers=headers,
+            )
+
+        if response.status_code == 200:
+            data = response.json()
+            entities = data.get("results", {}).get("entities", [])
+            signals: list[TasteSignal] = []
+
+            for ent in entities:
+                name = ent.get("name")
+                if not name:
+                    continue
+
+                query_info = ent.get("query") or {}
+                affinity = query_info.get("affinity")
+                props = ent.get("properties") or {}
+                desc = (
+                    props.get("description")
+                    or props.get("style_description")
+                    or props.get("category_description")
+                    or ""
+                )
+
+                score_val: float | None = float(affinity) if isinstance(affinity, (int, float)) else None
+                aff_label = f"{score_val:.2f}" if score_val is not None else "high"
+                text = f"Cultural affinity signal ({aff_label}) with {name}. {desc}".strip()
+
+                signals.append(
+                    TasteSignal(
+                        type="cultural_affinity",
+                        text=text[:300],
+                        source="qloo",
+                        score=score_val,
+                        raw={
+                            "affinity_score": score_val,
+                            "entity_name": name,
+                            "entity_id": ent.get("entity_id"),
+                            "subtype": ent.get("subtype"),
+                            "is_demo": False,
+                        },
+                    )
+                )
+
+            return signals
+
+        response.raise_for_status()
+        return []
+
+
 def get_taste_provider() -> TasteResearchProvider:
-    """Factory returning TasteResearchProvider (Mock until QLOO_API_KEY + live responses are verified)."""
-    api_key = os.environ.get("QLOO_API_KEY")
-    if api_key and api_key.strip():
-        # Per WS3 Section 5.4: Never guess Qloo schemas before real API docs/responses are recorded.
+    """Factory returning QlooTasteProvider if QLOO_API_KEY is configured, else MockTasteProvider."""
+    # Explicit empty environment variable forces MockTasteProvider (e.g. in test isolation)
+    if "QLOO_API_KEY" in os.environ and not os.environ["QLOO_API_KEY"].strip():
+        return MockTasteProvider()
+
+    api_key = os.environ.get("QLOO_API_KEY", "").strip()
+    base_url = os.environ.get("QLOO_BASE_URL", "").strip() or "https://hackathon.api.qloo.com"
+    timeout = 15.0
+
+    try:
+        from backend.app.core.config import get_settings
+
+        settings = get_settings()
+        api_key = api_key or getattr(settings, "qloo_api_key", None)
+        base_url = getattr(settings, "qloo_base_url", None) or base_url
+        timeout = float(getattr(settings, "qloo_timeout_seconds", 15.0))
+    except Exception:
         pass
+
+    if api_key and str(api_key).strip():
+        return QlooTasteProvider(
+            api_key=str(api_key).strip(),
+            base_url=str(base_url).strip(),
+            timeout_seconds=timeout,
+        )
     return MockTasteProvider()

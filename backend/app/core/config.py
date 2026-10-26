@@ -29,9 +29,15 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str = ""
     database_url: str = "sqlite+aiosqlite:///:memory:"
 
-    # AI Provider (Nebius / Nemotron)
+    # AI Provider 1 (Ultra 550B - Deep Reasoning & Outreach)
+    nebius_base_url: str = "https://integrate.api.nvidia.com/v1"
     nebius_api_key: str | None = None
-    nebius_model_id: str = "meta/llama-3.1-70b-instruct"
+    nebius_model_id: str = "nvidia/nemotron-3-ultra-550b-a55b"
+
+    # AI Provider 2 (Super VL 120B - Fast Extraction & Lead Assessment)
+    nemotron_fast_base_url: str = "https://integrate.api.nvidia.com/v1"
+    nemotron_fast_api_key: str | None = None
+    nemotron_fast_model_id: str = "nvidia/nemotron-3.5-super-vl-120b-a12b"
 
     # Research Provider (Tavily)
     tavily_api_key: str | None = None
@@ -79,6 +85,7 @@ class Settings(BaseSettings):
             self.supabase_service_role_key,
             self.supabase_jwt_secret,
             self.nebius_api_key,
+            self.nemotron_fast_api_key,
             self.tavily_api_key,
             self.qloo_api_key,
         ]
@@ -91,3 +98,7 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+# Singleton instance for backwards-compatible imports
+settings = get_settings()
