@@ -27,6 +27,7 @@ from backend.app.api.leads import _evidence_model_to_schema, _lead_model_to_sche
 from backend.app.api.products import _product_model_to_schema
 from backend.app.auth.deps import CurrentUser, current_user
 from backend.app.core.errors import AppError
+from backend.app.core.rate_limit import outreach_drafts_rate_limiter
 from backend.app.db.models import (
     LeadEvidenceModel,
     LeadModel,
@@ -108,6 +109,7 @@ async def generate_outreach_draft(
     id: UUID,
     user: CurrentUser = Depends(current_user),
     session: AsyncSession = Depends(get_db_session),
+    _rate_limit: None = Depends(outreach_drafts_rate_limiter),
 ) -> OutreachDraft:
     """Generate a new grounded outreach draft for a lead (AI Task D)."""
     # 1. Fetch lead

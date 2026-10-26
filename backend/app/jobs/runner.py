@@ -11,14 +11,15 @@ Precedence:
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 
 from contracts.schemas import (
+    CulturalAffinity,
     EvidenceItem,
     EvidenceSourceType,
     InsightOptions,
@@ -41,6 +42,10 @@ from backend.app.db.models import (
     TasteAnchorModel,
 )
 from backend.app.db.session import async_session_maker
+from backend.app.integrations.qloo_wrapper import (
+    does_signal_match_lead,
+    get_qloo_orchestrator,
+)
 from backend.app.scoring import compute_scores_and_tier, is_domain_excluded
 from backend.integrations.qloo.provider import get_taste_provider
 from backend.research.pipeline import get_research_pipeline
@@ -102,11 +107,11 @@ async def run_research_run_phase1(run_id: UUID) -> None:
         run.heartbeat_at = datetime.now(timezone.utc)
         await session.commit()
 
-        # Resolve anchors via Taste Provider
-        taste_provider = get_taste_provider()
-        provider_name = getattr(taste_provider, "name", "mock")
-        provider_is_demo = getattr(taste_provider, "is_demo", True)
-        taste_source = "qloo" if provider_name == "qloo" else "demo"
+        # Resolve anchors via Qloo Orchestrator
+        qloo_orchestrator = get_qloo_orchestrator(run_id=run.id, owner_id=run.owner_id)
+        provider_name = qloo_orchestrator.name
+        provider_is_demo = qloo_orchestrator.is_demo
+        taste_source = "qloo" if not provider_is_demo and provider_name == "qloo" else "demo"
 
         candidates = (
             plan.aesthetic_candidates
@@ -134,9 +139,9 @@ async def run_research_run_phase1(run_id: UUID) -> None:
             )
             session.add(ai_anchor)
 
-            # (b) Call get_taste_provider().search_entities() on candidate labels (D15)
+            # (b) Call qloo_orchestrator.search_entities() on candidate labels (D15)
             try:
-                entities = await taste_provider.search_entities(clean_label)
+                entities = await qloo_orchestrator.search_entities(clean_label, session=session)
                 for entity in entities:
                     entity_anchor = TasteAnchorModel(
                         owner_id=run.owner_id,
@@ -240,8 +245,8 @@ async def run_research_run_phase2(run_id: UUID) -> None:
             run.heartbeat_at = datetime.now(timezone.utc)
             await session.commit()
 
-            # 2. Taste resolution on confirmed anchors (DECISION-D15)
-            taste_provider = get_taste_provider()
+            # 2. Taste resolution on confirmed anchors via Qloo Orchestrator (DECISION-D15)
+            qloo_orchestrator = get_qloo_orchestrator(run_id=run.id, owner_id=run.owner_id)
             anchors_stmt = select(TasteAnchorModel).where(
                 TasteAnchorModel.run_id == run.id,
                 TasteAnchorModel.status == "confirmed",
@@ -253,9 +258,12 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                 # Resolve missing entity IDs for custom or unlinked anchors
                 if not anchor_m.external_id:
                     try:
-                        entities = await taste_provider.search_entities(anchor_m.label)
+                        entities = await qloo_orchestrator.search_entities(anchor_m.label, session=session)
                         if entities:
                             anchor_m.external_id = entities[0].id
+                            if not qloo_orchestrator.is_demo and qloo_orchestrator.name == "qloo":
+                                anchor_m.source = "qloo"
+                                anchor_m.is_demo = False
                             if entities[0].metadata:
                                 meta = dict(anchor_m.metadata_json or {})
                                 meta.update(entities[0].metadata)
@@ -266,17 +274,21 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                 # Fetch insights from taste provider
                 target_entity = anchor_m.external_id or anchor_m.label
                 try:
-                    insights = await taste_provider.get_insights(
+                    insights = await qloo_orchestrator.get_insights(
                         target_entity,
                         InsightOptions(entity_type=anchor_m.entity_type, max_results=5),
+                        session=session,
                     )
                     for sig in insights:
                         signals_to_attach.append({
                             "type": sig.type,
                             "text": sig.text,
-                            "source": sig.source or getattr(taste_provider, "name", "mock"),
+                            "source": sig.source or qloo_orchestrator.name,
                             "source_ref": sig.source_ref,
-                            "is_demo": getattr(sig, "is_demo", getattr(taste_provider, "is_demo", True)),
+                            "is_demo": getattr(sig, "is_demo", qloo_orchestrator.is_demo),
+                            "anchor_id": str(anchor_m.id),
+                            "anchor_category": anchor_m.metadata_json.get("category") if anchor_m.metadata_json else None,
+                            "raw": sig.raw or {},
                         })
                 except Exception as exc:
                     logger.warning("Insights lookup failed for anchor %s: %s", target_entity, exc)
@@ -292,7 +304,13 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                         for new_s in signals_to_attach:
                             key = (new_s.get("type"), new_s.get("text"))
                             if key not in seen:
-                                existing.append(new_s)
+                                existing.append({
+                                    "type": new_s["type"],
+                                    "text": new_s["text"],
+                                    "source": new_s["source"],
+                                    "source_ref": new_s.get("source_ref"),
+                                    "is_demo": new_s.get("is_demo", True),
+                                })
                                 seen.add(key)
                         hypo.signals = existing
                 else:
@@ -302,7 +320,16 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                         title="Taste Anchor Signals",
                         rationale="Signals resolved from confirmed taste anchors.",
                         region_hint=None,
-                        signals=signals_to_attach,
+                        signals=[
+                            {
+                                "type": s["type"],
+                                "text": s["text"],
+                                "source": s["source"],
+                                "source_ref": s.get("source_ref"),
+                                "is_demo": s.get("is_demo", True),
+                            }
+                            for s in signals_to_attach
+                        ],
                         status="confirmed",
                     )
                     session.add(new_hypo)
@@ -384,7 +411,41 @@ async def run_research_run_phase2(run_id: UUID) -> None:
             seen_domains_in_run: dict[str, UUID] = {}
 
             for candidate in candidates:
-                # (a) Upsert Lead row on (owner_id, product_id, canonical_domain) (DECISION-D2)
+                # (a) Evaluate CulturalAffinity if region/category match applies
+                matching_signals: list[dict[str, Any]] = []
+                matching_anchor_ids: set[UUID] = set()
+                candidate_loc = candidate.location.model_dump(mode="json") if candidate.location else {}
+
+                for sig_item in signals_to_attach:
+                    if does_signal_match_lead(
+                        signal_data=sig_item,
+                        lead_location=candidate_loc,
+                        product_category=product_schema.category,
+                        lead_retailer_type=candidate.retailer_type,
+                        anchor_category=sig_item.get("anchor_category"),
+                    ):
+                        matching_signals.append({
+                            "type": sig_item["type"],
+                            "text": sig_item["text"],
+                            "source_ref": sig_item.get("source_ref"),
+                        })
+                        if sig_item.get("anchor_id"):
+                            try:
+                                matching_anchor_ids.add(UUID(sig_item["anchor_id"]))
+                            except Exception:
+                                pass
+
+                lead_cultural_affinity = None
+                if matching_signals:
+                    lead_cultural_affinity = CulturalAffinity(
+                        provider=qloo_orchestrator.name,
+                        is_demo=qloo_orchestrator.is_demo,
+                        retrieved_at=qloo_orchestrator.last_retrieved_at or datetime.now(timezone.utc),
+                        anchor_ids=list(matching_anchor_ids),
+                        signals=matching_signals,
+                    ).model_dump(mode="json")
+
+                # (b) Upsert Lead row on (owner_id, product_id, canonical_domain) (DECISION-D2)
                 lead_model = None
                 if candidate.canonical_domain in seen_domains_in_run:
                     existing_id = seen_domains_in_run[candidate.canonical_domain]
@@ -411,6 +472,7 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                         lead_model.name = candidate.name
                     if candidate.location:
                         lead_model.location = candidate.location.model_dump(mode="json")
+                    lead_model.cultural_affinity = lead_cultural_affinity
                 else:
                     lead_model = LeadModel(
                         id=uuid4(),
@@ -427,7 +489,7 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                         tier="needs_review",
                         scores={},
                         assessment=None,
-                        cultural_affinity=None,
+                        cultural_affinity=lead_cultural_affinity,
                         review_status="new",
                         notes=None,
                         duplicate_of=None,
@@ -610,3 +672,46 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                     await err_session.commit()
         except Exception:
             pass
+
+
+async def recover_stuck_runs(session: Any = None) -> list[UUID]:
+    """
+    Recover stuck research runs on application startup.
+    Finds research_runs where status == 'running' and heartbeat_at is older than
+    STAGE_TIMEOUT_SECONDS (or None). Marks them status='failed',
+    error={'code': 'internal_error', 'message': 'interrupted'}, and sets finished_at.
+    Leaves runs in status == 'awaiting_review' completely untouched.
+    """
+    settings = get_settings()
+    timeout_seconds = getattr(settings, "stage_timeout_seconds", 120)
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=timeout_seconds)
+
+    async def _do_recover(s: Any) -> list[UUID]:
+        stmt = (
+            select(ResearchRunModel)
+            .where(
+                ResearchRunModel.status == "running",
+                or_(
+                    ResearchRunModel.heartbeat_at.is_(None),
+                    ResearchRunModel.heartbeat_at < cutoff,
+                ),
+            )
+        )
+        stuck_runs = (await s.execute(stmt)).scalars().all()
+        recovered_ids: list[UUID] = []
+        now = datetime.now(timezone.utc)
+        for r in stuck_runs:
+            r.status = "failed"
+            r.error = {"code": "internal_error", "message": "interrupted"}
+            r.finished_at = now
+            recovered_ids.append(r.id)
+            logger.warning("Recovered stuck run %s (marked as failed/interrupted)", r.id)
+        if recovered_ids:
+            await s.commit()
+        return recovered_ids
+
+    if session is not None:
+        return await _do_recover(session)
+    else:
+        async with async_session_maker() as s:
+            return await _do_recover(s)

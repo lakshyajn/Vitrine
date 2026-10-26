@@ -15,17 +15,27 @@ from backend.app.api.router import api_router, integrations_status
 from backend.app.core.config import get_settings
 from backend.app.core.errors import register_error_handlers
 from backend.app.core.logging import RequestIdMiddleware, setup_logging
-from backend.app.db.session import close_db, init_db
+from backend.app.db.session import async_session_maker, close_db, init_db
+from backend.app.jobs.runner import recover_stuck_runs
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # Startup: configure logging and ensure database tables exist
+    # Startup: configure logging, ensure database tables exist, and recover stuck runs
     setup_logging()
     await init_db()
+    settings = get_settings()
+    async with async_session_maker() as session:
+        await recover_stuck_runs(session)
+        if settings.app_env.lower() in ("dev", "test", "development"):
+            from backend.app.db.seed_demo import DEFAULT_DEMO_OWNER_ID, seed_demo_data
+            try:
+                await seed_demo_data(session, DEFAULT_DEMO_OWNER_ID)
+            except Exception as exc:
+                import logging
+                logging.getLogger("uvicorn.error").warning("Demo seed on startup skipped: %s", exc)
     yield
     # Shutdown logic
-    settings = get_settings()
     if ":memory:" not in settings.database_url:
         await close_db()
 
@@ -45,9 +55,14 @@ def create_app() -> FastAPI:
 
     # 2. Register Middleware (Order matters: RequestId inside, CORS outside)
     app.add_middleware(RequestIdMiddleware)
+    cors_allowed = list(settings.cors_origins)
+    for dev_origin in ("http://localhost:5173", "http://127.0.0.1:5173"):
+        if dev_origin not in cors_allowed:
+            cors_allowed.append(dev_origin)
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=cors_allowed,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
