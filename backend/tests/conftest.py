@@ -33,7 +33,11 @@ def clean_test_env(monkeypatch):
 
 @pytest.fixture(autouse=True)
 async def setup_test_db():
-    await init_db()
+    from backend.app.db.models import Base
+    from backend.app.db.session import engine
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
     yield
     # Await any pending background tasks (Phase 1 / Phase 2 runners) before next test runs
     pending = [
