@@ -43,7 +43,7 @@ class NebiusClient:
             "model": self.model_id,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": 2048,
+            "max_tokens": 4096,
             "response_format": {"type": "json_object"},
         }
 

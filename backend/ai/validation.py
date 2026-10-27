@@ -148,6 +148,11 @@ def validate_and_ground_outreach_draft(
     """
     subject = str(raw_data.get("subject") or "").strip()
     body = str(raw_data.get("body") or "").strip()
+
+    # Deterministically strip any accidental LLM inline citation artifacts (e.g. (evidence-uuid), (fact-1))
+    body = re.sub(r"\s*[\(\[](?:evidence-[a-f0-9\-]+|fact-\d+)[\)\]]", "", body).strip()
+    subject = re.sub(r"\s*[\(\[](?:evidence-[a-f0-9\-]+|fact-\d+)[\)\]]", "", subject).strip()
+
     if not subject or len(subject) > 200:
         raise_ai_output_invalid("OutreachDraft subject is missing or exceeds 200 characters.")
     if not body or len(body) > 3000:

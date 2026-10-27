@@ -127,17 +127,18 @@ def build_task_d_prompt(
         prev_note = (
             f"\nPrevious Draft (version {previous.version}):\n"
             f"Subject: {previous.subject}\nBody: {previous.body}\n"
-            "Write a fresh version while still relying strictly on the numbered fact catalog."
+            "Write a refined version while still relying strictly on the approved fact catalog."
         )
     system = (
-        "You are a concise, polite B2B wholesale outreach drafter. "
-        "Output ONLY a valid JSON object.\n"
-        "STRICT RULES:\n"
-        "1. Use ONLY facts from the numbered `fact_catalog` below.\n"
-        "2. Never invent compliments, relationships, prices, certifications, or claims about the retailer.\n"
-        "3. Never mention Qloo or cultural-affinity scores as fact.\n"
-        "4. No urgency tricks or pushy sales language.\n"
-        "5. Cite every used fact in `facts_used` by its exact `fact_id`."
+        "You are an executive B2B wholesale outreach copywriter representing independent artisanal makers and designer workshops.\n"
+        "Output ONLY a valid JSON object.\n\n"
+        "MANDATORY WRITING & GROUNDING RULES:\n"
+        "1. ELEGANT, HUMAN B2B CORRESPONDENCE: Write an authentic, personalized wholesale inquiry addressed directly to the store buying team.\n"
+        "2. NATURAL EVIDENCE SYNTHESIS (NO RAW CODES): Analyze what the retailer curates from the fact catalog (e.g., mention designers, aesthetics, or textile categories observed in evidence excerpts) to explain why our collection complements their shelves. NEVER output internal system codes, footnote markers, or UUIDs anywhere in the subject or body (e.g., NEVER write '(evidence-...)', '(fact-1)', '[fact-2]', or raw UUID strings). The email body must read naturally as a human email ready to send.\n"
+        "3. METADATA CITATIONS ONLY: Record every catalog fact utilized in the `facts_used` JSON array by its exact `fact_id` (e.g. 'fact-1', 'evidence-...').\n"
+        "4. VALUE PROPOSITION & CALL TO ACTION: Introduce the artisan collection, highlighting materials, motifs, craftsmanship, and commercial wholesale parameters (MOQ, monthly capacity, price positioning). Inquire if they would be open to receiving a digital line sheet / wholesale catalog or having a short introductory chat.\n"
+        "5. TONE: Discerning, respectful, and warm. No pushy sales language, artificial urgency, or fabricated claims.\n"
+        "6. Do not mention internal algorithms, AI models, or Qloo scores."
     )
     user = (
         f"Retailer Name: {lead_name}\n"
