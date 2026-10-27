@@ -127,18 +127,25 @@ export function NewRunModal({
             <label htmlFor="modal-prod" className="block text-xs font-semibold text-ink">
               Select Product Passport <span className="text-rose-600">*</span>
             </label>
-            <select
-              id="modal-prod"
-              value={selectedProductId}
-              onChange={(e) => setSelectedProductId(e.target.value)}
-              className="w-full rounded-xl border border-border bg-canvas px-3.5 py-2.5 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
-            >
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.category})
-                </option>
-              ))}
-            </select>
+            {products.length === 0 ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+                <p className="font-semibold">No products in your catalogue yet.</p>
+                <p>Please create your first Product Passport before launching a discovery run.</p>
+              </div>
+            ) : (
+              <select
+                id="modal-prod"
+                value={selectedProductId}
+                onChange={(e) => setSelectedProductId(e.target.value)}
+                className="w-full rounded-xl border border-border bg-canvas px-3.5 py-2.5 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+              >
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.category})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Regions Multi-Select */}

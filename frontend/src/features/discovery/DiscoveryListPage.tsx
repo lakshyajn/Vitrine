@@ -173,7 +173,7 @@ export function DiscoveryListPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   {getStatusBadge(run.status)}
                   <span className="rounded bg-surface-subtle px-2 py-0.5 text-[11px] font-mono text-muted border border-border">
-                    Stage: {run.stage.replace("_", " ")}
+                    Stage: {(run.stage || "queued").replace("_", " ")}
                   </span>
                   <DemoBadge />
                 </div>
@@ -186,7 +186,7 @@ export function DiscoveryListPage() {
                   <span>
                     Regions:{" "}
                     <strong className="text-ink">
-                      {run.inputs.regions.join(", ") || "Global"}
+                      {run.inputs?.regions?.join(", ") || "Global"}
                     </strong>
                   </span>
                   <span>·</span>
@@ -203,7 +203,7 @@ export function DiscoveryListPage() {
                   </span>
                 </div>
 
-                {run.inputs.notes && (
+                {run.inputs?.notes && (
                   <p className="text-xs text-muted italic line-clamp-1">
                     "{run.inputs.notes}"
                   </p>

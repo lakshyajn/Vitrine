@@ -292,24 +292,24 @@ export function RunDetailPage() {
           <div>
             <span className="text-subtle font-medium">Target Regions:</span>
             <p className="mt-0.5 font-semibold text-ink">
-              {run.inputs.regions.join(", ") || "Global"}
+              {run.inputs?.regions?.join(", ") || "Global"}
             </p>
           </div>
           <div>
             <span className="text-subtle font-medium">Retailer Formats:</span>
             <p className="mt-0.5 font-semibold text-ink">
-              {run.inputs.retailer_types.join(", ") || "All Independent Boutiques"}
+              {run.inputs?.retailer_types?.join(", ") || "All Independent Boutiques"}
             </p>
           </div>
           <div>
             <span className="text-subtle font-medium">Execution Status:</span>
             <p className="mt-0.5 font-semibold text-ink capitalize">
-              {run.status.replace("_", " ")} ({run.stage.replace("_", " ")})
+              {(run.status || "queued").replace("_", " ")} ({(run.stage || "queued").replace("_", " ")})
             </p>
           </div>
         </div>
 
-        {run.inputs.notes && (
+        {run.inputs?.notes && (
           <div className="mt-2 rounded-xl border border-border-subtle bg-surface-subtle/40 p-3 text-xs text-muted italic">
             "{run.inputs.notes}"
           </div>
@@ -396,7 +396,7 @@ export function RunDetailPage() {
                     {anchor.label}
                   </span>
                   <span className="rounded bg-surface-subtle px-2 py-0.5 text-[10px] font-semibold uppercase text-muted border border-border">
-                    {anchor.source.replace("_", " ")}
+                    {(anchor.source || "proposed").replace("_", " ")}
                   </span>
                   <span
                     className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${
@@ -530,7 +530,7 @@ export function RunDetailPage() {
                       {hyp.signals.map((sig, i) => (
                         <div key={i} className="rounded-lg border border-border bg-surface p-2.5 text-xs space-y-1">
                           <div className="flex items-center justify-between text-[10px] text-muted">
-                            <span className="font-semibold uppercase">{sig.source.replace("_", " ")}</span>
+                            <span className="font-semibold uppercase">{((sig as any).source || (sig as any).type || "signal").replace("_", " ")}</span>
                             {sig.is_demo && <DemoBadge />}
                           </div>
                           <p className="text-xs text-ink">{sig.text}</p>
