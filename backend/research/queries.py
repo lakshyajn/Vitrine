@@ -25,7 +25,7 @@ def build_research_queries(
     product: Product,
     plan: ResearchPlan,
     anchors: list[TasteAnchor],
-    max_queries: int = 8,
+    max_queries: int = 4,
 ) -> list[str]:
     regions = plan.target_regions or [""]
     style_word = product.style[0] if product.style else "artisanal"
@@ -33,26 +33,33 @@ def build_research_queries(
     motif_word = product.motifs[0] if product.motifs else "botanical"
     colour_word = product.colours[0] if product.colours else "earthy"
 
-    raw_queries: list[str] = list(plan.search_queries or [])
+    raw_queries: list[str] = []
 
-    # Incorporate confirmed taste anchors
+    # 1. Prioritize confirmed taste anchors at the very top of search
     confirmed_labels = [
         a.label for a in anchors if str(a.status) == "confirmed"
-    ][:2]
-    for label in confirmed_labels:
-        raw_queries.append(f"independent boutique stockist {product.category} {label}")
+    ]
+    if confirmed_labels:
+        for label in confirmed_labels:
+            raw_queries.append(f"independent boutique stockist {product.category} {label}")
+            raw_queries.append(f"lifestyle boutique home decor similar to {label}")
+    else:
+        # 2. Add plan search queries if no anchors confirmed
+        for q in (plan.search_queries or []):
+            raw_queries.append(q)
 
-    for region in regions[:2]:
-        for tmpl in QUERY_TEMPLATES:
-            q = tmpl.format(
-                category=product.category,
-                style=style_word,
-                materials=material_word,
-                motifs=motif_word,
-                colours=colour_word,
-                region=region,
-            ).strip()
-            raw_queries.append(" ".join(q.split()))
+        # 3. Add regional template queries
+        for region in regions[:2]:
+            for tmpl in QUERY_TEMPLATES:
+                q = tmpl.format(
+                    category=product.category,
+                    style=style_word,
+                    materials=material_word,
+                    motifs=motif_word,
+                    colours=colour_word,
+                    region=region,
+                ).strip()
+                raw_queries.append(" ".join(q.split()))
 
     deduped: list[str] = []
     seen_signatures: set[str] = set()

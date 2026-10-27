@@ -25,6 +25,7 @@ from backend.research.dedupe import extract_canonical_domain
 from contracts.schemas import EvidenceSourceType
 
 EXCLUDED_WHOLESALE_OR_CHAIN_DOMAINS = {
+    # Mass marketplaces & chains
     "amazon.com",
     "alibaba.com",
     "aliexpress.com",
@@ -35,6 +36,32 @@ EXCLUDED_WHOLESALE_OR_CHAIN_DOMAINS = {
     "wayfair.com",
     "temu.com",
     "ebay.com",
+    "etsy.com",
+    "faire.com",
+    "ankorstore.com",
+    # Directories, review aggregators & data brokers (not boutique retailers)
+    "mapquest.com",
+    "bbb.org",
+    "yellowpages.com",
+    "yelp.com",
+    "tripadvisor.com",
+    "wikipedia.org",
+    "gov.uk",
+    "crunchbase.com",
+    "dnb.com",
+    "zoominfo.com",
+    "rocketreach.co",
+    "leadiq.com",
+    "apollo.io",
+    # Social media platforms
+    "facebook.com",
+    "instagram.com",
+    "pinterest.com",
+    "tiktok.com",
+    "twitter.com",
+    "x.com",
+    "linkedin.com",
+    "youtube.com",
 }
 
 FREE_WEBMAIL_DOMAINS = {
@@ -69,15 +96,16 @@ def classify_evidence_source_type(url: str, excerpt: str = "") -> EvidenceSource
 
 
 def is_excluded_retailer_domain(url_or_domain: str) -> tuple[bool, str | None]:
-    """Configurable exclusion rule check for mass marketplaces, chains, and wholesalers."""
+    """Configurable exclusion rule check for mass marketplaces, chains, directories, and aggregators."""
     dom = extract_canonical_domain(url_or_domain)
-    base_dom = dom.split("/")[0]
-    if base_dom in EXCLUDED_WHOLESALE_OR_CHAIN_DOMAINS:
-        return True, f"Excluded mass marketplace or wholesale aggregator domain: {base_dom}"
+    base_dom = dom.split("/")[0].lower()
+    for excl in EXCLUDED_WHOLESALE_OR_CHAIN_DOMAINS:
+        if base_dom == excl or base_dom.endswith("." + excl):
+            return True, f"Excluded aggregator, directory or mass marketplace domain: {base_dom}"
     return False, None
 
 
-async def verify_website_http(url: str, timeout_seconds: float = 8.0) -> tuple[bool, datetime]:
+async def verify_website_http(url: str, timeout_seconds: float = 3.5) -> tuple[bool, datetime]:
     """Deterministic HTTP liveness check; never asks the LLM whether a site is alive."""
     checked_at = datetime.now(timezone.utc)
     normalized = url.strip()

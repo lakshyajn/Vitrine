@@ -128,7 +128,7 @@ class LiveResearchPipeline:
     name: str = "tavily"
     is_demo: bool = False
 
-    def __init__(self, client: TavilyClient, lead_cap: int = 40) -> None:
+    def __init__(self, client: TavilyClient, lead_cap: int = 6) -> None:
         self.client = client
         self.lead_cap = lead_cap
 
@@ -139,7 +139,7 @@ class LiveResearchPipeline:
         anchors: list[TasteAnchor],
         on_progress: Callable[[str, dict[str, Any]], None] | None = None,
     ) -> list[LeadCandidate]:
-        queries = build_research_queries(product, plan, anchors, max_queries=8)
+        queries = build_research_queries(product, plan, anchors, max_queries=4)
         if on_progress:
             on_progress("discovery", {"queries_count": len(queries), "message": "Running Tavily search queries"})
 
@@ -159,7 +159,7 @@ class LiveResearchPipeline:
             return []
 
         raw_candidates: list[LeadCandidate] = []
-        for hit in hits[:30]:  # Cap at 30 extractions per run
+        for hit in hits[:12]:  # Cap at top 12 search extractions per run for fast hackathon throughput
             url = str(hit["url"]).strip()
             excluded, _ = is_excluded_retailer_domain(url)
             if excluded:
@@ -224,13 +224,15 @@ def get_research_pipeline() -> ResearchPipeline:
         return FixtureResearchPipeline()
 
     api_key = os.environ.get("TAVILY_API_KEY", "").strip()
+    lead_cap = 6
     try:
         from backend.app.core.config import settings
 
         api_key = getattr(settings, "tavily_api_key", None) or getattr(settings, "TAVILY_API_KEY", None) or api_key
+        lead_cap = getattr(settings, "max_leads_per_run", 6)
     except Exception:
         pass
 
     if api_key and str(api_key).strip():
-        return LiveResearchPipeline(TavilyClient(api_key=str(api_key).strip()))
+        return LiveResearchPipeline(TavilyClient(api_key=str(api_key).strip()), lead_cap=lead_cap)
     return FixtureResearchPipeline()
