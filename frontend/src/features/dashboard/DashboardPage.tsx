@@ -424,11 +424,11 @@ export function DashboardPage() {
                           : "bg-surface-subtle text-muted"
                       }`}
                     >
-                      {run.status.replace("_", " ")}
+                      {(run.status || "queued").replace("_", " ")}
                     </span>
                   </div>
                   <p className="text-xs text-muted truncate">
-                    Regions: {run.inputs.regions.join(", ") || "Global"}
+                    Regions: {run.inputs?.regions?.join(", ") || "Global"}
                   </p>
                 </div>
 

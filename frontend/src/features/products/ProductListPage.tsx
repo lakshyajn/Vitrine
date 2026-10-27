@@ -229,7 +229,7 @@ export function ProductListPage() {
                       {product.name}
                     </h3>
                     <p className="text-xs text-muted font-medium">
-                      {product.price_segment.replace("_", " ").toUpperCase()}{" "}
+                      {(product.price_segment || "mid_premium").replace("_", " ").toUpperCase()}{" "}
                       {product.price_min !== null && product.price_max !== null
                         ? `· $${product.price_min} – $${product.price_max} ${product.currency}`
                         : ""}

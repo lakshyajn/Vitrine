@@ -124,7 +124,14 @@ export async function uploadProductImage(
 ): Promise<string[]> {
   if (USE_MOCK) {
     await new Promise((r) => setTimeout(r, 300));
-    const localUrl = URL.createObjectURL(file);
+    let localUrl = "/placeholder-product.png";
+    try {
+      if (typeof window !== "undefined" && file instanceof Blob) {
+        localUrl = URL.createObjectURL(file);
+      }
+    } catch (e) {
+      console.warn("Could not create object URL for mock product image:", e);
+    }
     const prod = mockProductsStore.find((p) => p.id === id);
     if (prod) {
       prod.images = [...prod.images, localUrl];

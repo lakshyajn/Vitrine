@@ -136,9 +136,21 @@ export function ProductFormPage() {
         alert(err instanceof Error ? err.message : "Image upload failed");
       }
     } else {
-      // Local preview before saving
-      const localUrl = URL.createObjectURL(file);
-      setImages((prev) => [...prev, localUrl]);
+      // Local preview before saving - safely convert to base64 Data URL
+      try {
+        if (typeof window !== "undefined" && file instanceof Blob) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const res = reader.result;
+            if (typeof res === "string") {
+              setImages((prev) => [...prev, res]);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      } catch (err) {
+        console.warn("Failed to create preview for image:", err);
+      }
     }
   };
 
