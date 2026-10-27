@@ -178,13 +178,20 @@ async def generate_outreach_draft(
         f.model_dump(mode="json") if hasattr(f, "model_dump") else dict(f)
         for f in (generated.facts_used or [])
     ]
+    cur_v_stmt = select(OutreachDraftModel.version).where(
+        OutreachDraftModel.lead_id == id,
+        OutreachDraftModel.owner_id == user.id,
+    ).order_by(OutreachDraftModel.version.desc()).limit(1)
+    max_v = (await session.execute(cur_v_stmt)).scalar_one_or_none()
+    final_version = (max_v + 1) if max_v is not None else next_version
+
     now = datetime.now(timezone.utc)
     new_draft = OutreachDraftModel(
         id=uuid4(),
         owner_id=user.id,
         lead_id=lead_model.id,
         product_id=product_model.id,
-        version=next_version,
+        version=final_version,
         subject=generated.subject,
         body=generated.body,
         facts_used=facts_data,

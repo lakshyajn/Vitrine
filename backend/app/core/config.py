@@ -22,13 +22,13 @@ class Settings(BaseSettings):
 
     # Application
     app_env: str = "dev"
-    allow_dev_tokens: bool = False
+    allow_dev_tokens: bool = True
 
     # Supabase & Database
     supabase_url: str = ""
     supabase_service_role_key: str = ""
     supabase_jwt_secret: str = ""
-    database_url: str = "sqlite+aiosqlite:///:memory:"
+    database_url: str = "sqlite+aiosqlite:///./vitrine.db"
 
     # AI Provider 1 (Ultra 550B - Deep Reasoning & Outreach)
     nebius_base_url: str = "https://integrate.api.nvidia.com/v1"
@@ -53,15 +53,24 @@ class Settings(BaseSettings):
     # Execution Limits
     run_max_seconds: int = 600
     stage_timeout_seconds: int = 120
-    max_leads_per_run: int = 40
+    max_leads_per_run: int = 6
 
     # Network / CORS
-    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    cors_origins: Any = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: Any) -> list[str]:
         if isinstance(v, str):
+            v_clean = v.strip()
+            if v_clean.startswith("[") and v_clean.endswith("]"):
+                try:
+                    import json
+                    parsed = json.loads(v_clean)
+                    if isinstance(parsed, list):
+                        return [str(o).strip() for o in parsed if str(o).strip()]
+                except Exception:
+                    pass
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         if isinstance(v, list):
             return [str(origin).strip() for origin in v if str(origin).strip()]

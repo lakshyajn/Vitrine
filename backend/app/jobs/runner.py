@@ -23,6 +23,7 @@ from contracts.schemas import (
     EvidenceItem,
     EvidenceSourceType,
     InsightOptions,
+    LeadCandidate,
     LeadLocation,
     ProvenanceTag,
     ResearchPlan,
@@ -409,6 +410,7 @@ async def run_research_run_phase2(run_id: UUID) -> None:
 
             ai_service = get_ai_service()
             seen_domains_in_run: dict[str, UUID] = {}
+            eval_queue: list[tuple[LeadCandidate, list[EvidenceItem], UUID]] = []
 
             for candidate in candidates:
                 # (a) Evaluate CulturalAffinity if region/category match applies
@@ -416,6 +418,7 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                 matching_anchor_ids: set[UUID] = set()
                 candidate_loc = candidate.location.model_dump(mode="json") if candidate.location else {}
 
+                seen_sig_keys: set[tuple[str, str]] = set()
                 for sig_item in signals_to_attach:
                     if does_signal_match_lead(
                         signal_data=sig_item,
@@ -424,11 +427,18 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                         lead_retailer_type=candidate.retailer_type,
                         anchor_category=sig_item.get("anchor_category"),
                     ):
-                        matching_signals.append({
-                            "type": sig_item["type"],
-                            "text": sig_item["text"],
-                            "source_ref": sig_item.get("source_ref"),
-                        })
+                        sig_key = (str(sig_item.get("type")), str(sig_item.get("text")))
+                        if sig_key not in seen_sig_keys:
+                            seen_sig_keys.add(sig_key)
+                            matching_signals.append({
+                                "type": sig_item["type"],
+                                "text": sig_item["text"],
+                                "source_ref": sig_item.get("source_ref"),
+                                "entity_name": sig_item.get("entity_name") or sig_item.get("raw", {}).get("entity_name") or sig_item.get("text", "").split(":")[0][:40],
+                            })
+                            if len(matching_signals) >= 3:
+                                break
+
                         if sig_item.get("anchor_id"):
                             try:
                                 matching_anchor_ids.add(UUID(sig_item["anchor_id"]))
@@ -574,58 +584,80 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                     if dup_id:
                         lead_model.duplicate_of = dup_id
 
-                await session.commit()
+                eval_queue.append((candidate, persisted_evidence_items, lead_model.id))
 
-                # (d) Assessment & scoring with per-lead failure isolation (AGENT.md Section 5)
-                try:
-                    assessment = await ai_service.assess_lead(
-                        product=product_schema,
-                        lead=candidate,
-                        evidence=persisted_evidence_items,
+            await session.commit()
+
+            # (d) Concurrent Assessment & scoring with per-lead failure isolation (AGENT.md Section 5)
+            sem = asyncio.Semaphore(6)
+
+            async def _assess_single(
+                cand: LeadCandidate,
+                evidence_items: list[EvidenceItem],
+                lead_id: UUID,
+            ) -> tuple[UUID, dict[str, Any] | None, dict[str, Any], str, str | None]:
+                async with sem:
+                    try:
+                        assessment = await ai_service.assess_lead(
+                            product=product_schema,
+                            lead=cand,
+                            evidence=evidence_items,
+                        )
+                        assessment_dict = (
+                            assessment.model_dump(mode="json")
+                            if hasattr(assessment, "model_dump")
+                            else dict(assessment)
+                        )
+
+                        is_excluded = is_domain_excluded(cand.canonical_domain)
+                        scores, tier = compute_scores_and_tier(
+                            lead_candidate=cand,
+                            evidence_items=evidence_items,
+                            assessment=assessment,
+                            is_excluded_domain=is_excluded,
+                        )
+
+                        tier_str = tier.value if hasattr(tier, "value") else str(tier)
+                        scores_dict = scores.model_dump(mode="json")
+                        return (lead_id, assessment_dict, scores_dict, tier_str, None)
+
+                    except Exception as exc:
+                        logger.warning(
+                            "Per-lead assessment/scoring failed for %s: %s (isolating to needs_review)",
+                            cand.canonical_domain,
+                            exc,
+                        )
+                        err_note = f"Per-lead assessment error: {str(exc)}"
+                        fallback_scores, _ = compute_scores_and_tier(
+                            lead_candidate=cand,
+                            evidence_items=evidence_items,
+                            assessment=None,
+                            is_excluded_domain=is_domain_excluded(cand.canonical_domain),
+                        )
+                        scores_dict = fallback_scores.model_dump(mode="json")
+                        scores_dict["tier_reasons"] = [err_note] + scores_dict.get("tier_reasons", [])
+                        fallback_assessment = {
+                            "summary": "Assessment incomplete due to processing error.",
+                            "unknowns": [err_note],
+                        }
+                        return (lead_id, fallback_assessment, scores_dict, "needs_review", err_note)
+
+            assessment_results = await asyncio.gather(
+                *[_assess_single(cand, ev_items, l_id) for cand, ev_items, l_id in eval_queue]
+            )
+
+            for lead_id, assessment_dict, scores_dict, tier_str, note in assessment_results:
+                await session.execute(
+                    update(LeadModel)
+                    .where(LeadModel.id == lead_id)
+                    .values(
+                        assessment=assessment_dict,
+                        scores=scores_dict,
+                        tier=tier_str,
+                        notes=note,
                     )
-                    assessment_dict = (
-                        assessment.model_dump(mode="json")
-                        if hasattr(assessment, "model_dump")
-                        else dict(assessment)
-                    )
-
-                    is_excluded = is_domain_excluded(candidate.canonical_domain)
-                    scores, tier = compute_scores_and_tier(
-                        lead_candidate=candidate,
-                        evidence_items=persisted_evidence_items,
-                        assessment=assessment,
-                        is_excluded_domain=is_excluded,
-                    )
-
-                    lead_model.assessment = assessment_dict
-                    lead_model.scores = scores.model_dump(mode="json")
-                    lead_model.tier = tier.value if hasattr(tier, "value") else str(tier)
-
-                except Exception as exc:
-                    logger.warning(
-                        "Per-lead assessment/scoring failed for %s: %s (isolating to needs_review)",
-                        candidate.canonical_domain,
-                        exc,
-                    )
-                    err_note = f"Per-lead assessment error: {str(exc)}"
-                    lead_model.tier = "needs_review"
-                    lead_model.notes = err_note
-
-                    fallback_scores, _ = compute_scores_and_tier(
-                        lead_candidate=candidate,
-                        evidence_items=persisted_evidence_items,
-                        assessment=None,
-                        is_excluded_domain=is_domain_excluded(candidate.canonical_domain),
-                    )
-                    scores_dict = fallback_scores.model_dump(mode="json")
-                    scores_dict["tier_reasons"] = [err_note] + scores_dict.get("tier_reasons", [])
-                    lead_model.scores = scores_dict
-                    lead_model.assessment = {
-                        "summary": "Assessment incomplete due to processing error.",
-                        "unknowns": [err_note],
-                    }
-
-                await session.commit()
+                )
+            await session.commit()
 
             # (e) Second pass: Resolve duplicate_of for candidates where secondary was discovered before primary
             for candidate in candidates:
