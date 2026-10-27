@@ -62,6 +62,9 @@ def make_auth_header(user_id: UUID | None = None, email: str = "artisan@samplese
         "aud": "authenticated",
         "exp": int(time.time()) + 3600,
     }
+    _s = get_settings()
+    if _s.supabase_url and "iss" not in payload:
+        payload["iss"] = f"{_s.supabase_url.rstrip('/')}/auth/v1"
     token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
     return {"Authorization": f"Bearer {token}"}
 

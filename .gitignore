@@ -16,6 +16,13 @@ env/
 venv/
 ENV/
 
+# SQLite database files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+
 # JS
 node_modules/
 frontend/dist/

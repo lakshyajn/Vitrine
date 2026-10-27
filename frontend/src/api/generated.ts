@@ -54,12 +54,14 @@ export interface paths {
         };
         /**
          * Get Profile
-         * @description Retrieve the seller profile (auto-creates default profile if none exists).
+         * @description Retrieve the seller profile.
+         *     Auto-creates an empty profile row if none exists (DECISION-D16).
          */
         get: operations["get_profile_api_v1_profile_get"];
         /**
          * Update Profile
-         * @description Update seller profile details.
+         * @description Update seller profile details (business_name, country, website, contact_email, about).
+         *     Persists changes to the database.
          */
         put: operations["update_profile_api_v1_profile_put"];
         post?: never;
@@ -79,12 +81,14 @@ export interface paths {
         /**
          * List Products
          * @description List all products belonging to the authenticated seller.
+         *     Ordered deterministically by created_at desc, id desc.
          */
         get: operations["list_products_api_v1_products_get"];
         put?: never;
         /**
          * Create Product
-         * @description Create a new product record.
+         * @description Create a new product record stamped with owner_id = current_user.id.
+         *     Validates price_min <= price_max and moq >= 1.
          */
         post: operations["create_product_api_v1_products_post"];
         delete?: never;
@@ -103,17 +107,22 @@ export interface paths {
         /**
          * Get Product
          * @description Retrieve a single product by ID.
+         *     Enforces owner_id == current_user.id.
+         *     Returns 404 not_found if not found or belongs to another user.
          */
         get: operations["get_product_api_v1_products__id__get"];
         /**
          * Update Product
          * @description Update a product record.
+         *     Enforces owner_id == current_user.id (returns 404 if belongs to another user).
+         *     Validates price_min <= price_max and moq >= 1.
          */
         put: operations["update_product_api_v1_products__id__put"];
         post?: never;
         /**
          * Delete Product
-         * @description Delete a product record.
+         * @description Delete a product record and cascade delete all child records (DECISION-D12).
+         *     Enforces owner_id == current_user.id (returns 404 if belongs to another user).
          */
         delete: operations["delete_product_api_v1_products__id__delete"];
         options?: never;
@@ -133,7 +142,9 @@ export interface paths {
         /**
          * Upload Product Image
          * @description Upload an image for a product.
-         *     Returns the updated list of image URLs (DECISION-D18).
+         *     Validates MIME type (jpeg, png, webp) and size <= 5MB.
+         *     Uploads under per-user path, appends URL to product.images, and returns list[str] (DECISION-D18).
+         *     Enforces owner_id == current_user.id (returns 404 if belongs to another user).
          */
         post: operations["upload_product_image_api_v1_products__id__images_post"];
         delete?: never;
@@ -154,7 +165,9 @@ export interface paths {
         /**
          * Extract Product Profile
          * @description AI Task A: Suggest structured product attributes from free-text description.
+         *     Calls get_ai_service().structure_product(description, known).
          *     Does NOT persist to database (seller review required).
+         *     Maps ai_output_invalid or timeouts to Appendix A.5 error codes.
          */
         post: operations["extract_product_profile_api_v1_products_extract_profile_post"];
         delete?: never;
@@ -172,13 +185,17 @@ export interface paths {
         };
         /**
          * List Research Runs
-         * @description List all research runs for the authenticated seller.
+         * @description List all research runs belonging to the authenticated seller.
          */
         get: operations["list_research_runs_api_v1_research_runs_get"];
         put?: never;
         /**
          * Create Research Run
          * @description Create and queue a new research run.
+         *     Verifies product_id belongs to caller.
+         *     Supports optional Idempotency-Key header to prevent duplicate runs.
+         *     Snapshots provider_modes (ai, search, taste as live or mock).
+         *     Triggers Phase 1 of async runner.
          */
         post: operations["create_research_run_api_v1_research_runs_post"];
         delete?: never;
@@ -218,7 +235,7 @@ export interface paths {
         put?: never;
         /**
          * Rerun Research Run
-         * @description Trigger a rerun for an existing research run.
+         * @description Trigger a rerun for an existing research run, copying inputs and merging new inputs.
          */
         post: operations["rerun_research_run_api_v1_research_runs__id__rerun_post"];
         delete?: never;
@@ -263,6 +280,10 @@ export interface paths {
         /**
          * Confirm Run Anchors
          * @description Resume run after reviewing anchors (DECISION-D4).
+         *     Requires run to be in awaiting_review state.
+         *     Requires >= 1 confirmed anchor unless proceed_without_anchors is true (returns 422 on failure).
+         *     Stores confirmed anchor_ids in run.inputs and transitions run to queued (stage: discovery).
+         *     Triggers Phase 2 of the runner.
          */
         post: operations["confirm_run_anchors_api_v1_research_runs__id__confirm_anchors_post"];
         delete?: never;
@@ -306,7 +327,7 @@ export interface paths {
         head?: never;
         /**
          * Update Taste Anchor
-         * @description Confirm, reject, or edit an anchor.
+         * @description Confirm, reject, or edit an anchor. Verifies parent run ownership.
          */
         patch: operations["update_taste_anchor_api_v1_taste_anchors__id__patch"];
         trace?: never;
@@ -321,6 +342,7 @@ export interface paths {
         /**
          * List Leads
          * @description List buyer leads with filtering, sorting, and pagination (DECISION-D7).
+         *     Enforces strict user isolation: owner_id == user.id.
          */
         get: operations["list_leads_api_v1_leads_get"];
         put?: never;
@@ -340,7 +362,7 @@ export interface paths {
         };
         /**
          * Get Lead
-         * @description Retrieve details, scores, and assessment for a single lead.
+         * @description Retrieve details, scores, and assessment for a single lead owned by the user.
          */
         get: operations["get_lead_api_v1_leads__id__get"];
         put?: never;
@@ -364,7 +386,7 @@ export interface paths {
         };
         /**
          * Get Lead Evidence
-         * @description Retrieve verified evidence items for a lead.
+         * @description Retrieve verified evidence items for a lead owned by the user.
          */
         get: operations["get_lead_evidence_api_v1_leads__id__evidence_get"];
         put?: never;
@@ -384,7 +406,7 @@ export interface paths {
         };
         /**
          * Get Lead Outreach Drafts
-         * @description Retrieve all versioned drafts for a lead.
+         * @description Retrieve all versioned drafts for a lead ordered by version desc.
          */
         get: operations["get_lead_outreach_drafts_api_v1_leads__id__outreach_drafts_get"];
         put?: never;
@@ -408,7 +430,7 @@ export interface paths {
         };
         /**
          * List Outreach Drafts
-         * @description List outreach drafts across leads (DECISION-D17).
+         * @description List outreach drafts across leads with optional filters (DECISION-D17).
          */
         get: operations["list_outreach_drafts_api_v1_outreach_drafts_get"];
         put?: never;
@@ -435,6 +457,7 @@ export interface paths {
         /**
          * Update Outreach Draft
          * @description Update subject, body, manual status, or followup notes of an outreach draft.
+         *     Atomic rule (DECISION-D11): when status is set to contacted, atomically update parent lead review_status.
          */
         patch: operations["update_outreach_draft_api_v1_outreach_drafts__id__patch"];
         trace?: never;
@@ -450,9 +473,30 @@ export interface paths {
         put?: never;
         /**
          * Regenerate Outreach Draft
-         * @description Regenerate a new draft version from an existing draft (inserts new version row).
+         * @description Regenerate a new draft version from an existing draft.
+         *     Inserts a new row with version = max_version + 1 and parent_draft_id = id (never overwrites).
          */
         post: operations["regenerate_outreach_draft_api_v1_outreach_drafts__id__regenerate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/seed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Seed Fixed Demo Scenario
+         * @description Seeds realistic demo products, research runs, leads, and outreach drafts scoped exclusively to the authenticated user. Idempotent per caller. Available only when APP_ENV is dev or test.
+         */
+        post: operations["seed_demo_workspace_api_v1_demo_seed_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -520,6 +564,29 @@ export interface components {
             signals?: {
                 [key: string]: unknown;
             }[];
+        };
+        /** DemoSeedSummary */
+        DemoSeedSummary: {
+            /**
+             * Products Seeded
+             * @description Number of demo products seeded for the caller
+             */
+            products_seeded: number;
+            /**
+             * Leads Seeded
+             * @description Number of demo buyer leads seeded for the caller
+             */
+            leads_seeded: number;
+            /**
+             * Runs Seeded
+             * @description Number of demo research runs seeded for the caller
+             */
+            runs_seeded: number;
+            /**
+             * Drafts Seeded
+             * @description Number of demo outreach drafts seeded for the caller
+             */
+            drafts_seeded: number;
         };
         /** DimensionAssessment */
         DimensionAssessment: {
@@ -1711,7 +1778,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateResearchRunRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -2194,6 +2265,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    seed_demo_workspace_api_v1_demo_seed_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoSeedSummary"];
                 };
             };
         };

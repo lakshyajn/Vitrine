@@ -2,13 +2,14 @@
 
 ## 1. Executive Summary
 
-The Vitrine backend (WS2) is feature-complete, hardened, and verified against the Contract v0.2 specification and architectural decisions. All endpoints across Products, Research Runs, Taste Anchors, Leads, Lead Evidence, and Outreach Studio are implemented, tested, and passing.
+The Vitrine backend (WS2) is feature-complete, hardened, and verified against the Contract v0.2 specification and architectural decisions. All endpoints across Products, Research Runs, Taste Anchors, Leads, Lead Evidence, Outreach Studio, and Workspace Demo Seeding are implemented, tested, and passing.
 
-Key hardening mechanisms delivered in Step 9:
+Key hardening mechanisms delivered:
+- **Asymmetric & Symmetric Token Verification:** PyJWKClient dynamically fetches and caches public keys (ES256/RS256) from Supabase `.well-known/jwks.json` with strict audience (`authenticated`), issuer (`{SUPABASE_URL}/auth/v1`), signature, expiry, and UUID `sub` claims validation; HS256 supported via `SUPABASE_JWT_SECRET`. `alg=none` unconditionally rejected. Dev aliases strictly gated behind `ALLOW_DEV_TOKENS=true`.
+- **Caller-Scoped Demo Scenario Seeding:** `POST /api/v1/demo/seed` seeds a complete demo catalog (4 products, 1 run, confirmed anchors, hypotheses, 3 scored leads with evidence, 1 outreach draft) scoped exclusively to the authenticated caller with `is_demo: true`. Fully idempotent per owner; returns HTTP 404 in `APP_ENV=production`.
 - **Stuck-Run Recovery:** Runs interrupted or stalled during `running` state past `STAGE_TIMEOUT_SECONDS` (120s) are automatically detected and transitioned to `failed` upon startup, while runs in `awaiting_review` remain untouched.
 - **Per-User Rate Limiting:** Sliding-window in-memory rate limiter on high-compute endpoints (`POST /api/v1/research-runs` and `POST /api/v1/leads/{id}/outreach-drafts`) returning HTTP 429 in the Appendix A.5 envelope.
 - **Qloo Taste Orchestration:** Deterministic caching (24h TTL), quota caps (20 calls/run), exponential backoff retries on 429/timeouts, strict audit logging in `provider_calls`, failure isolation, and cultural affinity matching.
-- **Fixed Demo Scenario Seeding:** Idempotent CLI script (`python -m backend.app.db.seed_demo`) populating the "Sample Seller" catalog with `is_demo: true` across all entities.
 
 ---
 
@@ -20,11 +21,11 @@ All endpoints conform strictly to Contract v0.2 wire types and return responses 
 | :--- | :--- | :--- | :--- | :--- |
 | **System** | `GET` | `/health` | Completed | Liveness probe returning `{"status": "ok"}` |
 | | `GET` | `/api/v1/integrations/status` | Completed | Reports live/mock state for AI, Search, Taste without leaking secrets |
-| **Profile** | `GET` | `/api/v1/profile` | Completed | Returns seller profile for authenticated caller |
+| **Profile** | `GET` | `/api/v1/profile` | Completed | Returns seller profile for authenticated caller (auto-creates empty on first call) |
 | | `PUT` | `/api/v1/profile` | Completed | Idempotent upsert of seller profile |
 | **Products** | `GET` | `/api/v1/products` | Completed | Lists products owned by caller |
 | | `POST` | `/api/v1/products` | Completed | Creates new product with price/MOQ validation |
-| | `GET` | `/api/v1/products/{id}` | Completed | Fetches product by ID with tenant isolation |
+| | `GET` | `/api/v1/products/{id}` | Completed | Fetches product by ID with tenant isolation (404 for cross-user access) |
 | | `PATCH` | `/api/v1/products/{id}` | Completed | Partial updates to product attributes |
 | | `DELETE` | `/api/v1/products/{id}` | Completed | Soft/hard delete with cascade cleanup |
 | **Research Runs** | `POST` | `/api/v1/research-runs` | Completed | Queues Phase 1 run; rate-limited (10/min); Idempotency-Key support |
@@ -45,6 +46,7 @@ All endpoints conform strictly to Contract v0.2 wire types and return responses 
 | | `GET` | `/api/v1/outreach-drafts` | Completed | Lists drafts across leads with status/product filters |
 | | `GET` | `/api/v1/outreach-drafts/{id}` | Completed | Fetches specific draft by ID |
 | | `PATCH` | `/api/v1/outreach-drafts/{id}` | Completed | Edits subject, body, followup_notes, status |
+| **Demo** | `POST` | `/api/v1/demo/seed` | Completed | Caller-scoped idempotent demo seeding (dev/test only; 404 in production) |
 
 ---
 
@@ -52,10 +54,15 @@ All endpoints conform strictly to Contract v0.2 wire types and return responses 
 
 1. **Authentication Enforcement:**
    - Every protected route injects `user: CurrentUser = Depends(current_user)`.
-   - JWT tokens are verified using `SUPABASE_JWT_SECRET` with HS256. Missing, invalid, or expired tokens return HTTP 401 in the Appendix A.5 error envelope.
+   - Supports asymmetric verification (**ES256**, **RS256**) via `PyJWKClient` fetching keys from `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` with in-memory caching.
+   - Supports symmetric verification (**HS256**) via `SUPABASE_JWT_SECRET`.
+   - Unconditionally rejects `alg=none` and unrecognized algorithms.
+   - Enforces claims: `aud == "authenticated"`, `iss == f"{SUPABASE_URL}/auth/v1"` (when configured), signature integrity, expiry, and valid UUID `sub`.
+   - Dev token aliases (`dev-token`, etc.) and unsigned tokens are strictly gated behind `ALLOW_DEV_TOKENS=true` (must be `false` in production).
+   - Missing, invalid, or expired tokens return HTTP 401 in the Appendix A.5 error envelope with generic error messages.
 2. **Owner Isolation:**
    - Database queries strictly enforce `WHERE owner_id == user.id` (or `user_id == user.id` for profiles).
-   - Path parameters (`{id}`) and payload IDs are never trusted as proof of ownership. If a resource exists but belongs to another user, the API returns HTTP 404 to avoid leaking resource existence.
+   - Path parameters (`{id}`) and payload IDs are never trusted as proof of ownership. If a resource exists but belongs to another user, the API returns HTTP 404 across all entities (profile, products, runs, anchors, hypotheses, leads, evidence, drafts) to avoid leaking resource existence.
 3. **Secret Redaction:**
    - All outgoing logs and exception messages pass through `redact_secrets()`, scrubbing `QLOO_API_KEY`, `NEBIUS_API_KEY`, `TAVILY_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `Bearer` tokens.
 
@@ -106,9 +113,10 @@ The `QlooOrchestrator` (`backend/app/integrations/qloo_wrapper.py`) wraps taste 
 
 ---
 
-## 7. Fixed Demo Scenario Seed Script
+## 7. Fixed Demo Scenario Seed Script & API
 
-The seed script (`backend/app/db/seed_demo.py`) provides an idempotent entrypoint:
+The seed script (`backend/app/db/seed_demo.py`) and API endpoint (`POST /api/v1/demo/seed`) provide idempotent entrypoints:
+- **API Endpoint:** `POST /api/v1/demo/seed` (requires authenticated `CurrentUser`, enabled in dev/test, returns 404 in production).
 - **CLI Command:** `python -m backend.app.db.seed_demo [--owner-id <UUID>]`
 - **Seeded Entities (`is_demo: true` on all records):**
   - **Profile:** "Sample Seller" (small textile workshop in India).
@@ -124,18 +132,21 @@ The seed script (`backend/app/db/seed_demo.py`) provides an idempotent entrypoin
 The complete test suite runs under pytest with full asynchronous execution and passes without errors:
 
 ```text
-backend\tests\test_auth_and_db.py .....                                  [  5%]
-backend\tests\test_contracts.py ............                             [ 17%]
-backend\tests\test_discovery_and_leads.py .......                        [ 24%]
-backend\tests\test_foundation.py ......                                  [ 30%]
-backend\tests\test_hardening_and_demo.py ...                             [ 33%]
-backend\tests\test_openapi_and_stubs.py .......                          [ 40%]
-backend\tests\test_outreach.py ..........                                [ 50%]
-backend\tests\test_products_and_profile.py ............                  [ 62%]
-backend\tests\test_qloo_orchestration.py .........                       [ 71%]
-backend\tests\test_research_runs_phase1.py ........                      [ 80%]
-backend\tests\test_scoring.py ...........                                [ 91%]
+backend\tests\test_auth_and_db.py ...............                        [ 12%]
+backend\tests\test_contracts.py ............                             [ 22%]
+backend\tests\test_demo_seed.py ....                                     [ 25%]
+backend\tests\test_discovery_and_leads.py .......                        [ 31%]
+backend\tests\test_foundation.py ......                                  [ 36%]
+backend\tests\test_hardening_and_demo.py ...                             [ 38%]
+backend\tests\test_multiuser_isolation.py .                              [ 39%]
+backend\tests\test_openapi_and_stubs.py .......                          [ 45%]
+backend\tests\test_outreach.py ..........                                [ 53%]
+backend\tests\test_products_and_profile.py ............                  [ 63%]
+backend\tests\test_qloo_and_hardening.py ........                        [ 69%]
+backend\tests\test_qloo_orchestration.py .........                       [ 77%]
+backend\tests\test_research_runs_phase1.py ........                      [ 83%]
+backend\tests\test_scoring.py ...........                                [ 92%]
 backend\tests\test_ws3_suite.py .........                                [100%]
 
-============================= 99 passed in 4.92s ==============================
+============================ 122 passed in 16.04s =============================
 ```

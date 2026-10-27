@@ -2,16 +2,27 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthProvider } from "@/features/auth/AuthProvider";
+import type { User } from "@supabase/supabase-js";
 import App from "./App";
 
-function renderAt(path: string) {
+const testQueryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+});
+
+function renderAt(path: string, initialUser?: User | null) {
   return render(
-    <MemoryRouter
-      initialEntries={[path]}
-      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-    >
-      <App />
-    </MemoryRouter>,
+    <QueryClientProvider client={testQueryClient}>
+      <MemoryRouter
+        initialEntries={[path]}
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <AuthProvider queryClient={testQueryClient} initialUser={initialUser}>
+          <App />
+        </AuthProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -153,7 +164,7 @@ describe("Vitrine — Public Landing Page & Route Architecture", () => {
   });
 
   it("shows Sign in page on '/login' without Shell nav", () => {
-    renderAt("/login");
+    renderAt("/login", null);
     expect(
       screen.getByRole("heading", { name: /sign in/i, level: 1 }),
     ).toBeInTheDocument();
@@ -163,7 +174,7 @@ describe("Vitrine — Public Landing Page & Route Architecture", () => {
   });
 
   it("shows Create account page on '/signup' without Shell nav", () => {
-    renderAt("/signup");
+    renderAt("/signup", null);
     expect(
       screen.getByRole("heading", { name: /create account/i, level: 1 }),
     ).toBeInTheDocument();

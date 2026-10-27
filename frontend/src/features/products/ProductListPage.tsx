@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, Compass, Edit, Trash2, Package } from "lucide-react";
+import { Plus, Search, Compass, Edit, Trash2, Package, Sparkles, CheckCircle, X } from "lucide-react";
 import { getProducts, deleteProduct, type Product } from "@/api";
+import { useSeedDemo } from "@/api/demo";
 import { DemoBadge } from "@/components/shared/DemoBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
@@ -9,9 +10,12 @@ import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 
 export function ProductListPage() {
   const navigate = useNavigate();
+  const seedMutation = useSeedDemo();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,6 +39,18 @@ export function ProductListPage() {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  const handleSeedDemo = async () => {
+    try {
+      const res = await seedMutation.mutateAsync();
+      await fetchProducts();
+      setNotification(
+        `Demo catalogue loaded: ${res.products_seeded} products, ${res.leads_seeded} leads, and ${res.runs_seeded} discovery run.`
+      );
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to seed demo data.");
+    }
+  };
 
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
@@ -66,6 +82,28 @@ export function ProductListPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6 animate-fade-in">
+      {/* Toast Notification Banner */}
+      {notification && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800 animate-fade-in shadow-xs"
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle className="size-4 text-emerald-600 flex-shrink-0" />
+            <span className="font-medium">{notification}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotification(null)}
+            className="rounded p-1 text-emerald-600 hover:text-emerald-900 transition-colors"
+            aria-label="Dismiss notification"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
         <div>
@@ -89,64 +127,73 @@ export function ProductListPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by product name, category, or material..."
-            className="w-full rounded-xl border border-border bg-surface pl-9 pr-4 py-2 text-xs sm:text-sm text-ink placeholder:text-subtle focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
-          />
-        </div>
+      {products.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by product name, category, or material..."
+              className="w-full rounded-xl border border-border bg-surface pl-9 pr-4 py-2 text-xs sm:text-sm text-ink placeholder:text-subtle focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+            />
+          </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted whitespace-nowrap">Segment:</span>
-          <select
-            value={segmentFilter}
-            onChange={(e) => setSegmentFilter(e.target.value)}
-            className="rounded-xl border border-border bg-surface px-3 py-2 text-xs sm:text-sm text-ink focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
-          >
-            <option value="all">All Segments</option>
-            <option value="budget">Budget</option>
-            <option value="mid">Mid</option>
-            <option value="mid_premium">Mid-Premium</option>
-            <option value="premium">Premium</option>
-            <option value="luxury">Luxury</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted whitespace-nowrap">Segment:</span>
+            <select
+              value={segmentFilter}
+              onChange={(e) => setSegmentFilter(e.target.value)}
+              className="rounded-xl border border-border bg-surface px-3 py-2 text-xs sm:text-sm text-ink focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+            >
+              <option value="all">All Segments</option>
+              <option value="budget">Budget</option>
+              <option value="mid">Mid</option>
+              <option value="mid_premium">Mid-Premium</option>
+              <option value="premium">Premium</option>
+              <option value="luxury">Luxury</option>
+            </select>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content Area */}
       {isLoading ? (
         <LoadingSkeleton variant="cards" count={3} />
       ) : error ? (
         <ErrorState message={error} onRetry={fetchProducts} />
-      ) : filteredProducts.length === 0 ? (
+      ) : products.length === 0 ? (
+        /* Empty Catalog: Show Load Demo Catalogue as primary action */
         <EmptyState
-          title={searchQuery || segmentFilter !== "all" ? "No matching products found" : "No products in your catalog yet"}
-          description={
-            searchQuery || segmentFilter !== "all"
-              ? "Try adjusting your search criteria or clearing filters."
-              : "Create your first Product Passport to initiate evidence-backed retailer discovery."
-          }
+          title="No products in your catalog yet"
+          description="Create your first Product Passport or load our curated demo scenario to explore wholesale research and buyer matching."
           icon={Package}
-          action={
-            searchQuery || segmentFilter !== "all"
-              ? {
-                  label: "Clear Filters",
-                  onClick: () => {
-                    setSearchQuery("");
-                    setSegmentFilter("all");
-                  },
-                }
-              : {
-                  label: "Add First Product",
-                  onClick: () => navigate("/app/products/new"),
-                  icon: Plus,
-                }
-          }
+          action={{
+            label: "Load demo catalogue",
+            onClick: handleSeedDemo,
+            icon: Sparkles,
+            loading: seedMutation.isPending,
+          }}
+          secondaryAction={{
+            label: "Add First Product",
+            onClick: () => navigate("/app/products/new"),
+            icon: Plus,
+          }}
+        />
+      ) : filteredProducts.length === 0 ? (
+        /* Filter returned empty */
+        <EmptyState
+          title="No matching products found"
+          description="Try adjusting your search criteria or clearing filters."
+          icon={Package}
+          action={{
+            label: "Clear Filters",
+            onClick: () => {
+              setSearchQuery("");
+              setSegmentFilter("all");
+            },
+          }}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -266,4 +313,3 @@ export function ProductListPage() {
     </div>
   );
 }
-

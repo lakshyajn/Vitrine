@@ -1613,6 +1613,33 @@
           }
         }
       }
+    },
+    "/api/v1/demo/seed": {
+      "post": {
+        "tags": [
+          "Demo"
+        ],
+        "summary": "Seed Fixed Demo Scenario",
+        "description": "Seeds realistic demo products, research runs, leads, and outreach drafts scoped exclusively to the authenticated user. Idempotent per caller. Available only when APP_ENV is dev or test.",
+        "operationId": "seed_demo_workspace_api_v1_demo_seed_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoSeedSummary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1724,6 +1751,38 @@
         },
         "type": "object",
         "title": "CulturalAffinity"
+      },
+      "DemoSeedSummary": {
+        "properties": {
+          "products_seeded": {
+            "type": "integer",
+            "title": "Products Seeded",
+            "description": "Number of demo products seeded for the caller"
+          },
+          "leads_seeded": {
+            "type": "integer",
+            "title": "Leads Seeded",
+            "description": "Number of demo buyer leads seeded for the caller"
+          },
+          "runs_seeded": {
+            "type": "integer",
+            "title": "Runs Seeded",
+            "description": "Number of demo research runs seeded for the caller"
+          },
+          "drafts_seeded": {
+            "type": "integer",
+            "title": "Drafts Seeded",
+            "description": "Number of demo outreach drafts seeded for the caller"
+          }
+        },
+        "type": "object",
+        "required": [
+          "products_seeded",
+          "leads_seeded",
+          "runs_seeded",
+          "drafts_seeded"
+        ],
+        "title": "DemoSeedSummary"
       },
       "DimensionAssessment": {
         "properties": {

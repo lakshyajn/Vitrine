@@ -385,3 +385,10 @@ export interface IntegrationStatusResponse {
   qloo?: IntegrationState;
   [key: string]: IntegrationState | undefined;
 }
+
+export interface DemoSeedSummary {
+  products_seeded: number;
+  leads_seeded: number;
+  runs_seeded: number;
+  drafts_seeded: number;
+}

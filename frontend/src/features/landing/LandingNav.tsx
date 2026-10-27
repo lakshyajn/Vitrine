@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/config/brand";
+import { useAuth } from "@/features/auth/AuthProvider";
 
 /**
  * Vitrine aperture mark — unified architectural framing glyph.
@@ -21,6 +22,7 @@ export function VitrineMark({ className = "size-5" }: { className?: string }) {
 
 export function LandingNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <header
@@ -67,23 +69,39 @@ export function LandingNav() {
 
         {/* Right CTA Cluster */}
         <div className="hidden sm:flex sm:items-center sm:gap-4">
-          <Link
-            to="/login"
-            className="text-sm font-medium text-stone-300 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          >
-            Sign in
-          </Link>
-          <Link
-            to="/app"
-            data-btn-accent
-            style={{ backgroundColor: "#CF1E1E", color: "#FFFFFF" }}
-            className="btn-accent pressable inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          >
-            <span style={{ color: "#FFFFFF" }} className="text-white font-semibold">
-              Explore workspace
-            </span>
-            <ArrowRight size={15} style={{ color: "#FFFFFF" }} className="text-white" aria-hidden="true" />
-          </Link>
+          {user ? (
+            <Link
+              to="/app"
+              data-btn-accent
+              style={{ backgroundColor: "#CF1E1E", color: "#FFFFFF" }}
+              className="btn-accent pressable inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              <span style={{ color: "#FFFFFF" }} className="text-white font-semibold">
+                Open workspace
+              </span>
+              <ArrowRight size={15} style={{ color: "#FFFFFF" }} className="text-white" aria-hidden="true" />
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="text-sm font-medium text-stone-300 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                Sign in
+              </Link>
+              <Link
+                to="/app"
+                data-btn-accent
+                style={{ backgroundColor: "#CF1E1E", color: "#FFFFFF" }}
+                className="btn-accent pressable inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                <span style={{ color: "#FFFFFF" }} className="text-white font-semibold">
+                  Explore workspace
+                </span>
+                <ArrowRight size={15} style={{ color: "#FFFFFF" }} className="text-white" aria-hidden="true" />
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -121,25 +139,42 @@ export function LandingNav() {
               Evidence Standard
             </a>
             <div className="pt-3.5 border-t border-white/10 flex flex-col gap-3">
-              <Link
-                to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2 text-center text-sm font-semibold text-stone-300 hover:text-white"
-              >
-                Sign in
-              </Link>
-              <Link
-                to="/app"
-                data-btn-accent
-                style={{ backgroundColor: "#CF1E1E", color: "#FFFFFF" }}
-                onClick={() => setMobileMenuOpen(false)}
-                className="btn-accent inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-xs"
-              >
-                <span style={{ color: "#FFFFFF" }} className="text-white font-semibold">
-                  Explore workspace
-                </span>
-                <ArrowRight size={15} style={{ color: "#FFFFFF" }} className="text-white" aria-hidden="true" />
-              </Link>
+              {user ? (
+                <Link
+                  to="/app"
+                  data-btn-accent
+                  style={{ backgroundColor: "#CF1E1E", color: "#FFFFFF" }}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn-accent inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-xs"
+                >
+                  <span style={{ color: "#FFFFFF" }} className="text-white font-semibold">
+                    Open workspace
+                  </span>
+                  <ArrowRight size={15} style={{ color: "#FFFFFF" }} className="text-white" aria-hidden="true" />
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="py-2 text-center text-sm font-semibold text-stone-300 hover:text-white"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    to="/app"
+                    data-btn-accent
+                    style={{ backgroundColor: "#CF1E1E", color: "#FFFFFF" }}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="btn-accent inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-xs"
+                  >
+                    <span style={{ color: "#FFFFFF" }} className="text-white font-semibold">
+                      Explore workspace
+                    </span>
+                    <ArrowRight size={15} style={{ color: "#FFFFFF" }} className="text-white" aria-hidden="true" />
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
         </div>

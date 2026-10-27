@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.router import api_router, integrations_status
+from backend.app.auth.deps import check_and_warn_dev_tokens
 from backend.app.core.config import get_settings
 from backend.app.core.errors import register_error_handlers
 from backend.app.core.logging import RequestIdMiddleware, setup_logging
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     setup_logging()
     await init_db()
     settings = get_settings()
+    check_and_warn_dev_tokens(settings)
     async with async_session_maker() as session:
         await recover_stuck_runs(session)
         if settings.app_env.lower() in ("dev", "test", "development"):

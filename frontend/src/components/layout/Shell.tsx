@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { MobileNav } from "./MobileNav";
 import { Sidebar } from "./Sidebar";
 import { NAV_ITEMS } from "./nav-items";
+import { OnboardingModal } from "@/features/auth/OnboardingModal";
 
 export function Shell() {
   const location = useLocation();
@@ -14,6 +15,9 @@ export function Shell() {
       data-ui
       className="flex h-dvh overflow-hidden bg-canvas text-ink selection:bg-accent-light selection:text-ink"
     >
+      {/* First-run studio onboarding modal */}
+      <OnboardingModal />
+
       {/* Desktop sidebar — hidden below lg breakpoint */}
       <div className="hidden lg:flex lg:flex-shrink-0">
         <Sidebar />

@@ -110,7 +110,13 @@ async def seed_demo_data(session: Any, owner_id: UUID) -> dict[str, Any]:
     seeded_products: list[ProductModel] = []
     for spec in product_specs:
         prod_id = _gen_id(owner_id, f"product:{spec['name']}")
-        prod_stmt = select(ProductModel).where(ProductModel.id == prod_id)
+        prod_stmt = select(ProductModel).where(
+            (ProductModel.id == prod_id)
+            | (
+                (ProductModel.owner_id == owner_id)
+                & (ProductModel.name == spec["name"])
+            )
+        )
         prod = (await session.execute(prod_stmt)).scalar_one_or_none()
         if prod is None:
             prod = ProductModel(
@@ -422,7 +428,13 @@ async def seed_demo_data(session: Any, owner_id: UUID) -> dict[str, Any]:
     seeded_leads: list[LeadModel] = []
     for lspec in lead_specs:
         lid = _gen_id(owner_id, f"lead:{lspec['canonical_domain']}")
-        lstmt = select(LeadModel).where(LeadModel.id == lid)
+        lstmt = select(LeadModel).where(
+            (LeadModel.id == lid)
+            | (
+                (LeadModel.owner_id == owner_id)
+                & (LeadModel.canonical_domain == lspec["canonical_domain"])
+            )
+        )
         lead = (await session.execute(lstmt)).scalar_one_or_none()
         if lead is None:
             lead = LeadModel(
@@ -530,6 +542,10 @@ async def seed_demo_data(session: Any, owner_id: UUID) -> dict[str, Any]:
     await session.commit()
 
     return {
+        "products_seeded": len(seeded_products),
+        "leads_seeded": len(seeded_leads),
+        "runs_seeded": 1,
+        "drafts_seeded": 1,
         "profile": profile,
         "products": seeded_products,
         "run": run,
