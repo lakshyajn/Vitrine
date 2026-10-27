@@ -32,7 +32,19 @@ export function OutreachListPage() {
         getLeads({ page_size: 100 }),
         getProducts(),
       ]);
-      setDrafts(draftsData);
+      // Deduplicate by lead_id to show strictly the latest draft per buyer lead
+      const latestDraftsByLead = new Map<string, OutreachDraft>();
+      for (const d of draftsData) {
+        const existing = latestDraftsByLead.get(d.lead_id);
+        if (
+          !existing ||
+          d.version > existing.version ||
+          new Date(d.updated_at).getTime() > new Date(existing.updated_at).getTime()
+        ) {
+          latestDraftsByLead.set(d.lead_id, d);
+        }
+      }
+      setDrafts(Array.from(latestDraftsByLead.values()));
       setLeads(leadsData.items);
       setProducts(prodsData);
     } catch (err: unknown) {
