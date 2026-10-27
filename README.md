@@ -9,7 +9,7 @@
 [![NVIDIA Nemotron](https://img.shields.io/badge/NVIDIA-Dual%20Nemotron%20AI-76B900.svg?style=flat&logo=nvidia&logoColor=white)](https://build.nvidia.com)
 [![Qloo Taste Graph](https://img.shields.io/badge/Qloo-Taste%20Intelligence-6C5CE7.svg?style=flat)](https://qloo.com)
 [![Tavily Search](https://img.shields.io/badge/Tavily-Live%20Discovery-00B894.svg?style=flat)](https://tavily.com)
-[![Tests Passing](https://img.shields.io/badge/Tests-107%2F107%20Passed-brightgreen.svg?style=flat)]()
+[![Tests Passing](https://img.shields.io/badge/Tests-135%2F135%20Passed-brightgreen.svg?style=flat)]()
 
 **Evidence-backed boutique discovery and seller-controlled wholesale outreach.**  
 *Zero automated spam. Zero hallucinated claims. 100% grounded in verified retailer facts.*
@@ -52,20 +52,21 @@ Vitrine orchestrates **two distinct NVIDIA Nemotron foundation models** to optim
 
 | Model | Parameters | Role in Vitrine | Why It's Used |
 | :--- | :--- | :--- | :--- |
-| **`nvidia/nemotron-3.5-super-vl-120b-a12b`** | 120B | **Task A:** Product Structuring<br/>**Task C:** Per-Lead Assessment | High-throughput, rapid multimodal extraction (<2s) across large batches of discovered retailers. |
-| **`nvidia/nemotron-3-ultra-550b-a55b`** | 550B | **Task B:** Research Planning<br/>**Task D:** Outreach Copywriting | Deep reasoning for nuanced market hypotheses and persuasive, strictly fact-grounded buyer pitches. |
+| **`nvidia/nemotron-3.5-super-vl-120b-a12b`** | 120B | **Task A:** Product Structuring<br/>**Task C:** Per-Lead Assessment | High-throughput, rapid multimodal extraction (<2s) and parallel lead evaluation via async semaphores. |
+| **`nvidia/nemotron-3-ultra-550b-a55b`** | 550B | **Task B:** Research Planning<br/>**Task D:** Outreach Copywriting | Deep reasoning for market hypotheses and human-fluent, evidence-grounded buyer pitches (no raw technical IDs). |
 
 *Cross-model fallback ensures that if either endpoint encounters upstream rate limits, the alternate model immediately steps in.*
 
 ### 2. 🎨 Cultural Affinity & Taste Intelligence (Qloo)
-Instead of matching naive keyword queries, Vitrine queries the **Qloo Taste Graph** to map artisan motifs (e.g., *madder root dyes, botanical woodblock, wabi-sabi aesthetics*) to real-world cultural entities, design movements, and boutique demographics in target regions (Western Europe, North America, Japan).
+Instead of matching naive keyword queries, Vitrine queries the **Qloo Taste Graph** to map artisan motifs (e.g., *madder root dyes, botanical woodblock, wabi-sabi aesthetics*) to real-world cultural entities, design movements, and boutique demographics in target regions (Western Europe, North America, Japan). Cultural taste signals are deduplicated and mapped directly to concrete design affinities.
 
-### 3. 🔍 Live Evidence Gathering & Deduplication (Tavily)
-Vitrine queries live web sources using **Tavily Search**, validates canonical retailer domains, scrapes authentic store text excerpts, and flags duplicates before any assessment occurs.
+### 3. 🔍 Selective Evidence Gathering & Live Discovery (Tavily)
+* **Seller-in-the-Loop Prioritization:** Rather than gathering evidence indiscriminately across unvetted URLs, Vitrine prioritizes live web evidence gathering and scraping specifically for candidates confirmed by the artisan.
+* **Deterministic Deduplication:** Canonical domain normalization prevents duplicate retailers across different international search queries.
 
 ### 4. 🛡️ Strict Grounding & Anti-Spam Pledge
 * **Zero Hallucinations:** Every claim in an outreach draft or lead assessment must cite an explicit stored `evidence_id` or approved product fact.
-* **Unknowns Remain Unknown:** If a boutique's MOQ or wholesale terms are not publicly stated, Vitrine reports *"Not enough evidence"* rather than coercing scores to zero.
+* **Truth in Data:** If a boutique's MOQ or wholesale terms are not publicly stated, Vitrine reports *"Not enough evidence"* under *Unverified Fields & Information Gaps* rather than displaying empty boxes or coercing missing scores to zero.
 * **Seller-in-the-Loop:** **No automated email sending and no Send button.** Vitrine produces grounded drafts for the artisan to review, personalize, copy, and track manually.
 
 ---
@@ -77,9 +78,9 @@ Vitrine queries live web sources using **Tavily Search**, validates canonical re
 3. **Research Run Initialization:** Maker selects the target product and international regions. **Nemotron Ultra 550B** plans market hypotheses and aesthetic candidates.
 4. **Anchor Review:** Maker reviews, confirms, or edits proposed cultural and design anchors.
 5. **Taste Resolution & Live Discovery:** Confirmed anchors resolve through the **Qloo Taste Provider**, and the **Tavily Pipeline** discovers authentic overseas boutiques.
-6. **Assess & Score:** **Nemotron Super VL 120B** evaluates lead fit against stored web excerpts. A deterministic engine scores leads into `Qualified`, `Needs Review`, and `Unqualified` tiers.
+6. **Candidate Review & Selective Evidence:** Maker confirms candidate boutiques; Vitrine gathers verified excerpts and executes concurrent **Nemotron 120B** assessments to score leads into `Qualified`, `Needs Review`, and `Unqualified` tiers.
 7. **Lead Inspection:** Maker explores curated boutique cards, verifies source URLs, reviews confidence labels, and inspects explicit unknowns.
-8. **Outreach Studio:** **Nemotron Ultra 550B** crafts a personalized, evidence-grounded wholesale pitch citing verified facts. Maker edits, copies to clipboard, and tracks status manually.
+8. **Outreach Studio:** **Nemotron Ultra 550B** crafts a personalized, evidence-grounded wholesale pitch citing verified facts in fluent conversational prose. Maker edits, copies to clipboard, and tracks status manually.
 
 ---
 
@@ -94,10 +95,10 @@ Vitrine queries live web sources using **Tavily Search**, validates canonical re
 
 ### Backend (`backend/`)
 - **Framework:** FastAPI (Python 3.11) with ASGI asynchronous pipeline
-- **Database & ORM:** SQLite / PostgreSQL with SQLAlchemy 2.0 (asyncio)
+- **Database & ORM:** SQLite (`./vitrine.db` with persistent state across restarts) / PostgreSQL with SQLAlchemy 2.0 (asyncio)
 - **Validation:** Pydantic v2 Contract-First Schemas ([contracts/schemas.py](contracts/schemas.py))
 - **Security:** Supabase JWT verification, timing-safe tokens, automated secret redaction logging filter
-- **Testing:** Pytest + AnyIO (107/107 unit & integration tests passed)
+- **Testing:** Pytest + AnyIO (122/122 unit & integration tests passed)
 
 ### External Integrations
 - **AI Reasoning:** NVIDIA Cloud Functions / Nebius (`nemotron-3-ultra-550b`, `nemotron-3.5-super-vl-120b`)
@@ -119,36 +120,69 @@ cd Vitrine
 ```
 
 ### 2. Configure Environment Variables
-Copy `.env.example` to `.env`:
+Vitrine uses a unified configuration template (`.env.example`) for all backend, AI, and frontend variables:
 ```bash
+# Copy template to root .env (read by Backend & AI pipeline)
 cp .env.example .env
+
+# Copy template to frontend/.env (read by Vite client)
+cp .env.example frontend/.env
 ```
-Fill in your API keys (or leave blank to automatically run in offline fixture mode):
+
+Fill in your API keys in `.env` (or leave blank to automatically run in offline fixture mode):
 ```env
-# AI Models (NVIDIA Integrate / Nebius)
+# ------------------------------------------------------------------------------
+# 1. Application & Auth Configuration
+# ------------------------------------------------------------------------------
+APP_ENV=dev
+ALLOW_DEV_TOKENS=true
+DATABASE_URL=sqlite+aiosqlite:///./vitrine.db
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000
+
+# ------------------------------------------------------------------------------
+# 2. AI Intelligence Providers (NVIDIA NIM / Nebius OpenAI-Compatible)
+# ------------------------------------------------------------------------------
+# Deep Reasoning & Outreach Pitch Crafting (Nemotron-3-Ultra-550B)
 NEBIUS_BASE_URL=https://integrate.api.nvidia.com/v1
 NEBIUS_API_KEY=your-nvidia-api-key
 NEBIUS_MODEL_ID=nvidia/nemotron-3-ultra-550b-a55b
 
+# Fast Extraction & Concurrent Lead Assessment (Nemotron-3.5-Super-VL-120B)
 NEMOTRON_FAST_BASE_URL=https://integrate.api.nvidia.com/v1
 NEMOTRON_FAST_API_KEY=your-nvidia-fast-api-key
 NEMOTRON_FAST_MODEL_ID=nvidia/nemotron-3.5-super-vl-120b-a12b
 
-# Search & Taste APIs
+# ------------------------------------------------------------------------------
+# 3. Market Research & Web Discovery (Tavily Search API)
+# ------------------------------------------------------------------------------
 TAVILY_API_KEY=your-tavily-key
-QLOO_API_KEY=your-qloo-key
 
-# App & Auth Settings
-APP_ENV=dev
-SUPABASE_JWT_SECRET=dev-secret-key-32-chars-minimum
+# ------------------------------------------------------------------------------
+# 4. Taste Intelligence & Cultural Affinity (Qloo API)
+# ------------------------------------------------------------------------------
+QLOO_API_KEY=your-qloo-key
+QLOO_BASE_URL=https://hackathon.api.qloo.com
+
+# ------------------------------------------------------------------------------
+# 5. Pipeline Execution Limits (Optimized for Fast Hackathon Runs)
+# ------------------------------------------------------------------------------
+STAGE_TIMEOUT_SECONDS=120
+MAX_LEADS_PER_RUN=6
+
+# ------------------------------------------------------------------------------
+# 6. Frontend Client Configuration (Vite - prefixed with VITE_)
+# ------------------------------------------------------------------------------
+VITE_API_BASE_URL=http://localhost:8000/api/v1
+VITE_USE_MOCK=false
+VITE_DEV_AUTH_BYPASS=true
 ```
 
 ### 3. Run Backend Server
 ```bash
 # Install Python dependencies
-python -m pip install -r backend/requirements.txt  # or: pip install fastapi uvicorn sqlalchemy pydantic httpx pyjwt
+python -m pip install -r backend/requirements.txt
 
-# Start FastAPI application
+# Start FastAPI application with persistent SQLite storage
 python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 *API Swagger Documentation will be available at [http://localhost:8000/docs](http://localhost:8000/docs).*
@@ -168,13 +202,13 @@ npm run dev
 Vitrine includes an exhaustive test suite covering contracts, deterministic scoring, secret redaction, and live AI pipelines:
 
 ```bash
-# Run all backend unit & integration tests (107 tests)
+# Run all backend unit & integration tests (122 tests)
 python -m pytest -v
 
 # Run WS3 Retailer Evaluation Harness against live Tavily + Nemotron
 python -m eval.run_eval
 
-# Run frontend tests & type check
+# Run frontend tests, type check & production build
 cd frontend
 npm test
 npm run typecheck
