@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     # Application
     app_env: str = "dev"
+    allow_dev_tokens: bool = False
 
     # Supabase & Database
     supabase_url: str = ""

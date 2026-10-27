@@ -3,6 +3,8 @@ import { Shell } from "@/components/layout/Shell";
 import { LandingPage } from "@/features/landing/LandingPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { SignupPage } from "@/features/auth/SignupPage";
+import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
+import { RequireAuth, RedirectIfAuthenticated } from "@/features/auth/AuthGuards";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { ProductListPage } from "@/features/products/ProductListPage";
 import { ProductFormPage } from "@/features/products/ProductFormPage";
@@ -70,12 +72,34 @@ export default function App() {
       {/* Public Landing Page */}
       <Route path="/" element={<LandingPage />} />
 
-      {/* Non-shell auth routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
+      {/* Non-shell auth routes (redirect to /app if already signed in) */}
+      <Route
+        path="/login"
+        element={
+          <RedirectIfAuthenticated>
+            <LoginPage />
+          </RedirectIfAuthenticated>
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <RedirectIfAuthenticated>
+            <SignupPage />
+          </RedirectIfAuthenticated>
+        }
+      />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Workspace routes — wrapped in Shell (sidebar + mobile nav) */}
-      <Route path="/app" element={<Shell />}>
+      {/* Workspace routes — guarded by RequireAuth, wrapped in Shell */}
+      <Route
+        path="/app"
+        element={
+          <RequireAuth>
+            <Shell />
+          </RequireAuth>
+        }
+      >
         <Route index element={<DashboardPage />} />
         <Route path="products" element={<ProductListPage />} />
         <Route path="products/new" element={<ProductFormPage />} />

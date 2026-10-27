@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter
 
 from contracts.schemas import IntegrationState
+from backend.app.api.demo import demo_router
 from backend.app.api.leads import leads_router
 from backend.app.api.outreach import lead_outreach_router, outreach_router
 from backend.app.api.products import products_router
@@ -61,3 +62,4 @@ api_router.include_router(taste_anchors_router)
 api_router.include_router(leads_router)
 api_router.include_router(lead_outreach_router)
 api_router.include_router(outreach_router)
+api_router.include_router(demo_router)

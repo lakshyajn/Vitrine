@@ -1,7 +1,10 @@
 import { Link, NavLink } from "react-router-dom";
+import { LogOut } from "lucide-react";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/config/brand";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
+import { useAuth } from "@/features/auth/AuthProvider";
+import { useProfile } from "@/api/profile";
 
 /**
  * Architectural Vitrine showcase aperture glyph.
@@ -21,6 +24,16 @@ function VitrineMark({ className }: { className?: string }) {
 }
 
 export function Sidebar() {
+  const { user, signOut, isMockMode } = useAuth();
+  const { data: profile } = useProfile(!!user);
+
+  const businessName =
+    profile?.business_name ||
+    (user?.user_metadata?.studio_name as string) ||
+    "Studio Workspace";
+  const userEmail = user?.email || "";
+  const isDemoUser = isMockMode || Boolean(user?.user_metadata?.is_demo);
+
   return (
     <aside
       data-ui
@@ -105,18 +118,41 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      {/* Workspace Footer Profile */}
-      <div className="flex-shrink-0 border-t border-sidebar-border p-4">
-        <div className="rounded-lg bg-sidebar-surface/60 border border-sidebar-border/70 p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-white">
-              Studio Workspace
-            </span>
-            <span className="flex size-2 rounded-full bg-emerald-500" aria-label="System operational" />
+      {/* Workspace Footer Profile with Signed-in Maker Details & Sign Out */}
+      <div className="flex-shrink-0 border-t border-sidebar-border p-3.5">
+        <div className="rounded-lg bg-sidebar-surface/60 border border-sidebar-border/70 p-3 space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-xs font-semibold text-white">
+                  {businessName}
+                </span>
+                {isDemoUser && (
+                  <span className="inline-flex items-center rounded bg-amber-500/20 px-1.5 py-0.2 text-[10px] font-medium text-amber-300 border border-amber-500/30 flex-shrink-0">
+                    Demo data
+                  </span>
+                )}
+              </div>
+              {userEmail && (
+                <p className="truncate text-[11px] text-sidebar-muted" title={userEmail}>
+                  {userEmail}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              title="Sign out of workspace"
+              aria-label="Sign out"
+              className="pressable grid size-7 flex-shrink-0 place-items-center rounded-md text-sidebar-muted hover:text-white hover:bg-sidebar-hover transition-colors focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              <LogOut size={14} />
+            </button>
           </div>
-          <p className="mt-1 text-[11px] text-sidebar-muted">
-            Independent Label Edition
-          </p>
+          <div className="flex items-center justify-between pt-1 border-t border-sidebar-border/50 text-[10px] text-sidebar-muted">
+            <span>Evidence-led mode</span>
+            <span className="flex size-1.5 rounded-full bg-emerald-500" aria-label="System operational" />
+          </div>
         </div>
       </div>
     </aside>

@@ -17,6 +17,7 @@ def clean_test_env(monkeypatch):
     monkeypatch.setenv("NEBIUS_API_KEY", "")
     monkeypatch.setenv("NEMOTRON_FAST_API_KEY", "")
     monkeypatch.setenv("TAVILY_API_KEY", "")
+    monkeypatch.setenv("ALLOW_DEV_TOKENS", "true")
     try:
         from backend.app.core.config import get_settings
         get_settings.cache_clear()

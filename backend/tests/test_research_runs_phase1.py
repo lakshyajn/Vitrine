@@ -59,6 +59,9 @@ def make_token(user_id: UUID, email: str = "artisan@test.com") -> str:
         "aud": "authenticated",
         "exp": int(time.time()) + 3600,
     }
+    _s = get_settings()
+    if _s.supabase_url and "iss" not in payload:
+        payload["iss"] = f"{_s.supabase_url.rstrip('/')}/auth/v1"
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
 

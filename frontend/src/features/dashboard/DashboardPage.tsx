@@ -8,6 +8,10 @@ import {
   ArrowRight,
   Plus,
   Clock,
+  Sparkles,
+  CheckCircle,
+  X,
+  Loader2,
 } from "lucide-react";
 import {
   getProducts,
@@ -21,6 +25,7 @@ import {
   type OutreachDraft,
   type IntegrationStatusResponse,
 } from "@/api";
+import { useSeedDemo } from "@/api/demo";
 import { IntegrationBanner } from "@/components/shared/IntegrationBanner";
 import { DemoBadge } from "@/components/shared/DemoBadge";
 import { ScoreBar } from "@/components/shared/ScoreBar";
@@ -29,6 +34,7 @@ import { ErrorState } from "@/components/shared/ErrorState";
 
 export function DashboardPage() {
   const navigate = useNavigate();
+  const seedMutation = useSeedDemo();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [runs, setRuns] = useState<ResearchRun[]>([]);
@@ -38,6 +44,7 @@ export function DashboardPage() {
     useState<IntegrationStatusResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -69,6 +76,18 @@ export function DashboardPage() {
     fetchDashboardData();
   }, []);
 
+  const handleSeedDemo = async () => {
+    try {
+      const res = await seedMutation.mutateAsync();
+      await fetchDashboardData();
+      setNotification(
+        `Demo workspace ready: ${res.products_seeded} products, ${res.leads_seeded} leads, and ${res.runs_seeded} discovery run.`
+      );
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load demo scenario.");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
@@ -90,6 +109,28 @@ export function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8 animate-fade-in">
+      {/* Toast Notification Banner */}
+      {notification && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800 animate-fade-in shadow-xs"
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle className="size-4 text-emerald-600 flex-shrink-0" />
+            <span className="font-medium">{notification}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotification(null)}
+            className="rounded p-1 text-emerald-600 hover:text-emerald-900 transition-colors"
+            aria-label="Dismiss notification"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
         <div>
@@ -127,6 +168,52 @@ export function DashboardPage() {
 
       {/* Integration Status Subsystems Banner */}
       <IntegrationBanner status={integrationStatus} />
+
+      {/* Empty State Banner: Prompt when no products exist */}
+      {products.length === 0 && (
+        <div className="rounded-2xl border border-primary/20 bg-primary-light/40 p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xs animate-fade-in">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="flex items-center gap-2 text-primary font-semibold text-xs uppercase tracking-wider">
+              <Sparkles className="size-4" />
+              <span>Get Started with Vitrine</span>
+            </div>
+            <h2 className="font-display text-lg sm:text-xl font-bold text-ink">
+              Your maker workspace has no products yet
+            </h2>
+            <p className="text-xs text-muted leading-relaxed">
+              Create your first artisan Product Passport to begin wholesale matching, or load our pre-configured demo scenario to explore the complete research pipeline.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSeedDemo}
+              disabled={seedMutation.isPending}
+              data-btn-primary
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors disabled:opacity-50"
+            >
+              {seedMutation.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Loading demo catalogue...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="size-4" />
+                  <span>Load demo catalogue</span>
+                </>
+              )}
+            </button>
+            <Link
+              to="/app/products/new"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-semibold text-ink hover:bg-surface-subtle transition-colors shadow-xs"
+            >
+              <Plus className="size-4" />
+              <span>Add Product</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Action Callout if Anchor Review is pending */}
       {pendingReviewRuns.length > 0 && (
@@ -171,7 +258,7 @@ export function DashboardPage() {
             <span className="text-xs text-muted">passports</span>
           </div>
           <p className="mt-1 text-[11px] text-muted">
-            All materials & wholesale parameters verified
+            All materials &amp; wholesale parameters verified
           </p>
         </Link>
 
@@ -191,7 +278,7 @@ export function DashboardPage() {
             <span className="text-xs text-muted">executed</span>
           </div>
           <p className="mt-1 text-[11px] text-muted">
-            Tavily web extractions & Qloo taste grounding
+            Tavily web extractions &amp; Qloo taste grounding
           </p>
         </Link>
 
@@ -360,4 +447,3 @@ export function DashboardPage() {
     </div>
   );
 }
-

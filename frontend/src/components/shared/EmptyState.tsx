@@ -1,15 +1,22 @@
+import React from "react";
 import type { LucideIcon } from "lucide-react";
-import { FolderSearch } from "lucide-react";
+import { FolderSearch, Loader2 } from "lucide-react";
+
+interface ActionConfig {
+  label: string;
+  onClick: () => void;
+  icon?: LucideIcon;
+  disabled?: boolean;
+  loading?: boolean;
+}
 
 interface EmptyStateProps {
   title: string;
   description: string;
   icon?: LucideIcon;
-  action?: {
-    label: string;
-    onClick: () => void;
-    icon?: LucideIcon;
-  };
+  action?: ActionConfig;
+  secondaryAction?: ActionConfig;
+  children?: React.ReactNode;
   className?: string;
 }
 
@@ -18,6 +25,8 @@ export function EmptyState({
   description,
   icon: Icon = FolderSearch,
   action,
+  secondaryAction,
+  children,
   className = "",
 }: EmptyStateProps) {
   return (
@@ -36,16 +45,43 @@ export function EmptyState({
         {description}
       </p>
 
-      {action && (
-        <button
-          type="button"
-          onClick={action.onClick}
-          data-btn-primary
-          className="mt-6 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-        >
-          {action.icon && <action.icon className="size-4" aria-hidden="true" />}
-          <span>{action.label}</span>
-        </button>
+      {children && <div className="mt-4 w-full">{children}</div>}
+
+      {(action || secondaryAction) && (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          {action && (
+            <button
+              type="button"
+              onClick={action.onClick}
+              disabled={action.disabled || action.loading}
+              data-btn-primary
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-xs transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              {action.loading ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                action.icon && <action.icon className="size-4" aria-hidden="true" />
+              )}
+              <span>{action.label}</span>
+            </button>
+          )}
+
+          {secondaryAction && (
+            <button
+              type="button"
+              onClick={secondaryAction.onClick}
+              disabled={secondaryAction.disabled || secondaryAction.loading}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-ink shadow-xs hover:bg-surface-subtle transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              {secondaryAction.loading ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                secondaryAction.icon && <secondaryAction.icon className="size-4" aria-hidden="true" />
+              )}
+              <span>{secondaryAction.label}</span>
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
