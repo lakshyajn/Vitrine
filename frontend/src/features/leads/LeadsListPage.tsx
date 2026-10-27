@@ -234,7 +234,7 @@ export function LeadsListPage() {
                         : "bg-rose-100 text-rose-800 border border-rose-200"
                     }`}
                   >
-                    {lead.tier.replace("_", " ")}
+                    {(lead.tier || "needs_review").replace("_", " ")}
                   </span>
 
                   <span className="rounded bg-surface-subtle px-2 py-0.5 text-[11px] font-semibold text-muted border border-border">

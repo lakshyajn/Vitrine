@@ -232,7 +232,7 @@ export function LeadDetailPage() {
                   : "bg-rose-100 text-rose-800 border border-rose-300"
               }`}
             >
-              {lead.tier.replace("_", " ")}
+              {(lead.tier || "needs_review").replace("_", " ")}
             </span>
           </div>
         </div>
@@ -291,35 +291,60 @@ export function LeadDetailPage() {
             {lead.assessment.summary}
           </p>
 
-          {/* Dimension Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-            <div className="rounded-xl border border-border p-3 space-y-1.5">
-              <span className="text-[11px] font-semibold uppercase text-muted">Category Alignment</span>
-              <ul className="text-xs space-y-1 text-muted">
-                {lead.assessment.category_fit.reasons.map((r, i) => (
-                  <li key={i}>• {r}</li>
-                ))}
-              </ul>
-            </div>
+          {/* Dimension Details: Only show dimensions that have verified findings */}
+          {(() => {
+            const hasCat = lead.assessment.category_fit.reasons.length > 0;
+            const hasAes = lead.assessment.aesthetic_fit.reasons.length > 0;
+            const hasWho = lead.assessment.seller_compat.reasons.length > 0;
+            const activeCount = [hasCat, hasAes, hasWho].filter(Boolean).length;
 
-            <div className="rounded-xl border border-border p-3 space-y-1.5">
-              <span className="text-[11px] font-semibold uppercase text-muted">Aesthetic Vector</span>
-              <ul className="text-xs space-y-1 text-muted">
-                {lead.assessment.aesthetic_fit.reasons.map((r, i) => (
-                  <li key={i}>• {r}</li>
-                ))}
-              </ul>
-            </div>
+            if (activeCount === 0) return null;
 
-            <div className="rounded-xl border border-border p-3 space-y-1.5">
-              <span className="text-[11px] font-semibold uppercase text-muted">Wholesale Fit</span>
-              <ul className="text-xs space-y-1 text-muted">
-                {lead.assessment.seller_compat.reasons.map((r, i) => (
-                  <li key={i}>• {r}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+            return (
+              <div
+                className={`grid grid-cols-1 ${
+                  activeCount === 3
+                    ? "sm:grid-cols-3"
+                    : activeCount === 2
+                    ? "sm:grid-cols-2"
+                    : ""
+                } gap-4 pt-2`}
+              >
+                {hasCat && (
+                  <div className="rounded-xl border border-border p-3 space-y-1.5">
+                    <span className="text-[11px] font-semibold uppercase text-muted">Category Alignment</span>
+                    <ul className="text-xs space-y-1 text-muted">
+                      {lead.assessment.category_fit.reasons.map((r, i) => (
+                        <li key={i}>• {r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {hasAes && (
+                  <div className="rounded-xl border border-border p-3 space-y-1.5">
+                    <span className="text-[11px] font-semibold uppercase text-muted">Aesthetic Vector</span>
+                    <ul className="text-xs space-y-1 text-muted">
+                      {lead.assessment.aesthetic_fit.reasons.map((r, i) => (
+                        <li key={i}>• {r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {hasWho && (
+                  <div className="rounded-xl border border-border p-3 space-y-1.5">
+                    <span className="text-[11px] font-semibold uppercase text-muted">Wholesale Fit</span>
+                    <ul className="text-xs space-y-1 text-muted">
+                      {lead.assessment.seller_compat.reasons.map((r, i) => (
+                        <li key={i}>• {r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Missing evidence / Unknowns callout */}
           {lead.assessment.unknowns.length > 0 && (
@@ -338,46 +363,100 @@ export function LeadDetailPage() {
         </div>
       )}
 
-      {/* Cultural Affinity Signals (Qloo Integration) */}
-      {lead.cultural_affinity && (
-        <div className="rounded-2xl border border-border bg-surface p-6 shadow-card space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="size-4 text-purple-600" />
-              <h2 className="font-display text-base font-semibold text-ink">
-                Qloo Cultural Taste Affinity
-              </h2>
-            </div>
-            {lead.cultural_affinity.is_demo && <DemoBadge />}
-          </div>
+      {/* Cultural Affinity Signals (Qloo Integration): Deduplicated and capped to top unique signals */}
+      {(() => {
+        const rawSignals = (lead.cultural_affinity?.signals || []) as Array<{
+          type?: string;
+          text?: string;
+          entity_name?: string;
+          affinity_score?: number;
+          source_ref?: string;
+          correlated_categories?: string[];
+          [key: string]: unknown;
+        }>;
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {lead.cultural_affinity.signals.map((sig, idx) => (
-              <div key={idx} className="rounded-xl border border-purple-100 bg-purple-50/50 p-3.5 text-xs space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-purple-950">
-                    {String(sig.entity_name || "Boutique Affinity")}
-                  </span>
-                  {sig.affinity_score !== undefined && (
-                    <span className="rounded bg-purple-200/70 px-2 py-0.5 text-[10px] font-bold text-purple-900">
-                      {Math.round(Number(sig.affinity_score) * 100)}% Affinity
-                    </span>
-                  )}
-                </div>
-                {Array.isArray(sig.correlated_categories) && (
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {sig.correlated_categories.map((cat, i) => (
-                      <span key={i} className="rounded bg-white px-2 py-0.5 text-[10px] text-purple-800 border border-purple-200">
-                        {String(cat)}
-                      </span>
-                    ))}
-                  </div>
-                )}
+        if (!rawSignals.length) return null;
+
+        // Deduplicate signals by text or label to prevent repetitive wall of identical cards
+        const uniqueSignals = Array.from(
+          new Map(
+            rawSignals.map((s) => [
+              (s.text || s.entity_name || s.type || "").trim(),
+              s,
+            ])
+          ).values()
+        )
+          .filter((s) => (s.text && s.text.trim().length > 0) || Boolean(s.entity_name))
+          .slice(0, 3);
+
+        if (uniqueSignals.length === 0) return null;
+
+        return (
+          <div className="rounded-2xl border border-border bg-surface p-6 shadow-card space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-4 text-purple-600" />
+                <h2 className="font-display text-base font-semibold text-ink">
+                  Qloo Cultural Taste Affinity
+                </h2>
               </div>
-            ))}
+              {lead.cultural_affinity?.is_demo && <DemoBadge />}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {uniqueSignals.map((sig, idx) => {
+                const title: string =
+                  sig.entity_name ||
+                  (sig.type ? String(sig.type).replace(/_/g, " ") : "Taste Insight");
+                const bodyText: string =
+                  sig.text ||
+                  "Consumer affinity overlap with confirmed boutique taste anchor.";
+
+                return (
+                  <div
+                    key={idx}
+                    className="rounded-xl border border-purple-100 bg-purple-50/50 p-3.5 text-xs space-y-1.5 flex flex-col justify-between"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-purple-950 capitalize truncate">
+                          {title}
+                        </span>
+                        {sig.affinity_score !== undefined ? (
+                          <span className="rounded bg-purple-200/70 px-2 py-0.5 text-[10px] font-bold text-purple-900 flex-shrink-0">
+                            {Math.round(Number(sig.affinity_score) * 100)}% Affinity
+                          </span>
+                        ) : sig.source_ref ? (
+                          <span className="font-mono text-[10px] text-purple-700 truncate">
+                            {String(sig.source_ref)}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="text-xs text-purple-900/90 leading-relaxed">
+                        {bodyText}
+                      </p>
+                    </div>
+
+                    {Array.isArray(sig.correlated_categories) &&
+                      sig.correlated_categories.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1.5 border-t border-purple-200/40">
+                          {sig.correlated_categories.map((cat, i) => (
+                            <span
+                              key={i}
+                              className="rounded bg-white px-2 py-0.5 text-[10px] text-purple-800 border border-purple-200"
+                            >
+                              {String(cat)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Verified Web Evidence Section */}
       <div className="rounded-2xl border border-border bg-surface p-6 shadow-card space-y-4">
