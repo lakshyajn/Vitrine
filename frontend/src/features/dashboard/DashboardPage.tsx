@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import {
+  ApiError,
   getProducts,
   getResearchRuns,
   getLeads,
@@ -64,6 +65,9 @@ export function DashboardPage() {
       setDrafts(draftsData);
       setIntegrationStatus(statusData);
     } catch (err: unknown) {
+      if (err instanceof ApiError && err.status === 401) {
+        return;
+      }
       setError(
         err instanceof Error ? err.message : "Failed to load dashboard metrics."
       );

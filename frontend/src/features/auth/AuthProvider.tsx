@@ -62,50 +62,98 @@ export function AuthProvider({
   children,
   queryClient,
   initialUser,
+  isMockMode: isMockModeProp,
 }: {
   children: React.ReactNode;
   queryClient?: QueryClient;
   initialUser?: User | null;
+  isMockMode?: boolean;
 }) {
-  const isMockMode = import.meta.env.VITE_USE_MOCK === "true";
+  const isMockMode = isMockModeProp ?? (import.meta.env.VITE_USE_MOCK === "true");
   const defaultUser = initialUser !== undefined ? initialUser : (isMockMode ? DEMO_USER : null);
   const defaultSession = defaultUser ? (isMockMode ? DEMO_SESSION : null) : null;
   const [session, setSession] = useState<Session | null>(defaultSession);
   const [user, setUser] = useState<User | null>(defaultUser);
   const [isLoading, setIsLoading] = useState<boolean>(!isMockMode && initialUser === undefined);
   const currentUserIdRef = useRef<string | null>(defaultUser?.id ?? null);
+  const currentSessionRef = useRef<Session | null>(defaultSession);
+  const isRedirectingRef = useRef<boolean>(false);
 
   useEffect(() => {
-    // 1. Wire Access Token Provider for apiRequest
+    // 1. Wire Access Token Provider for apiRequest (prevents getSession race condition)
     setAccessTokenProvider(async () => {
       if (isMockMode) return DEMO_SESSION.access_token;
+      if (currentSessionRef.current?.access_token) {
+        return currentSessionRef.current.access_token;
+      }
       if (!supabase) return null;
       const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
-      return data.session?.access_token ?? null;
+      if (data.session?.access_token) {
+        currentSessionRef.current = data.session;
+        return data.session.access_token;
+      }
+      return null;
     });
 
-    // 2. Wire 401 Unauthorized Handler (attempts refresh once then signs out)
-    setUnauthorizedHandler(async () => {
-      if (isMockMode || !supabase) return null;
+    const triggerSessionInvalidRedirect = async () => {
+      if (isRedirectingRef.current) return;
+      isRedirectingRef.current = true;
       try {
-        const { data, error } = await supabase.auth.refreshSession();
-        if (error || !data.session) {
-          throw error || new Error("Session refresh failed");
+        if (supabase) {
+          await supabase.auth.signOut().catch(() => {});
         }
-        setSession(data.session);
-        setUser(data.session.user);
-        return data.session.access_token;
-      } catch {
-        // Refresh failed: clear cache, sign out, and redirect to /login
-        await supabase.auth.signOut().catch(() => {});
-        queryClient?.clear();
+      } finally {
+        currentSessionRef.current = null;
         setSession(null);
         setUser(null);
+        queryClient?.clear();
+        const notice = "Your session could not be verified. Please sign in again.";
+        try {
+          sessionStorage.setItem("auth_notice", notice);
+        } catch {
+          // Ignore storage issues in test/restricted environments
+        }
         const currentPath = window.location.pathname + window.location.search;
-        const next = encodeURIComponent(currentPath);
-        window.location.href = `/login?next=${next}`;
+        const next = encodeURIComponent(currentPath.startsWith("/login") ? "/app" : currentPath);
+        const loginUrl = `/login?next=${next}&message=${encodeURIComponent(notice)}`;
+        window.location.href = loginUrl;
+      }
+    };
+
+    // 2. Wire 401 Unauthorized Handler (attempts refresh once then signs out and redirects)
+    let refreshPromise: Promise<string | null> | null = null;
+
+    setUnauthorizedHandler(async ({ isRetry }: { isRetry: boolean }) => {
+      if (isMockMode || !supabase) return null;
+
+      if (isRetry) {
+        // Request failed 401 even after token refresh: reject and redirect to login
+        await triggerSessionInvalidRedirect();
         return null;
       }
+
+      // Initial 401: attempt single refreshSession()
+      if (!refreshPromise) {
+        refreshPromise = (async () => {
+          try {
+            const { data, error } = await supabase.auth.refreshSession();
+            if (error || !data.session) {
+              throw error || new Error("Session refresh failed");
+            }
+            currentSessionRef.current = data.session;
+            setSession(data.session);
+            setUser(data.session.user);
+            return data.session.access_token;
+          } catch {
+            await triggerSessionInvalidRedirect();
+            return null;
+          } finally {
+            refreshPromise = null;
+          }
+        })();
+      }
+
+      return refreshPromise;
     });
 
     if (isMockMode) {
@@ -119,12 +167,20 @@ export function AuthProvider({
     }
 
     // Initialize real Supabase session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
-      currentUserIdRef.current = initialSession?.user?.id ?? null;
+    const sessionPromise = supabase.auth.getSession();
+    if (sessionPromise && typeof sessionPromise.then === 'function') {
+      sessionPromise.then(({ data: { session: initialSession } }) => {
+        currentSessionRef.current = initialSession;
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+        currentUserIdRef.current = initialSession?.user?.id ?? null;
+        setIsLoading(false);
+      }).catch(() => {
+        setIsLoading(false);
+      });
+    } else {
       setIsLoading(false);
-    });
+    }
 
     const {
       data: { subscription },
@@ -132,6 +188,7 @@ export function AuthProvider({
       const prevId = currentUserIdRef.current;
       const nextId = currentSession?.user?.id ?? null;
       currentUserIdRef.current = nextId;
+      currentSessionRef.current = currentSession;
 
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
@@ -149,6 +206,7 @@ export function AuthProvider({
 
   const signIn = async (email: string, password: string) => {
     if (isMockMode) {
+      currentSessionRef.current = DEMO_SESSION;
       setSession(DEMO_SESSION);
       setUser(DEMO_USER);
       return { error: null, session: DEMO_SESSION };
@@ -158,6 +216,7 @@ export function AuthProvider({
     }
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (data.session) {
+      currentSessionRef.current = data.session;
       setSession(data.session);
       setUser(data.session.user);
     }
@@ -172,6 +231,7 @@ export function AuthProvider({
         user_metadata: { studio_name: studioName || "Demo Studio", is_demo: true },
       } as User;
       const mockSession = { ...DEMO_SESSION, user: mockUser };
+      currentSessionRef.current = mockSession;
       setSession(mockSession);
       setUser(mockUser);
       return { error: null, session: mockSession };
@@ -187,6 +247,7 @@ export function AuthProvider({
       },
     });
     if (data.session) {
+      currentSessionRef.current = data.session;
       setSession(data.session);
       setUser(data.session.user);
     }
@@ -195,6 +256,7 @@ export function AuthProvider({
 
   const signOut = async () => {
     queryClient?.clear();
+    currentSessionRef.current = null;
     if (isMockMode || !supabase) {
       setSession(null);
       setUser(null);
@@ -219,20 +281,6 @@ export function AuthProvider({
     return { error };
   };
 
-  const resendConfirmation = async (email: string) => {
-    if (isMockMode) {
-      return { error: null };
-    }
-    if (!supabase) {
-      return { error: new Error("Supabase is not configured") };
-    }
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email,
-    });
-    return { error };
-  };
-
   if (!isMockMode && !isSupabaseConfigured) {
     return <SupabaseConfigError />;
   }
@@ -248,7 +296,6 @@ export function AuthProvider({
         signUp,
         signOut,
         resetPassword,
-        resendConfirmation,
       }}
     >
       {children}

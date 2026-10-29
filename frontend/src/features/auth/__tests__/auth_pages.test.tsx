@@ -1,9 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { updateProfile, useProfile } from "@/api/profile";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 import { AuthProvider } from "../AuthProvider";
 import { LoginPage } from "../LoginPage";
 import { SignupPage } from "../SignupPage";
@@ -95,7 +97,6 @@ vi.mock("@/api/profile", () => {
   };
 });
 
-import { useProfile } from "@/api/profile";
 
 describe("Milestone C: Auth Pages, Onboarding, Layout & Landing", () => {
   let queryClient: QueryClient;
@@ -155,6 +156,167 @@ describe("Milestone C: Auth Pages, Onboarding, Layout & Landing", () => {
     expect(screen.queryByText(/password must be at least 6 characters/i)).toBeNull();
     expect(submitBtn).not.toBeDisabled();
   });
+
+  it("SignupPage succeeds in one step: signUp returns session, calls updateProfile, navigates to /app", async () => {
+    const user = userEvent.setup();
+    const mockSession = {
+      access_token: "test-token-signup-123",
+      user: { id: "u-new-123", email: "bloom@studio.co" },
+    };
+    vi.mocked(supabase!.auth.signUp).mockResolvedValue({
+      data: {
+        user: mockSession.user as unknown as User,
+        session: mockSession as unknown as Session,
+      },
+      error: null,
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/signup"]}>
+          <AuthProvider queryClient={queryClient} initialUser={null} isMockMode={false}>
+            <Routes>
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/app" element={<div data-testid="workspace-app">Workspace App</div>} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const studioInput = screen.getByLabelText(/studio or brand name/i);
+    const emailInput = screen.getByLabelText(/studio email address/i);
+    const pwdInput = screen.getByLabelText(/password/i);
+
+    await user.type(studioInput, "Atelier Bloom");
+    await user.type(emailInput, "bloom@studio.co");
+    await user.type(pwdInput, "secret123");
+
+    const submitBtn = screen.getByRole("button", { name: /create account/i });
+    await user.click(submitBtn);
+
+    await waitFor(() => {
+      expect(supabase!.auth.signUp).toHaveBeenCalledWith({
+        email: "bloom@studio.co",
+        password: "secret123",
+        options: {
+          data: { studio_name: "Atelier Bloom" },
+        },
+      });
+      expect(updateProfile).toHaveBeenCalledWith({ business_name: "Atelier Bloom" });
+      expect(screen.getByTestId("workspace-app")).toBeInTheDocument();
+    });
+  });
+
+  it("SignupPage shows clear configuration error when signUp returns no session and renders no email verification UI", async () => {
+    const user = userEvent.setup();
+    vi.mocked(supabase!.auth.signUp).mockResolvedValue({
+      data: {
+        user: { id: "u-no-session", email: "bloom@studio.co" } as unknown as User,
+        session: null,
+      },
+      error: null,
+    });
+
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/signup"]}>
+          <AuthProvider queryClient={queryClient} initialUser={null} isMockMode={false}>
+            <Routes>
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/app" element={<div data-testid="workspace-app">Workspace App</div>} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await user.type(screen.getByLabelText(/studio or brand name/i), "Atelier Bloom");
+    await user.type(screen.getByLabelText(/studio email address/i), "bloom@studio.co");
+    await user.type(screen.getByLabelText(/password/i), "secret123");
+
+    const submitBtn = screen.getByRole("button", { name: /create account/i });
+    await user.click(submitBtn);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Sign-up did not return a session. Email confirmation appears to be enabled for this Supabase project. Turn off 'Confirm email' in the Supabase dashboard and try again."
+        )
+      ).toBeInTheDocument();
+    });
+
+    // Verify no email verification / confirmation UI was rendered
+    const text = container.textContent?.toLowerCase() || "";
+    expect(text).not.toContain("check your email");
+    expect(text).not.toContain("resend");
+    expect(text).not.toContain("verification code");
+    expect(screen.queryByTestId("workspace-app")).toBeNull();
+  });
+
+  it("No email-confirmation UI elements remain in SignupPage or LoginPage", () => {
+    const { container: signupContainer } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AuthProvider queryClient={queryClient} initialUser={null}>
+            <SignupPage />
+          </AuthProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const signupText = signupContainer.textContent?.toLowerCase() || "";
+    expect(signupText).not.toContain("check your email");
+    expect(signupText).not.toContain("resend");
+    expect(signupText).not.toContain("confirm email");
+
+    const { container: loginContainer } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AuthProvider queryClient={queryClient} initialUser={null}>
+            <LoginPage />
+          </AuthProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const loginText = loginContainer.textContent?.toLowerCase() || "";
+    expect(loginText).not.toContain("check your email");
+    expect(loginText).not.toContain("resend");
+    expect(loginText).not.toContain("not confirmed");
+  });
+
+  it("LoginPage displays auth notice when message param is present in URL", async () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/login?message=Your%20session%20could%20not%20be%20verified.%20Please%20sign%20in%20again."]}>
+          <AuthProvider queryClient={queryClient} initialUser={null}>
+            <LoginPage />
+          </AuthProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("Your session could not be verified. Please sign in again.")).toBeInTheDocument();
+  });
+
+  it("LoginPage displays auth notice when stored in sessionStorage", async () => {
+    sessionStorage.setItem("auth_notice", "Your session could not be verified. Please sign in again.");
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/login"]}>
+          <AuthProvider queryClient={queryClient} initialUser={null}>
+            <LoginPage />
+          </AuthProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("Your session could not be verified. Please sign in again.")).toBeInTheDocument();
+    expect(sessionStorage.getItem("auth_notice")).toBeNull();
+  });
+
 
   it("SignupPage validates studio name 2-80 chars, email and password", async () => {
     const user = userEvent.setup();

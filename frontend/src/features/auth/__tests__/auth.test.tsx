@@ -1,3 +1,4 @@
+import type { User } from "@supabase/supabase-js";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -10,13 +11,13 @@ import { apiRequest, setUnauthorizedHandler } from "@/api/client";
 // Mock Supabase module
 vi.mock("@/lib/supabase", () => {
   const mockAuth = {
-    getSession: vi.fn(),
+    getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
     onAuthStateChange: vi.fn(() => ({
       data: { subscription: { unsubscribe: vi.fn() } },
     })),
     signInWithPassword: vi.fn(),
     signUp: vi.fn(),
-    signOut: vi.fn(),
+    signOut: vi.fn().mockResolvedValue({ error: null }),
     refreshSession: vi.fn(),
     resetPasswordForEmail: vi.fn(),
   };
@@ -43,18 +44,18 @@ function TestConsumer() {
   );
 }
 
-describe("Frontend Auth Core (Milestone B)", () => {
+describe("Frontend Auth Core (Milestones B & D)", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
   });
 
   it("mock mode yields the demo user without calling Supabase", async () => {
-    // VITE_USE_MOCK is "true" by default in vitest config
     render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
@@ -68,7 +69,6 @@ describe("Frontend Auth Core (Milestone B)", () => {
     expect(screen.getByTestId("auth-mock")).toHaveTextContent("true");
     expect(screen.getByTestId("auth-user")).toHaveTextContent("studio@ateliersolenne.com");
     expect(screen.getByTestId("auth-token")).toHaveTextContent("mock-demo-access-token");
-    // Ensure supabase was not called in mock mode
     expect(supabase?.auth.getSession).not.toHaveBeenCalled();
   });
 
@@ -100,7 +100,6 @@ describe("Frontend Auth Core (Milestone B)", () => {
   });
 
   it("RedirectIfAuthenticated redirects signed-in user and rejects open-redirects", async () => {
-    // Test with malicious next target: https://attacker.com
     render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={["/login?next=https%3A%2F%2Fattacker.com"]}>
@@ -121,7 +120,6 @@ describe("Frontend Auth Core (Milestone B)", () => {
       </QueryClientProvider>,
     );
 
-    // Because mock user is signed in, RedirectIfAuthenticated redirects to /app (NOT to attacker.com)
     await waitFor(() => {
       expect(screen.getByTestId("workspace-view")).toBeInTheDocument();
       expect(screen.queryByTestId("login-view")).toBeNull();
@@ -217,13 +215,84 @@ describe("Frontend Auth Core (Milestone B)", () => {
       });
     });
 
-    const refreshHandler = vi.fn().mockResolvedValue(null); // refresh fails
+    const refreshHandler = vi.fn().mockResolvedValue(null);
     setUnauthorizedHandler(refreshHandler);
 
     await expect(apiRequest("/test-failed-refresh")).rejects.toThrow("Expired");
     expect(refreshHandler).toHaveBeenCalledTimes(1);
-    expect(callCount).toBe(1); // not retried
+    expect(callCount).toBe(1);
 
     globalThis.fetch = originalFetch;
+  });
+
+  it("401 then retried request still 401 triggers unauthorizedHandler with isRetry: true exactly once", async () => {
+    const originalFetch = globalThis.fetch;
+    let callCount = 0;
+
+    globalThis.fetch = vi.fn().mockImplementation(async () => {
+      callCount++;
+      return new Response(JSON.stringify({ error: { code: "unauthorized", message: "Invalid signature" } }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    const handler = vi.fn().mockImplementation(async ({ isRetry }) => {
+      if (!isRetry) {
+        return "refreshed-token-xyz";
+      }
+      return null;
+    });
+    setUnauthorizedHandler(handler);
+
+    await expect(apiRequest("/test-permanent-401")).rejects.toThrow("Invalid signature");
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler).toHaveBeenNthCalledWith(1, { isRetry: false });
+    expect(handler).toHaveBeenNthCalledWith(2, { isRetry: true });
+    expect(callCount).toBe(2);
+
+    globalThis.fetch = originalFetch;
+  });
+
+  it("AuthProvider wires 401 handler that signs out and redirects to /login with verified message on failure", async () => {
+    // Render AuthProvider in live mode to wire real handler
+    const originalLocation = window.location;
+    // @ts-expect-error test location mock
+    delete window.location;
+    window.location = {
+      ...originalLocation,
+      pathname: "/app",
+      search: "",
+      href: "http://localhost:5173/app",
+    } as unknown as Location;
+
+    vi.mocked(supabase!.auth.refreshSession).mockRejectedValue(new Error("Refresh revoked"));
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AuthProvider queryClient={queryClient} initialUser={{ id: "u-123" } as User} isMockMode={false}>
+            <TestConsumer />
+          </AuthProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Call apiRequest with 401
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: { code: "unauthorized", message: "Unauthorized" } }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(apiRequest("/test-unverified-session")).rejects.toThrow();
+
+    expect(window.location.href).toContain("/login");
+    expect(window.location.href).toContain("message=Your%20session%20could%20not%20be%20verified.%20Please%20sign%20in%20again.");
+
+    globalThis.fetch = originalFetch;
+    window.location = originalLocation;
   });
 });

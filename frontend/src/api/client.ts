@@ -2,7 +2,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:800
 type ErrorBody = { error?: { code?: string; message?: string; details?: unknown; request_id?: string } };
 
 type AccessTokenProvider = () => Promise<string | null>;
-type UnauthorizedHandler = () => Promise<string | null>;
+type UnauthorizedHandler = (options: { isRetry: boolean }) => Promise<string | null>;
 
 let accessTokenProvider: AccessTokenProvider | undefined;
 let unauthorizedHandler: UnauthorizedHandler | undefined;
@@ -59,12 +59,17 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}, isRetr
   }
 
   // Handle 401 unauthorized: attempt single token refresh and retry
-  if (response.status === 401 && !isRetry && unauthorizedHandler) {
-    const refreshedToken = await unauthorizedHandler().catch(() => null);
-    if (refreshedToken) {
-      const retryHeaders = new Headers(init.headers);
-      retryHeaders.set("Authorization", "Bearer " + refreshedToken);
-      return apiRequest<T>(path, { ...init, headers: retryHeaders }, true);
+  if (response.status === 401 && unauthorizedHandler) {
+    if (!isRetry) {
+      const refreshedToken = await unauthorizedHandler({ isRetry: false }).catch(() => null);
+      if (refreshedToken) {
+        const retryHeaders = new Headers(init.headers);
+        retryHeaders.set("Authorization", "Bearer " + refreshedToken);
+        return apiRequest<T>(path, { ...init, headers: retryHeaders }, true);
+      }
+    } else {
+      // Retry request was still 401: trigger sign out and redirect once
+      await unauthorizedHandler({ isRetry: true }).catch(() => null);
     }
   }
 
@@ -75,7 +80,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}, isRetr
     const error = (body && typeof body === "object" ? body : {}) as ErrorBody;
     throw new ApiError({
       message: error.error?.message || "Request failed (" + response.status + ").",
-      code: error.error?.code || "unknown_error",
+      code: error.error?.code || (response.status === 401 ? "unauthorized" : "unknown_error"),
       status: response.status,
       requestId: error.error?.request_id,
       details: error.error?.details,

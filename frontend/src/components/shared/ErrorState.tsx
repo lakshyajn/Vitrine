@@ -17,6 +17,11 @@ export function ErrorState({
   onRetry,
   className = "",
 }: ErrorStateProps) {
+  // Auth errors must never render as the generic "Action Failed" card
+  if (code === "unauthorized" || code === "401") {
+    return null;
+  }
+
   // Retry allowed for upstream_timeout, upstream_unavailable, rate_limited or explicit isRetryable
   const canRetry =
     Boolean(onRetry) &&

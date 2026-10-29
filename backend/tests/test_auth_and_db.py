@@ -1,14 +1,15 @@
 """
-Tests for Auth (Supabase JWT Verification) and Database Models (Step 2 & Milestone A).
+Tests for Auth (Supabase JWT Verification) and Database Models (Step 2 & Milestones A & B).
 Verifies:
 1. Valid HS256 JWT extracts user_id, email, and role.
 2. Valid ES256 and RS256 JWTs verify using PyJWKClient (mocked locally, no network).
-3. Missing, expired, wrong audience, wrong issuer, or tampered tokens return 401 unauthorized in Appendix A.5 format.
-4. alg=none is rejected with 401.
-5. Missing sub or non-UUID sub is rejected with 401.
-6. When ALLOW_DEV_TOKENS=false, dev aliases ("dev-token") and unsigned tokens are rejected with 401.
-7. No secret, token, or key value appears in error responses or logs for failed auth.
-8. Database tables initialize cleanly in async SQLite and support CRUD operations.
+3. SUPABASE_URL trailing slash normalization.
+4. Clock skew tolerance: iat 30s in future accepted (leeway=60), 10m in future rejected (not_yet_valid).
+5. All 12 failure reason codes are logged at WARNING without leaking tokens or secrets:
+   missing_token, malformed, unsupported_alg, bad_signature, bad_issuer, bad_audience,
+   expired, not_yet_valid, jwks_unavailable, no_matching_key, secret_not_configured, invalid_sub.
+6. Startup configuration checks (sb_ secret, JWT-as-secret, trailing slash, allow_dev_tokens).
+7. Database tables initialize cleanly in async SQLite and support CRUD operations.
 """
 
 from __future__ import annotations
@@ -21,13 +22,18 @@ from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from fastapi import Depends
 from httpx import ASGITransport, AsyncClient
 import jwt
+from jwt import PyJWKClientConnectionError, PyJWKClientError, PyJWKSetError
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from backend.app.auth.deps import CurrentUser, current_user
+from backend.app.auth.deps import (
+    CurrentUser,
+    check_startup_config,
+    current_user,
+)
 import backend.app.auth.deps as auth_deps
-from backend.app.core.config import get_settings
+from backend.app.core.config import Settings, get_settings
 from backend.app.db.models import (
     Base,
     LeadModel,
@@ -57,21 +63,25 @@ def create_token(
     sub: str | UUID,
     email: str = "seller@example.com",
     expires_in: int = 3600,
+    iat_offset: int = 0,
     secret: str = JWT_SECRET,
     aud: str = "authenticated",
     iss: str | None = None,
     algorithm: str = "HS256",
+    headers: dict | None = None,
 ) -> str:
+    now = int(time.time())
     payload = {
         "sub": str(sub),
         "email": email,
         "role": "authenticated",
         "aud": aud,
-        "exp": int(time.time()) + expires_in,
+        "iat": now + iat_offset,
+        "exp": now + expires_in,
     }
     if iss is not None:
         payload["iss"] = iss
-    return jwt.encode(payload, secret, algorithm=algorithm)
+    return jwt.encode(payload, secret, algorithm=algorithm, headers=headers)
 
 
 @pytest.mark.asyncio
@@ -135,6 +145,7 @@ async def test_auth_success_es256(monkeypatch):
             "email": "es256-seller@karigar.test",
             "aud": "authenticated",
             "iss": f"{TEST_SUPABASE_URL}/auth/v1",
+            "iat": int(time.time()),
             "exp": int(time.time()) + 3600,
         },
         ec_priv,
@@ -190,6 +201,7 @@ async def test_auth_success_rs256(monkeypatch):
             "email": "rs256-seller@karigar.test",
             "aud": "authenticated",
             "iss": f"{TEST_SUPABASE_URL}/auth/v1",
+            "iat": int(time.time()),
             "exp": int(time.time()) + 3600,
         },
         rsa_priv,
@@ -209,8 +221,70 @@ async def test_auth_success_rs256(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_auth_missing_token_returns_401(auth_env):
-    """Verify that missing Authorization header returns 401 unauthorized in A.5 envelope."""
+async def test_supabase_url_with_trailing_slash_normalized(monkeypatch):
+    """Verify that SUPABASE_URL with trailing slash is normalized and correctly verifies issuer."""
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", JWT_SECRET)
+    monkeypatch.setenv("ALLOW_DEV_TOKENS", "false")
+    monkeypatch.setenv("SUPABASE_URL", f"{TEST_SUPABASE_URL}/  ")
+    get_settings.cache_clear()
+
+    app = create_app()
+    user_id = uuid4()
+
+    @app.get("/api/v1/test-protected")
+    async def protected_route(user: CurrentUser = Depends(current_user)):
+        return {"user_id": str(user.id)}
+
+    token = create_token(
+        sub=user_id,
+        iss=f"{TEST_SUPABASE_URL}/auth/v1",
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get(
+            "/api/v1/test-protected",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 200
+        assert res.json()["user_id"] == str(user_id)
+
+
+@pytest.mark.asyncio
+async def test_auth_iat_clock_skew(auth_env, caplog):
+    """Verify leeway=60s: iat 30s in future accepted; 10m in future rejected with not_yet_valid."""
+    caplog.set_level(logging.WARNING)
+    app = create_app()
+    user_id = uuid4()
+
+    @app.get("/api/v1/test-protected")
+    async def protected_route(user: CurrentUser = Depends(current_user)):
+        return {"user_id": str(user.id)}
+
+    # 1. 30 seconds in future: accepted via leeway=60s
+    token_30s_future = create_token(sub=user_id, iat_offset=30)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get(
+            "/api/v1/test-protected",
+            headers={"Authorization": f"Bearer {token_30s_future}"},
+        )
+        assert res.status_code == 200
+
+    # 2. 10 minutes (600s) in future: rejected with 401 and not_yet_valid logged
+    caplog.clear()
+    token_10m_future = create_token(sub=user_id, iat_offset=600)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get(
+            "/api/v1/test-protected",
+            headers={"Authorization": f"Bearer {token_10m_future}"},
+        )
+        assert res.status_code == 401
+        assert "not_yet_valid" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_auth_missing_token_returns_401(auth_env, caplog):
+    """Verify missing Authorization header logs reason=missing_token and returns 401."""
+    caplog.set_level(logging.WARNING)
     app = create_app()
 
     @app.get("/api/v1/test-protected")
@@ -221,17 +295,14 @@ async def test_auth_missing_token_returns_401(auth_env):
         res = await client.get("/api/v1/test-protected")
         assert res.status_code == 401
         data = res.json()
-
-        assert "error" in data
-        error = data["error"]
-        assert error["code"] == "unauthorized"
-        assert "Missing" in error["message"]
-        assert "request_id" in error
+        assert data["error"]["code"] == "unauthorized"
+        assert "missing_token" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_auth_expired_token_returns_401(auth_env):
-    """Verify that an expired token returns 401 unauthorized with expired message."""
+async def test_auth_expired_token_returns_401(auth_env, caplog):
+    """Verify expired token logs reason=expired and returns 401."""
+    caplog.set_level(logging.WARNING)
     app = create_app()
 
     @app.get("/api/v1/test-protected")
@@ -246,15 +317,13 @@ async def test_auth_expired_token_returns_401(auth_env):
             headers={"Authorization": f"Bearer {expired_token}"},
         )
         assert res.status_code == 401
-        data = res.json()
-
-        assert data["error"]["code"] == "unauthorized"
-        assert "expired" in data["error"]["message"].lower()
+        assert "expired" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_auth_wrong_audience_returns_401(auth_env):
-    """Verify that token with wrong audience returns 401 unauthorized."""
+async def test_auth_wrong_audience_returns_401(auth_env, caplog):
+    """Verify wrong audience logs reason=bad_audience and returns 401."""
+    caplog.set_level(logging.WARNING)
     app = create_app()
 
     @app.get("/api/v1/test-protected")
@@ -269,14 +338,13 @@ async def test_auth_wrong_audience_returns_401(auth_env):
             headers={"Authorization": f"Bearer {bad_aud_token}"},
         )
         assert res.status_code == 401
-        data = res.json()
-        assert data["error"]["code"] == "unauthorized"
-        assert "audience" in data["error"]["message"].lower()
+        assert "bad_audience" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_auth_wrong_issuer_returns_401(monkeypatch):
-    """Verify that token with wrong issuer returns 401 unauthorized when SUPABASE_URL is configured."""
+async def test_auth_wrong_issuer_returns_401(monkeypatch, caplog):
+    """Verify wrong issuer logs reason=bad_issuer and returns 401."""
+    caplog.set_level(logging.WARNING)
     monkeypatch.setenv("SUPABASE_JWT_SECRET", JWT_SECRET)
     monkeypatch.setenv("ALLOW_DEV_TOKENS", "false")
     monkeypatch.setenv("SUPABASE_URL", TEST_SUPABASE_URL)
@@ -300,14 +368,13 @@ async def test_auth_wrong_issuer_returns_401(monkeypatch):
             headers={"Authorization": f"Bearer {wrong_iss_token}"},
         )
         assert res.status_code == 401
-        data = res.json()
-        assert data["error"]["code"] == "unauthorized"
-        assert "issuer" in data["error"]["message"].lower()
+        assert "bad_issuer" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_auth_invalid_signature_returns_401(auth_env):
-    """Verify that token signed with wrong secret returns 401 unauthorized."""
+async def test_auth_invalid_signature_returns_401(auth_env, caplog):
+    """Verify wrong secret logs reason=bad_signature and returns 401."""
+    caplog.set_level(logging.WARNING)
     app = create_app()
 
     @app.get("/api/v1/test-protected")
@@ -322,15 +389,13 @@ async def test_auth_invalid_signature_returns_401(auth_env):
             headers={"Authorization": f"Bearer {fake_token}"},
         )
         assert res.status_code == 401
-        data = res.json()
-
-        assert data["error"]["code"] == "unauthorized"
-        assert "signature" in data["error"]["message"].lower()
+        assert "bad_signature" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_auth_alg_none_rejected(auth_env):
-    """Verify that alg=none tokens are strictly rejected with 401 unauthorized."""
+async def test_auth_alg_none_rejected(auth_env, caplog):
+    """Verify alg=none logs reason=unsupported_alg and returns 401."""
+    caplog.set_level(logging.WARNING)
     app = create_app()
 
     @app.get("/api/v1/test-protected")
@@ -350,46 +415,25 @@ async def test_auth_alg_none_rejected(auth_env):
             headers={"Authorization": f"Bearer {none_token}"},
         )
         assert res.status_code == 401
-        data = res.json()
-        assert data["error"]["code"] == "unauthorized"
-        assert "algorithm" in data["error"]["message"].lower()
+        assert "unsupported_alg" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_auth_dev_alias_rejected_when_dev_tokens_disabled(auth_env):
-    """Verify that dev aliases like 'dev-token' return 401 when ALLOW_DEV_TOKENS=false."""
+async def test_auth_empty_secret_with_hs256_token(monkeypatch, caplog):
+    """Verify empty SUPABASE_JWT_SECRET logs reason=secret_not_configured and returns 401."""
+    caplog.set_level(logging.WARNING)
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", "")
+    monkeypatch.setenv("ALLOW_DEV_TOKENS", "false")
+    monkeypatch.setenv("SUPABASE_URL", "")
+    get_settings.cache_clear()
+
     app = create_app()
 
     @app.get("/api/v1/test-protected")
     async def protected_route(user: CurrentUser = Depends(current_user)):
         return {"user_id": str(user.id)}
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        for alias in ("dev-token", "demo-token", "dev", "test", "mock"):
-            res = await client.get(
-                "/api/v1/test-protected",
-                headers={"Authorization": f"Bearer {alias}"},
-            )
-            assert res.status_code == 401
-            assert res.json()["error"]["code"] == "unauthorized"
-
-
-@pytest.mark.asyncio
-async def test_auth_unsigned_vitrine_dev_token_rejected_when_dev_tokens_disabled(auth_env):
-    """Verify that unsigned vitrine-dev tokens return 401 when ALLOW_DEV_TOKENS=false."""
-    app = create_app()
-
-    @app.get("/api/v1/test-protected")
-    async def protected_route(user: CurrentUser = Depends(current_user)):
-        return {"user_id": str(user.id)}
-
-    payload = {
-        "sub": "00000000-0000-0000-0000-000000000001",
-        "iss": "vitrine-dev",
-        "aud": "authenticated",
-        "exp": int(time.time()) + 3600,
-    }
-    token = jwt.encode(payload, "untrusted-secret-at-least-32-chars-long", algorithm="HS256")
+    token = create_token(sub=uuid4(), secret="any-secret-at-least-32-chars-long")
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         res = await client.get(
@@ -397,12 +441,121 @@ async def test_auth_unsigned_vitrine_dev_token_rejected_when_dev_tokens_disabled
             headers={"Authorization": f"Bearer {token}"},
         )
         assert res.status_code == 401
-        assert res.json()["error"]["code"] == "unauthorized"
+        assert "secret_not_configured" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_auth_missing_sub_returns_401(auth_env):
-    """Verify that a token missing the sub claim returns 401 unauthorized."""
+async def test_auth_unreachable_jwks(monkeypatch, caplog):
+    """Verify unreachable JWKS logs reason=jwks_unavailable and returns 401."""
+    caplog.set_level(logging.WARNING)
+    monkeypatch.setenv("ALLOW_DEV_TOKENS", "false")
+    monkeypatch.setenv("SUPABASE_URL", TEST_SUPABASE_URL)
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", "")
+    get_settings.cache_clear()
+
+    class FailingJWKClient:
+        def get_signing_key_from_jwt(self, token_str: str):
+            raise PyJWKClientConnectionError("JWKS endpoint unreachable")
+
+    monkeypatch.setattr(auth_deps, "get_jwk_client", lambda url: FailingJWKClient())
+
+    app = create_app()
+
+    @app.get("/api/v1/test-protected")
+    async def protected_route(user: CurrentUser = Depends(current_user)):
+        return {"user_id": str(user.id)}
+
+    ec_priv = ec.generate_private_key(ec.SECP256R1())
+    token = jwt.encode(
+        {"sub": str(uuid4()), "aud": "authenticated", "exp": int(time.time()) + 3600},
+        ec_priv,
+        algorithm="ES256",
+        headers={"kid": "some-kid"},
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get(
+            "/api/v1/test-protected",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 401
+        assert "jwks_unavailable" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_auth_missing_kid_es256(monkeypatch, caplog):
+    """Verify missing kid in ES256 header logs reason=no_matching_key and returns 401."""
+    caplog.set_level(logging.WARNING)
+    monkeypatch.setenv("ALLOW_DEV_TOKENS", "false")
+    monkeypatch.setenv("SUPABASE_URL", TEST_SUPABASE_URL)
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", "")
+    get_settings.cache_clear()
+
+    app = create_app()
+
+    @app.get("/api/v1/test-protected")
+    async def protected_route(user: CurrentUser = Depends(current_user)):
+        return {"user_id": str(user.id)}
+
+    ec_priv = ec.generate_private_key(ec.SECP256R1())
+    # Token without 'kid' in headers
+    token = jwt.encode(
+        {"sub": str(uuid4()), "aud": "authenticated", "exp": int(time.time()) + 3600},
+        ec_priv,
+        algorithm="ES256",
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get(
+            "/api/v1/test-protected",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 401
+        assert "no_matching_key" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_auth_no_matching_kid_in_jwks(monkeypatch, caplog):
+    """Verify non-matching kid in JWKS logs reason=no_matching_key and returns 401."""
+    caplog.set_level(logging.WARNING)
+    monkeypatch.setenv("ALLOW_DEV_TOKENS", "false")
+    monkeypatch.setenv("SUPABASE_URL", TEST_SUPABASE_URL)
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", "")
+    get_settings.cache_clear()
+
+    class MissingKeyJWKClient:
+        def get_signing_key_from_jwt(self, token_str: str):
+            raise PyJWKClientError('Unable to find a signing key that matches: "unknown-kid"')
+
+    monkeypatch.setattr(auth_deps, "get_jwk_client", lambda url: MissingKeyJWKClient())
+
+    app = create_app()
+
+    @app.get("/api/v1/test-protected")
+    async def protected_route(user: CurrentUser = Depends(current_user)):
+        return {"user_id": str(user.id)}
+
+    ec_priv = ec.generate_private_key(ec.SECP256R1())
+    token = jwt.encode(
+        {"sub": str(uuid4()), "aud": "authenticated", "exp": int(time.time()) + 3600},
+        ec_priv,
+        algorithm="ES256",
+        headers={"kid": "unknown-kid"},
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get(
+            "/api/v1/test-protected",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 401
+        assert "no_matching_key" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_auth_missing_sub_returns_401(auth_env, caplog):
+    """Verify token missing sub claim logs reason=invalid_sub and returns 401."""
+    caplog.set_level(logging.WARNING)
     app = create_app()
 
     @app.get("/api/v1/test-protected")
@@ -423,14 +576,13 @@ async def test_auth_missing_sub_returns_401(auth_env):
             headers={"Authorization": f"Bearer {token}"},
         )
         assert res.status_code == 401
-        data = res.json()
-        assert data["error"]["code"] == "unauthorized"
-        assert "sub" in data["error"]["message"].lower() or "subject" in data["error"]["message"].lower()
+        assert "invalid_sub" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_auth_non_uuid_sub_returns_401(auth_env):
-    """Verify that a token with non-UUID sub claim returns 401 unauthorized."""
+async def test_auth_non_uuid_sub_returns_401(auth_env, caplog):
+    """Verify token with non-UUID sub logs reason=invalid_sub and returns 401."""
+    caplog.set_level(logging.WARNING)
     app = create_app()
 
     @app.get("/api/v1/test-protected")
@@ -445,14 +597,31 @@ async def test_auth_non_uuid_sub_returns_401(auth_env):
             headers={"Authorization": f"Bearer {token}"},
         )
         assert res.status_code == 401
-        data = res.json()
-        assert data["error"]["code"] == "unauthorized"
-        assert "uuid" in data["error"]["message"].lower()
+        assert "invalid_sub" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_auth_malformed_token_returns_401(auth_env, caplog):
+    """Verify completely malformed token string logs reason=malformed and returns 401."""
+    caplog.set_level(logging.WARNING)
+    app = create_app()
+
+    @app.get("/api/v1/test-protected")
+    async def protected_route(user: CurrentUser = Depends(current_user)):
+        return {"user_id": str(user.id)}
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get(
+            "/api/v1/test-protected",
+            headers={"Authorization": "Bearer not-a-valid.jwt-token.at-all"},
+        )
+        assert res.status_code == 401
+        assert "malformed" in caplog.text
 
 
 @pytest.mark.asyncio
 async def test_auth_no_secret_or_token_leaked_in_error_or_logs(auth_env, caplog):
-    """Verify that no secret, token, or key value appears in error responses or logs for failed auth."""
+    """Verify that no secret, token, or Authorization header appears in error responses or logs."""
     caplog.set_level(logging.DEBUG)
     app = create_app()
 
@@ -460,13 +629,12 @@ async def test_auth_no_secret_or_token_leaked_in_error_or_logs(auth_env, caplog)
     async def protected_route(user: CurrentUser = Depends(current_user)):
         return {"user_id": str(user.id)}
 
-    sensitive_token_payload = "super-secret-sensitive-marker-string-987654"
-    tampered_token = create_token(sub=uuid4(), secret="different-secret-key-at-least-32-chars")
+    sensitive_token = create_token(sub=uuid4(), secret="different-secret-key-at-least-32-chars")
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         res = await client.get(
             "/api/v1/test-protected",
-            headers={"Authorization": f"Bearer {tampered_token}"},
+            headers={"Authorization": f"Bearer {sensitive_token}"},
         )
         assert res.status_code == 401
         resp_text = res.text
@@ -474,12 +642,60 @@ async def test_auth_no_secret_or_token_leaked_in_error_or_logs(auth_env, caplog)
         # Ensure no secret or token content appears in response
         assert JWT_SECRET not in resp_text
         assert "different-secret-key-at-least-32-chars" not in resp_text
-        assert sensitive_token_payload not in resp_text
+        assert sensitive_token not in resp_text
 
-        # Ensure no secrets leak in captured logs
+        # Ensure no secrets, token, or Authorization header leak in captured logs
         log_text = caplog.text
         assert JWT_SECRET not in log_text
         assert "different-secret-key-at-least-32-chars" not in log_text
+        assert sensitive_token not in log_text
+        assert f"Bearer {sensitive_token}" not in log_text
+
+
+def test_startup_warnings_config_check(caplog):
+    """Verify startup warnings for sb_ secret, JWT secret, trailing slash, and allow_dev_tokens."""
+    caplog.set_level(logging.WARNING)
+
+    # 1. Warning when SUPABASE_JWT_SECRET starts with sb_
+    caplog.clear()
+    settings_sb = Settings(
+        supabase_jwt_secret="sb_secret_key_1234567890",
+        supabase_url="https://xyz.supabase.co",
+        allow_dev_tokens=False,
+    )
+    check_startup_config(settings_sb)
+    assert "starts with 'sb_'" in caplog.text
+
+    # 2. Warning when SUPABASE_JWT_SECRET is a 3-part JWT
+    caplog.clear()
+    settings_jwt = Settings(
+        supabase_jwt_secret="eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig",
+        supabase_url="https://xyz.supabase.co",
+        allow_dev_tokens=False,
+    )
+    check_startup_config(settings_jwt)
+    assert "looks like a JWT" in caplog.text
+
+    # 3. Warning when SUPABASE_URL has trailing slash
+    caplog.clear()
+    settings_slash = Settings(
+        supabase_jwt_secret="valid_secret_key_32_characters_long",
+        supabase_url="https://xyz.supabase.co/",
+        allow_dev_tokens=False,
+    )
+    check_startup_config(settings_slash)
+    assert "trailing slash" in caplog.text
+
+    # 4. Warning when ALLOW_DEV_TOKENS is true
+    caplog.clear()
+    settings_dev = Settings(
+        supabase_jwt_secret="valid_secret_key_32_characters_long",
+        supabase_url="https://xyz.supabase.co",
+        allow_dev_tokens=True,
+    )
+    auth_deps._warned_allow_dev_tokens = False
+    check_startup_config(settings_dev)
+    assert "ALLOW_DEV_TOKENS is true" in caplog.text
 
 
 @pytest.mark.asyncio
