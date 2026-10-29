@@ -11,7 +11,7 @@ Vitrine supports two primary local operating modes:
 | Mode | Backend Auth & DB | Frontend Client | Best For |
 | :--- | :--- | :--- | :--- |
 | **Offline Mock Mode** | SQLite in-memory or file (`vitrine.db`); no Supabase required | `VITE_USE_MOCK=true`; pre-seeded demo user (`studio@ateliersolenne.com`) | Rapid frontend development, UI/UX prototyping, offline demos |
-| **Live Supabase Mode** | Asymmetric (ES256) or symmetric (HS256) token verification; SQLite file (`vitrine.db`) | Supabase auth client with real signup, login, password recovery, session refresh | Production, staging, team multi-tenant testing |
+| **Live Supabase Mode** | Asymmetric (ES256/RS256) or symmetric (HS256) token verification; SQLite file (`vitrine.db`) | Supabase auth client with 1-step signup, login, password recovery, session refresh | Production, staging, team multi-tenant testing |
 
 ---
 
@@ -25,8 +25,8 @@ Vitrine supports two primary local operating modes:
 | :--- | :--- | :--- |
 | `APP_ENV` | All | Application environment (`dev`, `test`, `production`). In `production`, demo seeding is disabled (returns 404). |
 | `ALLOW_DEV_TOKENS` | Testing only | Boolean flag (`true` or `false`). When `false`, all tokens must be cryptographically verified. Must be `false` outside unit tests. |
-| `SUPABASE_URL` | Live mode | Supabase project URL (e.g. `https://<project-ref>.supabase.co`). Used for JWKS public key retrieval and issuer claim verification. |
-| `SUPABASE_JWT_SECRET` | HS256 mode | Symmetric HMAC signing secret from Supabase Dashboard (API settings). Used as fallback for legacy HS256 tokens. |
+| `SUPABASE_URL` | Live mode | Supabase project URL (e.g. `https://<project-ref>.supabase.co`). Normalized on startup by stripping any trailing slashes and whitespace. |
+| `SUPABASE_JWT_SECRET` | HS256 mode | Symmetric HMAC signing secret from Supabase Dashboard (API settings). Used for legacy HS256 tokens. Must not be an API key. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Admin only | Backend-only service role secret. NEVER expose to the browser or frontend. |
 | `DATABASE_URL` | All | Database connection string. For persistent local data across restarts, set to `sqlite+aiosqlite:///./vitrine.db`. For stateless test suites, use `sqlite+aiosqlite:///:memory:`. |
 | `CORS_ORIGINS` | All | Comma-separated list of permitted frontend origins (e.g. `http://localhost:5173,http://127.0.0.1:5173`). |
@@ -48,22 +48,24 @@ Vitrine supports two primary local operating modes:
 Modern Supabase projects default to asymmetric token signing using elliptic curve cryptography (**ES256**) or RSA (**RS256**). Older instances used symmetric HMAC (**HS256**) with a shared secret.
 
 ### Backend Verification Mechanism (`backend/app/auth/deps.py`)
-1. **Header Inspection:** Reads unverified JWT header algorithm (`alg`).
+1. **Header Inspection:** Reads unverified JWT header algorithm (`alg`) and key identifier (`kid`).
 2. **Algorithm Enforcement:**
    - Strictly permits only `HS256`, `ES256`, or `RS256`.
-   - Explicitly rejects `alg=none` with HTTP 401.
+   - Explicitly rejects `alg=none` with HTTP 401 (`unsupported_alg`).
 3. **Asymmetric Verification (`ES256` / `RS256`):**
    - Fetches public keys from Supabase's standard JWKS endpoint: `{SUPABASE_URL}/auth/v1/.well-known/jwks.json`.
-   - Uses PyJWKClient with in-memory key caching (`cache_keys=True`).
-   - Rejects token with HTTP 401 if `SUPABASE_URL` is unset or JWKS cannot be retrieved.
+   - Uses PyJWKClient with in-memory key caching (`cache_keys=True`) and a 5-second timeout.
+   - Rejects token with HTTP 401 if `SUPABASE_URL` is unset or JWKS cannot be retrieved (`jwks_unavailable`), or if key ID is missing/not found (`no_matching_key`).
 4. **Symmetric Verification (`HS256`):**
-   - Verifies against `SUPABASE_JWT_SECRET`. Rejects with HTTP 401 if secret is not configured.
+   - Verifies against `SUPABASE_JWT_SECRET`. Rejects with HTTP 401 if secret is not configured (`secret_not_configured`).
 5. **Strict Claim Validation:**
    - `aud`: Must equal `"authenticated"`.
    - `iss`: Must match `{SUPABASE_URL}/auth/v1` whenever `SUPABASE_URL` is configured.
    - `exp`: Token must not be expired.
-   - `sub`: Must be present and parse as a valid RFC 4122 UUID. No fallback to demo owner.
-6. **Error Sanitization:** All failures return standard Appendix A.5 envelopes with generic messages to prevent token/secret leakage in responses or logs.
+   - `sub`: Must be present and parse as a valid RFC 4122 UUID.
+   - `leeway`: 60 seconds allowed on decode to prevent clock skew rejections.
+6. **Diagnosable Structured Logging:** Single structured WARNING log line per failure containing non-secret facts (`reason`, `alg`, `kid_present`, `iss`, `aud`). Never logs tokens, secrets, or authorization headers.
+7. **Error Sanitization:** All failures return standard Appendix A.5 envelopes with generic messages to prevent token/secret leakage.
 
 ---
 
@@ -74,8 +76,8 @@ Modern Supabase projects default to asymmetric token signing using elliptic curv
   - When enabled in isolated test suites, a single warning is emitted on startup.
 - **Frontend `VITE_DEV_AUTH_BYPASS`:**
   - Must remain `false` by default.
-  - Hardcoded tokens (such as legacy `DEV_DEFAULT_TOKEN`) have been completely removed from `client.ts`.
-  - When a 401 occurs in live mode, `setUnauthorizedHandler` triggers `supabase.auth.refreshSession()` once; if refresh fails, the user is redirected to `/login?next=...`.
+  - Hardcoded tokens have been completely removed from `client.ts`.
+  - When a 401 occurs in live mode, `apiRequest` attempts token refresh once; if the retried request is still 401, the user is signed out, the query cache is cleared, and the user is redirected to `/login?message=Your%20session%20could%20not%20be%20verified.%20Please%20sign%20in%20again.`.
 
 ---
 
@@ -127,7 +129,8 @@ When a new user signs up or starts with an empty catalog, they can populate a fu
    VITE_SUPABASE_URL=https://<your-project>.supabase.co
    VITE_SUPABASE_ANON_KEY=<your-anon-publishable-key>
    ```
-3. Start backend and frontend:
+3. In your Supabase Dashboard under **Authentication > Providers > Email**, ensure **"Confirm email"** is turned **OFF** so signups succeed in one step.
+4. Start backend and frontend:
    ```bash
    # Terminal 1:
    python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
@@ -135,7 +138,7 @@ When a new user signs up or starts with an empty catalog, they can populate a fu
    # Terminal 2:
    npm --prefix frontend run dev
    ```
-4. Visit `http://localhost:5173/signup`, register your studio, and confirm your email (or auto-confirm if enabled in Supabase Dashboard).
+5. Visit `http://localhost:5173/signup` and register your studio account.
 
 ---
 
@@ -144,6 +147,8 @@ When a new user signs up or starts with an empty catalog, they can populate a fu
 | Issue | Cause | Solution |
 | :--- | :--- | :--- |
 | **Token rejected: 401 Unauthorized** | Token expired, wrong audience (`aud != "authenticated"`), or missing/wrong issuer claim. | Ensure your token was issued by the Supabase project matching `SUPABASE_URL`. If using HS256, ensure `SUPABASE_JWT_SECRET` matches your project. |
+| **Invalid authentication token after signup** | Reason code logged in backend (e.g. `secret_not_configured`, `jwks_unavailable`, `no_matching_key`, `bad_issuer`). | Check reason code in backend log; check `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, JWT keys type; restart backend; clear site data / browser storage. |
+| **Sign-up did not return a session** | Email confirmation is enabled for the Supabase project. | Turn off "Confirm email" in the Supabase dashboard (Authentication -> Providers -> Email -> Confirm email) and try again. |
 | **JWKS fetch failure: 401** | Backend cannot reach `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` or `SUPABASE_URL` is malformed. | Verify network connectivity to Supabase and verify `SUPABASE_URL` begins with `https://` without a trailing path. |
 | **SQLite DB locked (`database is locked`)** | Multiple processes accessing the SQLite file simultaneously or an open transaction. | Ensure you are using `sqlite+aiosqlite://` driver. Stop any orphaned uvicorn or script instances holding a file lock. |
 | **Schema mismatch / 500 error on restart** | Database file schema out of date with current SQLAlchemy models. | Delete the local `vitrine.db` file and restart uvicorn; tables will be cleanly recreated on startup. |

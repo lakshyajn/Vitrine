@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sparkles, ArrowRight, Mail, Lock, Building, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { Sparkles, ArrowRight, Mail, Lock, Building, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import { updateProfile } from "@/api/profile";
 
@@ -25,18 +25,13 @@ function mapSignupError(err: Error | null): string {
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const { signUp, signIn, resendConfirmation, isMockMode } = useAuth();
+  const { signUp, signIn, isMockMode } = useAuth();
 
   const [studioName, setStudioName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-
-  // Confirmation email state
-  const [emailConfirmationRequired, setEmailConfirmationRequired] = useState(false);
-  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [resendMessage, setResendMessage] = useState("");
 
   const studioNameValid = studioName.trim().length >= 2 && studioName.trim().length <= 80;
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -69,42 +64,26 @@ export function SignupPage() {
         return;
       }
 
-      // If Supabase returned an active session immediately (auto-confirm enabled or mock mode)
-      if (data_or_session) {
-        try {
-          await updateProfile({ business_name: trimmedStudio });
-        } catch {
-          // Non-blocking: profile will be verified or completed during onboarding
-        }
-        navigate("/app", { replace: true });
+      // If no session returned, email confirmation is enabled on Supabase
+      if (!data_or_session) {
+        setErrorMessage(
+          "Sign-up did not return a session. Email confirmation appears to be enabled for this Supabase project. Turn off 'Confirm email' in the Supabase dashboard and try again."
+        );
+        setIsSubmitting(false);
         return;
       }
 
-      // If no session returned, email confirmation is enabled on Supabase
-      setEmailConfirmationRequired(true);
+      // One-step success: update profile with studio name, then proceed directly to workspace
+      try {
+        await updateProfile({ business_name: trimmedStudio });
+      } catch {
+        // Non-blocking: profile will be completed during onboarding if needed
+      }
+      navigate("/app", { replace: true });
     } catch (err: unknown) {
       setErrorMessage(mapSignupError(err instanceof Error ? err : new Error(String(err))));
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleResendConfirmation = async () => {
-    if (resendStatus === "sending") return;
-    setResendStatus("sending");
-    setResendMessage("");
-    try {
-      const { error } = await resendConfirmation(email.trim());
-      if (error) {
-        setResendStatus("error");
-        setResendMessage(mapSignupError(error));
-      } else {
-        setResendStatus("sent");
-        setResendMessage("A new verification link has been sent to your email.");
-      }
-    } catch {
-      setResendStatus("error");
-      setResendMessage("Failed to resend confirmation email. Please try again.");
     }
   };
 
@@ -122,85 +101,6 @@ export function SignupPage() {
       setIsSubmitting(false);
     }
   };
-
-  // Render "Check your email" confirmation screen if email confirmation is required
-  if (emailConfirmationRequired) {
-    return (
-      <div className="flex min-h-screen flex-col justify-center bg-canvas px-4 py-12 sm:px-6 lg:px-8 animate-fade-in text-ink">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-3">
-          <Link to="/" className="inline-flex items-center gap-2 focus-visible:outline-2 focus-visible:outline-primary">
-            <img
-              src="/vitrine-mark.svg"
-              alt="Vitrine"
-              className="size-10 transition-transform duration-300 hover:rotate-6"
-            />
-            <span className="font-display text-2xl font-bold tracking-tight text-ink">
-              Vitrine
-            </span>
-          </Link>
-          <div className="mx-auto grid size-12 place-items-center rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
-            <Mail className="size-6" />
-          </div>
-          <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-ink">
-            Check your studio email
-          </h1>
-          <p className="text-xs text-muted leading-relaxed">
-            We sent a verification link to <strong className="text-ink font-semibold">{email}</strong>.
-            Click the link in the message to activate your maker workspace.
-          </p>
-        </div>
-
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="rounded-2xl border border-border bg-surface p-8 shadow-elevated space-y-6 text-center">
-            {resendMessage && (
-              <div
-                role="status"
-                aria-live="polite"
-                className={`flex items-start gap-2.5 rounded-xl border p-3.5 text-xs text-left ${
-                  resendStatus === "error"
-                    ? "border-red-200 bg-red-50 text-red-800"
-                    : "border-emerald-200 bg-emerald-50 text-emerald-800"
-                }`}
-              >
-                {resendStatus === "error" ? (
-                  <AlertCircle className="size-4 flex-shrink-0 text-red-600 mt-0.5" />
-                ) : (
-                  <CheckCircle className="size-4 flex-shrink-0 text-emerald-600 mt-0.5" />
-                )}
-                <span>{resendMessage}</span>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={handleResendConfirmation}
-                disabled={resendStatus === "sending"}
-                data-btn-primary
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2"
-              >
-                {resendStatus === "sending" ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    <span>Resending email...</span>
-                  </>
-                ) : (
-                  <span>Resend verification email</span>
-                )}
-              </button>
-
-              <Link
-                to="/login"
-                className="inline-flex w-full items-center justify-center rounded-xl border border-border bg-canvas py-2.5 text-xs sm:text-sm font-semibold text-ink shadow-xs hover:bg-surface-subtle transition-colors"
-              >
-                Return to sign in
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen flex-col justify-center bg-canvas px-4 py-12 sm:px-6 lg:px-8 animate-fade-in text-ink">

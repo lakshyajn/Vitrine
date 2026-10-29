@@ -10,9 +10,6 @@ function mapAuthError(err: Error | null): string {
   if (lower.includes("invalid login credentials") || lower.includes("invalid credentials")) {
     return "Invalid email or password. Please check your credentials and try again.";
   }
-  if (lower.includes("email not confirmed")) {
-    return "Your email address has not been confirmed. Please check your inbox for the verification email.";
-  }
   if (lower.includes("rate limit") || lower.includes("too many requests")) {
     return "Too many sign-in attempts. Please wait a moment before trying again.";
   }
@@ -26,6 +23,21 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { signIn, isMockMode } = useAuth();
+
+  const [authNotice] = useState<string>(() => {
+    const urlNotice = searchParams.get("message");
+    if (urlNotice) return urlNotice;
+    try {
+      const stored = sessionStorage.getItem("auth_notice");
+      if (stored) {
+        sessionStorage.removeItem("auth_notice");
+        return stored;
+      }
+    } catch {
+      // Ignore storage errors
+    }
+    return "";
+  });
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -109,14 +121,14 @@ export function LoginPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="rounded-2xl border border-border bg-surface p-8 shadow-elevated space-y-6">
-          {errorMessage && (
+          {(errorMessage || authNotice) && (
             <div
               role="alert"
               aria-live="assertive"
               className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 animate-fade-in"
             >
               <AlertCircle className="size-4 flex-shrink-0 text-red-600 mt-0.5" />
-              <span>{errorMessage}</span>
+              <span>{errorMessage || authNotice}</span>
             </div>
           )}
 
