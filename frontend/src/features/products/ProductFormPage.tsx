@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Sparkles, X, Upload, Check, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Sparkles, X, Upload, Check, AlertCircle, Loader2, Plus } from "lucide-react";
 import {
   getProduct,
   createProduct,
@@ -35,19 +35,14 @@ export function ProductFormPage() {
   const [coloursInput, setColoursInput] = useState("");
   const [colours, setColours] = useState<string[]>([]);
   const [priceSegment, setPriceSegment] = useState<PriceSegment>("mid_premium");
-  const [priceMin, setPriceMin] = useState<string>("85");
-  const [priceMax, setPriceMax] = useState<string>("140");
+  const [priceMin, setPriceMin] = useState<string>("");
+  const [priceMax, setPriceMax] = useState<string>("");
   const [currency, setCurrency] = useState("USD");
-  const [moq, setMoq] = useState<string>("12");
-  const [monthlyCapacity, setMonthlyCapacity] = useState<string>("150");
+  const [moq, setMoq] = useState<string>("1");
+  const [monthlyCapacity, setMonthlyCapacity] = useState<string>("");
   const [retailerTypeInput, setRetailerTypeInput] = useState("");
-  const [targetRetailerTypes, setTargetRetailerTypes] = useState<string[]>([
-    "Independent Design Boutique",
-    "Curated Lifestyle Concept Store",
-  ]);
-  const [images, setImages] = useState<string[]>([
-    "/images/vitrine-boutique-collection.webp",
-  ]);
+  const [targetRetailerTypes, setTargetRetailerTypes] = useState<string[]>([]);
+  const [images, setImages] = useState<string[]>([]);
 
   // Load product if edit mode
   useEffect(() => {
@@ -133,7 +128,7 @@ export function ProductFormPage() {
         const updatedImages = await uploadProductImage(id, file);
         setImages(updatedImages);
       } catch (err: unknown) {
-        alert(err instanceof Error ? err.message : "Image upload failed");
+        setFormError(err instanceof Error ? err.message : "Image upload failed.");
       }
     } else {
       // Local preview before saving - safely convert to base64 Data URL
@@ -362,14 +357,17 @@ export function ProductFormPage() {
                   }
                 }}
                 placeholder="e.g. Mulberry Silk, Madder Root Dye (press Enter to add)"
-                className="flex-1 rounded-xl border border-border bg-canvas px-3.5 py-2 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+                className="min-w-0 flex-1 rounded-xl border border-border bg-canvas px-3.5 py-2 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
               />
               <button
                 type="button"
+                disabled={!materialInput.trim()}
                 onClick={() => addTag(materialInput, materials, setMaterials, setMaterialInput)}
-                className="rounded-xl border border-border bg-surface-subtle px-3 py-2 text-xs font-semibold text-ink hover:bg-surface transition-colors"
+                className="flex-shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-40 transition-colors shadow-xs"
+                aria-label="Add material"
               >
-                Add
+                <Plus className="size-4" />
+                <span>Add</span>
               </button>
             </div>
             <div className="flex flex-wrap gap-1.5 pt-1">
@@ -407,14 +405,16 @@ export function ProductFormPage() {
                     }
                   }}
                   placeholder="e.g. Minimalist"
-                  className="flex-1 rounded-xl border border-border bg-canvas px-3 py-1.5 text-xs text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+                  className="min-w-0 flex-1 rounded-xl border border-border bg-canvas px-3 py-1.5 text-xs text-ink placeholder:text-subtle focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
                 />
                 <button
                   type="button"
                   onClick={() => addTag(styleInput, style, setStyle, setStyleInput)}
-                  className="rounded-xl border border-border bg-surface-subtle px-2.5 py-1.5 text-xs font-semibold text-ink"
+                  disabled={!styleInput.trim()}
+                  className="flex-shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-xl bg-primary text-white hover:bg-primary/90 disabled:opacity-40 transition-colors"
+                  aria-label="Add"
                 >
-                  +
+                  <Plus className="size-4" />
                 </button>
               </div>
               <div className="flex flex-wrap gap-1 pt-1">
@@ -447,14 +447,16 @@ export function ProductFormPage() {
                     }
                   }}
                   placeholder="e.g. Variegation"
-                  className="flex-1 rounded-xl border border-border bg-canvas px-3 py-1.5 text-xs text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+                  className="min-w-0 flex-1 rounded-xl border border-border bg-canvas px-3 py-1.5 text-xs text-ink placeholder:text-subtle focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
                 />
                 <button
                   type="button"
                   onClick={() => addTag(motifsInput, motifs, setMotifs, setMotifsInput)}
-                  className="rounded-xl border border-border bg-surface-subtle px-2.5 py-1.5 text-xs font-semibold text-ink"
+                  disabled={!motifsInput.trim()}
+                  className="flex-shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-xl bg-primary text-white hover:bg-primary/90 disabled:opacity-40 transition-colors"
+                  aria-label="Add"
                 >
-                  +
+                  <Plus className="size-4" />
                 </button>
               </div>
               <div className="flex flex-wrap gap-1 pt-1">
@@ -487,14 +489,16 @@ export function ProductFormPage() {
                     }
                   }}
                   placeholder="e.g. Madder Coral"
-                  className="flex-1 rounded-xl border border-border bg-canvas px-3 py-1.5 text-xs text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+                  className="min-w-0 flex-1 rounded-xl border border-border bg-canvas px-3 py-1.5 text-xs text-ink placeholder:text-subtle focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
                 />
                 <button
                   type="button"
                   onClick={() => addTag(coloursInput, colours, setColours, setColoursInput)}
-                  className="rounded-xl border border-border bg-surface-subtle px-2.5 py-1.5 text-xs font-semibold text-ink"
+                  disabled={!coloursInput.trim()}
+                  className="flex-shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-xl bg-primary text-white hover:bg-primary/90 disabled:opacity-40 transition-colors"
+                  aria-label="Add"
                 >
-                  +
+                  <Plus className="size-4" />
                 </button>
               </div>
               <div className="flex flex-wrap gap-1 pt-1">
@@ -538,7 +542,7 @@ export function ProductFormPage() {
             <div className="space-y-1.5">
               <label htmlFor="prod-pmin" className="block text-xs font-semibold text-ink">Wholesale Price Min</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted font-mono">{currency || "$"}</span>
                 <input
                   id="prod-pmin"
                   type="number"
@@ -546,8 +550,8 @@ export function ProductFormPage() {
                   step="0.01"
                   value={priceMin}
                   onChange={(e) => setPriceMin(e.target.value)}
-                  placeholder="85"
-                  className="w-full rounded-xl border border-border bg-canvas pl-7 pr-3 py-2 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+                  placeholder="0.00"
+                  className="w-full rounded-xl border border-border bg-canvas pl-11 pr-3 py-2 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
                 />
               </div>
             </div>
@@ -555,7 +559,7 @@ export function ProductFormPage() {
             <div className="space-y-1.5">
               <label htmlFor="prod-pmax" className="block text-xs font-semibold text-ink">Wholesale Price Max</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted font-mono">{currency || "$"}</span>
                 <input
                   id="prod-pmax"
                   type="number"
@@ -563,21 +567,35 @@ export function ProductFormPage() {
                   step="0.01"
                   value={priceMax}
                   onChange={(e) => setPriceMax(e.target.value)}
-                  placeholder="140"
-                  className="w-full rounded-xl border border-border bg-canvas pl-7 pr-3 py-2 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+                  placeholder="0.00"
+                  className="w-full rounded-xl border border-border bg-canvas pl-11 pr-3 py-2 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <label htmlFor="prod-curr" className="block text-xs font-semibold text-ink">Currency</label>
-              <input
+              <select
                 id="prod-curr"
-                type="text"
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-                className="w-full rounded-xl border border-border bg-canvas px-3 py-2 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
-              />
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full rounded-xl border border-border bg-canvas px-3.5 py-2.5 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+              >
+                <option value="">Select currency…</option>
+                <option value="USD">USD – US Dollar</option>
+                <option value="GBP">GBP – British Pound</option>
+                <option value="EUR">EUR – Euro</option>
+                <option value="JPY">JPY – Japanese Yen</option>
+                <option value="AUD">AUD – Australian Dollar</option>
+                <option value="CAD">CAD – Canadian Dollar</option>
+                <option value="CHF">CHF – Swiss Franc</option>
+                <option value="DKK">DKK – Danish Krone</option>
+                <option value="NOK">NOK – Norwegian Krone</option>
+                <option value="SEK">SEK – Swedish Krona</option>
+                <option value="NZD">NZD – New Zealand Dollar</option>
+                <option value="SGD">SGD – Singapore Dollar</option>
+                <option value="HKD">HKD – Hong Kong Dollar</option>
+              </select>
             </div>
           </div>
 
@@ -608,7 +626,7 @@ export function ProductFormPage() {
                 min="1"
                 value={monthlyCapacity}
                 onChange={(e) => setMonthlyCapacity(e.target.value)}
-                placeholder="150"
+                placeholder="Optional, e.g. 100"
                 className="w-full rounded-xl border border-border bg-canvas px-3.5 py-2 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
               />
               {isCapWarning && (
@@ -634,14 +652,17 @@ export function ProductFormPage() {
                   }
                 }}
                 placeholder="e.g. Museum Design Store (press Enter)"
-                className="flex-1 rounded-xl border border-border bg-canvas px-3.5 py-2 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+                className="min-w-0 flex-1 rounded-xl border border-border bg-canvas px-3.5 py-2 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
               />
               <button
                 type="button"
+                disabled={!retailerTypeInput.trim()}
                 onClick={() => addTag(retailerTypeInput, targetRetailerTypes, setTargetRetailerTypes, setRetailerTypeInput)}
-                className="rounded-xl border border-border bg-surface-subtle px-3 py-2 text-xs font-semibold text-ink"
+                className="flex-shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-40 transition-colors shadow-xs"
+                aria-label="Add channel"
               >
-                Add
+                <Plus className="size-4" />
+                <span>Add</span>
               </button>
             </div>
             <div className="flex flex-wrap gap-1.5 pt-1">

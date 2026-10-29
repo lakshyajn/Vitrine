@@ -1,6 +1,5 @@
 import { ExternalLink, CheckCircle, AlertCircle, Calendar } from "lucide-react";
 import { ProvenanceTag, type ProvenanceType } from "./ProvenanceTag";
-import { DemoBadge } from "./DemoBadge";
 
 export interface EvidenceItemData {
   id: string;
@@ -58,8 +57,6 @@ export function EvidenceCard({ evidence, className = "" }: EvidenceCardProps) {
               Secondary source
             </span>
           )}
-
-          {evidence.is_demo && <DemoBadge />}
         </div>
 
         <ProvenanceTag provenance={evidence.provenance} />

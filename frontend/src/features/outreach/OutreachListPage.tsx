@@ -9,7 +9,6 @@ import {
   type Lead,
   type Product,
 } from "@/api";
-import { DemoBadge } from "@/components/shared/DemoBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -85,18 +84,23 @@ export function OutreachListPage() {
       {/* Filter Tabs */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 rounded-xl border border-border bg-surface p-1 text-xs">
-          {(["all", "draft", "ready", "contacted"] as const).map((st) => (
+          {[
+            { id: "all", label: "All" },
+            { id: "draft", label: "In Progress" },
+            { id: "ready", label: "Ready to Send" },
+            { id: "contacted", label: "Contacted" },
+          ].map((tab) => (
             <button
-              key={st}
+              key={tab.id}
               type="button"
-              onClick={() => setStatusFilter(st)}
-              className={`rounded-lg px-3 py-1.5 font-semibold capitalize transition-colors ${
-                statusFilter === st
+              onClick={() => setStatusFilter(tab.id)}
+              className={`rounded-lg px-3 py-1.5 font-semibold transition-colors ${
+                statusFilter === tab.id
                   ? "bg-primary text-white shadow-xs"
                   : "text-muted hover:text-ink hover:bg-surface-subtle"
               }`}
             >
-              {st}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -136,11 +140,10 @@ export function OutreachListPage() {
                         : "bg-surface-subtle text-muted border border-border"
                     }`}
                   >
-                    {draft.status}
+                    {draft.status === "ready" ? "Ready to Send" : draft.status === "contacted" ? "Contacted" : "In Progress"}
                   </span>
 
-                  <span className="text-xs font-mono text-muted">v{draft.version}</span>
-                  {draft.is_demo && <DemoBadge />}
+                  <span className="text-xs text-muted">Revision {draft.version}</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">

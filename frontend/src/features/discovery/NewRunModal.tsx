@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { X, Compass, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Compass, Loader2 } from "lucide-react";
 import {
   createResearchRun,
   type Product,
 } from "@/api";
+import { Modal } from "@/components/shared/Modal";
 
 interface NewRunModalProps {
   isOpen: boolean;
@@ -41,6 +42,32 @@ export function NewRunModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Synchronize and validate selected product whenever initialProductId, products, or modal open state changes
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (initialProductId && products.some((p) => p.id === initialProductId)) {
+      setSelectedProductId(initialProductId);
+    } else if (
+      (!selectedProductId || !products.some((p) => p.id === selectedProductId)) &&
+      products.length > 0
+    ) {
+      setSelectedProductId(products[0].id);
+    }
+  }, [initialProductId, products, selectedProductId, isOpen]);
+
+  // Handle Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isLoading) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose, isLoading]);
+
   if (!isOpen) return null;
 
   const toggleRegion = (reg: string) => {
@@ -64,10 +91,12 @@ export function NewRunModal({
     setError(null);
     try {
       const selectedProd = products.find((p) => p.id === selectedProductId);
-      const retailerTypes = selectedProd?.target_retailer_types || [
-        "Independent Design Boutique",
-        "Curated Lifestyle Concept Store",
-      ];
+      const retailerTypes = selectedProd?.target_retailer_types?.length
+        ? selectedProd.target_retailer_types
+        : [
+            "Independent Design Boutique",
+            "Curated Lifestyle Concept Store",
+          ];
 
       const run = await createResearchRun({
         product_id: selectedProductId,
@@ -88,39 +117,24 @@ export function NewRunModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in">
-      <div className="flex max-h-[90vh] w-full max-w-xl flex-col rounded-2xl border border-border bg-surface shadow-elevated">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary">
-              <Compass className="size-4" />
-            </div>
-            <div>
-              <h3 className="font-display text-base font-semibold text-ink">
-                Start Market Discovery Run
-              </h3>
-              <p className="text-xs text-muted">
-                Initiate evidence-backed retailer discovery across target regions.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-muted hover:bg-surface-subtle hover:text-ink transition-colors"
-          >
-            <X className="size-5" />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="xl"
+      title="Start Market Discovery Run"
+      subtitle="Discover independent stockists and boutiques across target regions."
+      headerLeading={
+        <div className="flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary">
+          <Compass className="size-4" />
         </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleStart} className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          {error && (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
-              {error}
-            </div>
-          )}
+      }
+    >
+      <form onSubmit={handleStart} className="space-y-4">
+        {error && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+            {error}
+          </div>
+        )}
 
           {/* Product Selector */}
           <div className="space-y-1.5">
@@ -197,7 +211,7 @@ export function NewRunModal({
           </div>
 
           <div className="rounded-xl border border-border bg-surface-subtle/50 p-3 text-xs text-muted">
-            <span className="font-semibold text-ink">Workflow Notice:</span> Once initiated, Vitrine will formulate search queries and propose Brand Taste Anchors for your interactive review before final retailer discovery and verification.
+            <span className="font-semibold text-ink">Next step:</span> Once started, Vitrine will formulate search queries and propose reference stockists for your interactive review before final retailer discovery and verification.
           </div>
 
           {/* Actions */}
@@ -211,7 +225,7 @@ export function NewRunModal({
             </button>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || products.length === 0}
               data-btn-primary
               className="inline-flex items-center gap-2 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs disabled:opacity-50 transition-colors"
             >
@@ -229,8 +243,6 @@ export function NewRunModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
-

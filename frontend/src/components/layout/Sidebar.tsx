@@ -6,6 +6,7 @@ import { NAV_ITEMS } from "./nav-items";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useProfile } from "@/api/profile";
 
+
 /**
  * Architectural Vitrine showcase aperture glyph.
  * Represents precision framing and exhibition for independent craft makers.
@@ -24,7 +25,7 @@ function VitrineMark({ className }: { className?: string }) {
 }
 
 export function Sidebar() {
-  const { user, signOut, isMockMode } = useAuth();
+  const { user, signOut } = useAuth();
   const { data: profile } = useProfile(!!user);
 
   const businessName =
@@ -32,7 +33,6 @@ export function Sidebar() {
     (user?.user_metadata?.studio_name as string) ||
     "Studio Workspace";
   const userEmail = user?.email || "";
-  const isDemoUser = isMockMode || Boolean(user?.user_metadata?.is_demo);
 
   return (
     <aside
@@ -127,11 +127,6 @@ export function Sidebar() {
                 <span className="truncate text-xs font-semibold text-white">
                   {businessName}
                 </span>
-                {isDemoUser && (
-                  <span className="inline-flex items-center rounded bg-amber-500/20 px-1.5 py-0.2 text-[10px] font-medium text-amber-300 border border-amber-500/30 flex-shrink-0">
-                    Demo data
-                  </span>
-                )}
               </div>
               {userEmail && (
                 <p className="truncate text-[11px] text-sidebar-muted" title={userEmail}>
@@ -148,10 +143,6 @@ export function Sidebar() {
             >
               <LogOut size={14} />
             </button>
-          </div>
-          <div className="flex items-center justify-between pt-1 border-t border-sidebar-border/50 text-[10px] text-sidebar-muted">
-            <span>Evidence-led mode</span>
-            <span className="flex size-1.5 rounded-full bg-emerald-500" aria-label="System operational" />
           </div>
         </div>
       </div>

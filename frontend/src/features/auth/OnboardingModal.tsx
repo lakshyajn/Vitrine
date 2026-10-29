@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Sparkles, Building, Globe, MapPin, FileText, Loader2, ArrowRight } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import { useProfile, useUpdateProfile } from "@/api/profile";
+import { Modal } from "@/components/shared/Modal";
 
 export function OnboardingModal() {
   const { user } = useAuth();
@@ -52,35 +53,36 @@ export function OnboardingModal() {
     }
   };
 
+  if (!needsOnboarding) return null;
+
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="onboarding-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in"
-    >
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-6 sm:p-8 shadow-elevated text-ink animate-scale-in">
-        <div className="flex items-center gap-2 mb-2 text-primary font-semibold text-xs uppercase tracking-wider">
+    <Modal
+      isOpen={needsOnboarding}
+      onClose={() => {}}
+      maxWidth="lg"
+      showCloseButton={false}
+      closeOnBackdropClick={false}
+      closeOnEscape={false}
+      headerLeading={
+        <div className="flex items-center gap-2 text-primary font-semibold text-xs uppercase tracking-wider">
           <Sparkles className="size-4" />
           <span>Welcome to Vitrine</span>
         </div>
-        <h2 id="onboarding-title" className="font-display text-xl sm:text-2xl font-bold tracking-tight text-ink">
-          Set up your Maker Studio
-        </h2>
-        <p className="mt-1.5 text-xs text-muted leading-relaxed">
-          Please confirm your studio details. These details anchor your Product Passports and wholesale discovery profiles.
-        </p>
-
+      }
+      title="Set up your Maker Studio"
+      subtitle="Please confirm your studio details. These details anchor your Product Passports and wholesale discovery profiles."
+    >
+      <div className="space-y-4">
         {errorMsg && (
           <div
             role="alert"
-            className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800"
+            className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800"
           >
             {errorMsg}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <label htmlFor="onboard-business-name" className="block text-xs font-semibold text-ink">
               Studio or Business Name <span className="text-red-500">*</span>
@@ -179,6 +181,6 @@ export function OnboardingModal() {
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 }

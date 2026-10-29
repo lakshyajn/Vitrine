@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Sparkles, Check, X, AlertCircle, Loader2 } from "lucide-react";
+import { Sparkles, Check, AlertCircle, Loader2 } from "lucide-react";
 import { extractProductProfile, type ProductAttributes } from "@/api";
+import { Modal } from "@/components/shared/Modal";
 
 interface ExtractProfileModalProps {
   isOpen: boolean;
@@ -88,85 +89,54 @@ export function ExtractProfileModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in">
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border border-border bg-surface shadow-elevated">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary">
-              <Sparkles className="size-4" />
-            </div>
-            <div>
-              <h3 className="font-display text-base font-semibold text-ink">
-                AI Attribute Extraction
-              </h3>
-              <p className="text-xs text-muted">
-                Analyze studio notes or catalog copy into structured wholesale attributes.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-muted hover:bg-surface-subtle hover:text-ink transition-colors"
-          >
-            <X className="size-5" />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="2xl"
+      title="AI Attribute Extraction"
+      subtitle="Analyze studio notes or catalog copy into structured wholesale attributes."
+      headerLeading={
+        <div className="flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary">
+          <Sparkles className="size-4" />
         </div>
+      }
+    >
+      <div className="space-y-4">
+        {error && (
+          <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+            <AlertCircle className="size-4 flex-shrink-0 text-rose-600" />
+            <span>{error}</span>
+          </div>
+        )}
 
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           {!results ? (
             <div className="space-y-3">
-              <label htmlFor="notes-input" className="block text-xs font-semibold text-ink">
-                Paste Artisan Notes, Lookbook Narrative or Production Details:
+              <label htmlFor="extract-input" className="block text-xs font-semibold text-ink">
+                Paste product specifications, line sheet notes, or descriptive text:
               </label>
               <textarea
-                id="notes-input"
-                rows={6}
+                id="extract-input"
+                rows={7}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="e.g. Handcrafted mulberry silk scarf kettle-dyed with madder root. Small batches of 12 scarves, priced around $85 wholesale, looking for independent museum shops and slow-craft boutiques..."
-                className="w-full rounded-xl border border-border bg-canvas p-3.5 text-xs text-ink placeholder:text-subtle focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="e.g. Hand-finished organic mulberry silk scarf kettle-dyed with madder root. Retails between $85-$140. Ideal for curated design boutiques and museum stores. Minimum order quantity 12 pieces..."
+                className="w-full rounded-xl border border-border bg-canvas p-3.5 text-xs text-ink placeholder:text-subtle focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
               />
-
-              {error && (
-                <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
-                  <AlertCircle className="size-4 flex-shrink-0 text-rose-600" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <div className="rounded-xl border border-border bg-surface-subtle/50 p-3 text-xs text-muted">
-                <span className="font-semibold text-ink">Seller Protection:</span> Vitrine never auto-saves extracted attributes. You will review and accept or reject each suggestion before applying it to your form.
-              </div>
+              <p className="text-[11px] text-muted">
+                The extraction engine will identify garment materials, aesthetic motifs, pricing suggestions, and target retail store formats. You review and approve every extracted attribute before saving.
+              </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-xs text-emerald-900 flex items-center justify-between">
-                <span>Extraction complete. Select which attributes to accept into your Product Passport:</span>
-                <button
-                  type="button"
-                  onClick={() => setResults(null)}
-                  className="font-semibold underline text-emerald-800 hover:text-emerald-950 text-xs"
-                >
-                  Edit prompt
-                </button>
+            <div className="space-y-4 animate-fade-in">
+              <div className="flex items-center justify-between border-b border-border pb-2">
+                <span className="text-xs font-semibold text-ink">
+                  Review Extracted Attributes
+                </span>
+                <span className="text-[11px] text-muted">
+                  Check fields you wish to populate into the passport form
+                </span>
               </div>
 
-              {/* Assumptions & Uncertainties callout if present */}
-              {results.assumptions.length > 0 && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-900 space-y-1">
-                  <span className="font-semibold">Model Assumptions & Notes:</span>
-                  <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-amber-800">
-                    {results.assumptions.map((a, i) => (
-                      <li key={i}>{a}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Field Review Grid */}
               <div className="space-y-2">
                 {/* Category */}
                 {results.category && (
@@ -180,7 +150,7 @@ export function ExtractProfileModal({
                   >
                     <div>
                       <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Category</span>
-                      <p className="text-xs font-semibold text-ink">{results.category}</p>
+                      <p className="text-xs font-medium text-ink">{results.category}</p>
                     </div>
                     <div className={`size-5 rounded flex items-center justify-center border ${acceptedFields.category ? "bg-primary border-primary text-white" : "border-border"}`}>
                       {acceptedFields.category && <Check className="size-3.5" />}
@@ -224,6 +194,46 @@ export function ExtractProfileModal({
                     </div>
                     <div className={`size-5 rounded flex items-center justify-center border ${acceptedFields.style ? "bg-primary border-primary text-white" : "border-border"}`}>
                       {acceptedFields.style && <Check className="size-3.5" />}
+                    </div>
+                  </div>
+                )}
+
+                {/* Motifs */}
+                {results.motifs.length > 0 && (
+                  <div
+                    onClick={() => toggleField("motifs")}
+                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                      acceptedFields.motifs
+                        ? "border-primary bg-primary-light/40"
+                        : "border-border bg-surface opacity-60"
+                    }`}
+                  >
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Motifs</span>
+                      <p className="text-xs font-medium text-ink">{results.motifs.join(", ")}</p>
+                    </div>
+                    <div className={`size-5 rounded flex items-center justify-center border ${acceptedFields.motifs ? "bg-primary border-primary text-white" : "border-border"}`}>
+                      {acceptedFields.motifs && <Check className="size-3.5" />}
+                    </div>
+                  </div>
+                )}
+
+                {/* Colours */}
+                {results.colours.length > 0 && (
+                  <div
+                    onClick={() => toggleField("colours")}
+                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                      acceptedFields.colours
+                        ? "border-primary bg-primary-light/40"
+                        : "border-border bg-surface opacity-60"
+                    }`}
+                  >
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Colours</span>
+                      <p className="text-xs font-medium text-ink">{results.colours.join(", ")}</p>
+                    </div>
+                    <div className={`size-5 rounded flex items-center justify-center border ${acceptedFields.colours ? "bg-primary border-primary text-white" : "border-border"}`}>
+                      {acceptedFields.colours && <Check className="size-3.5" />}
                     </div>
                   </div>
                 )}
@@ -272,10 +282,8 @@ export function ExtractProfileModal({
               </div>
             </div>
           )}
-        </div>
-
         {/* Modal Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
           <button
             type="button"
             onClick={onClose}
@@ -317,7 +325,6 @@ export function ExtractProfileModal({
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
-

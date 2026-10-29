@@ -455,7 +455,7 @@ describe("Milestone C: Auth Pages, Onboarding, Layout & Landing", () => {
 
     expect(screen.getByText("Atelier Solenne")).toBeInTheDocument();
     expect(screen.getByText("artisan@atelier.com")).toBeInTheDocument();
-    expect(screen.getByText("Demo data")).toBeInTheDocument();
+    expect(screen.queryByText("Demo data")).toBeNull();
     expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
   });
 
@@ -497,9 +497,7 @@ describe("Milestone C: Auth Pages, Onboarding, Layout & Landing", () => {
     expect(screen.queryByRole("link", { name: /sign in/i })).toBeNull();
   });
 
-  it("ProductListPage empty state renders 'Load demo catalogue' button and triggers demo seed", async () => {
-    const user = userEvent.setup();
-
+  it("ProductListPage empty state renders actionable 'Add Your First Product' and does not render demo seed", async () => {
     render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
@@ -511,17 +509,13 @@ describe("Milestone C: Auth Pages, Onboarding, Layout & Landing", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/no products in your catalog yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/no products in your catalogue yet/i)).toBeInTheDocument();
     });
 
-    const seedBtn = screen.getByRole("button", { name: /load demo catalogue/i });
-    expect(seedBtn).toBeInTheDocument();
+    // Verify 'Add Your First Product' is present
+    expect(screen.getByRole("button", { name: /add your first product/i })).toBeInTheDocument();
 
-    await user.click(seedBtn);
-
-    expect(mockSeedMutateAsync).toHaveBeenCalledTimes(1);
-    await waitFor(() => {
-      expect(screen.getByText(/demo catalogue loaded: 4 products, 3 leads/i)).toBeInTheDocument();
-    });
+    // Verify 'Load demo catalogue' is removed
+    expect(screen.queryByRole("button", { name: /load demo catalogue/i })).toBeNull();
   });
 });

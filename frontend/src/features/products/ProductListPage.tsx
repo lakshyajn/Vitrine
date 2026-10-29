@@ -1,16 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, Compass, Edit, Trash2, Package, Sparkles, CheckCircle, X } from "lucide-react";
-import { getProducts, deleteProduct, type Product } from "@/api";
-import { useSeedDemo } from "@/api/demo";
-import { DemoBadge } from "@/components/shared/DemoBadge";
+import { Plus, Search, Compass, Edit, Trash2, Package, CheckCircle, X, Loader2, AlertTriangle } from "lucide-react";
+import { getProducts, deleteProduct, createResearchRun, type Product } from "@/api";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
+import { ConfirmationModal } from "@/components/shared/Modal";
 
 export function ProductListPage() {
   const navigate = useNavigate();
-  const seedMutation = useSeedDemo();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,7 +18,13 @@ export function ProductListPage() {
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [segmentFilter, setSegmentFilter] = useState<string>("all");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Deletion modal state
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Discovery launch state
+  const [startingDiscoveryId, setStartingDiscoveryId] = useState<string | null>(null);
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -40,30 +44,49 @@ export function ProductListPage() {
     fetchProducts();
   }, []);
 
-  const handleSeedDemo = async () => {
+  // In-app deletion modal confirm
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget || isDeleting) return;
+    setIsDeleting(true);
     try {
-      const res = await seedMutation.mutateAsync();
-      await fetchProducts();
-      setNotification(
-        `Demo catalogue loaded: ${res.products_seeded} products, ${res.leads_seeded} leads, and ${res.runs_seeded} discovery run.`
-      );
+      await deleteProduct(deleteTarget.id);
+      setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      setNotification(`"${deleteTarget.name}" was successfully removed.`);
+      setDeleteTarget(null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to seed demo data.");
+      setError(err instanceof Error ? err.message : "Failed to delete product.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
-      return;
-    }
-    setDeletingId(id);
+  // Immediate start discovery from card
+  const handleStartDiscovery = async (product: Product) => {
+    if (startingDiscoveryId) return;
+    setStartingDiscoveryId(product.id);
+    setError(null);
     try {
-      await deleteProduct(id);
-      setProducts((prev) => prev.filter((p) => p.id !== id));
+      const targetRegions = ["United Kingdom", "France & Western Europe"];
+      const targetRetailers = product.target_retailer_types?.length
+        ? product.target_retailer_types
+        : ["Independent Design Boutique", "Curated Lifestyle Concept Store"];
+
+      const run = await createResearchRun({
+        product_id: product.id,
+        inputs: {
+          regions: targetRegions,
+          retailer_types: targetRetailers,
+        },
+      });
+
+      navigate(`/app/discovery/${run.id}`);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to delete product.");
-    } finally {
-      setDeletingId(null);
+      setError(
+        err instanceof Error
+          ? `Could not start discovery run: ${err.message}`
+          : "Failed to start discovery run for this product."
+      );
+      setStartingDiscoveryId(null);
     }
   };
 
@@ -128,15 +151,15 @@ export function ProductListPage() {
 
       {/* Filter and Search Bar */}
       {products.length > 0 && (
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between rounded-2xl border border-border bg-surface p-4 shadow-card">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by product name, category, or material..."
-              className="w-full rounded-xl border border-border bg-surface pl-9 pr-4 py-2 text-xs sm:text-sm text-ink placeholder:text-subtle focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+              placeholder="Search by name, category, or material..."
+              className="w-full rounded-xl border border-border bg-canvas pl-9 pr-4 py-2 text-xs sm:text-sm text-ink placeholder:text-subtle focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
             />
           </div>
 
@@ -164,19 +187,13 @@ export function ProductListPage() {
       ) : error ? (
         <ErrorState message={error} onRetry={fetchProducts} />
       ) : products.length === 0 ? (
-        /* Empty Catalog: Show Load Demo Catalogue as primary action */
+        /* Empty Catalog */
         <EmptyState
-          title="No products in your catalog yet"
-          description="Create your first Product Passport or load our curated demo scenario to explore wholesale research and buyer matching."
+          title="No products in your catalogue yet"
+          description="Create your first Product Passport with materials, wholesale specs, and brand assets to begin discovering stockists."
           icon={Package}
           action={{
-            label: "Load demo catalogue",
-            onClick: handleSeedDemo,
-            icon: Sparkles,
-            loading: seedMutation.isPending,
-          }}
-          secondaryAction={{
-            label: "Add First Product",
+            label: "Add Your First Product",
             onClick: () => navigate("/app/products/new"),
             icon: Plus,
           }}
@@ -202,11 +219,11 @@ export function ProductListPage() {
               key={product.id}
               className="flex flex-col justify-between rounded-2xl border border-border bg-surface p-5 shadow-card transition-all hover:border-border-strong hover:shadow-elevated"
             >
-              {/* Card Header & Thumbnail */}
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="size-16 flex-shrink-0 overflow-hidden rounded-xl border border-border bg-surface-subtle">
-                    {product.images[0] ? (
+              <div className="space-y-4">
+                {/* Product Header & Image */}
+                <div className="flex items-start gap-4">
+                  <div className="size-20 flex-shrink-0 overflow-hidden rounded-xl border border-border bg-surface-subtle">
+                    {product.images && product.images.length > 0 ? (
                       <img
                         src={product.images[0]}
                         alt={product.name}
@@ -223,7 +240,6 @@ export function ProductListPage() {
                       <span className="rounded bg-surface-subtle px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted border border-border">
                         {product.category}
                       </span>
-                      {product.is_demo && <DemoBadge />}
                     </div>
                     <h3 className="mt-1 font-display text-base font-semibold leading-snug text-ink truncate">
                       {product.name}
@@ -231,7 +247,7 @@ export function ProductListPage() {
                     <p className="text-xs text-muted font-medium">
                       {(product.price_segment || "mid_premium").replace("_", " ").toUpperCase()}{" "}
                       {product.price_min !== null && product.price_max !== null
-                        ? `· $${product.price_min} – $${product.price_max} ${product.currency}`
+                        ? `· ${product.currency} ${product.price_min} – ${product.price_max}`
                         : ""}
                     </p>
                   </div>
@@ -280,11 +296,21 @@ export function ProductListPage() {
               <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
                 <button
                   type="button"
-                  onClick={() => navigate(`/app/discovery?product_id=${product.id}`)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary-light px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary-light/80 transition-colors"
+                  disabled={startingDiscoveryId !== null}
+                  onClick={() => handleStartDiscovery(product)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary-light px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary-light/80 disabled:opacity-50 transition-colors"
                 >
-                  <Compass className="size-3.5" />
-                  <span>Start Discovery</span>
+                  {startingDiscoveryId === product.id ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" />
+                      <span>Starting Discovery...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Compass className="size-3.5" />
+                      <span>Start Discovery</span>
+                    </>
+                  )}
                 </button>
 
                 <div className="flex items-center gap-1">
@@ -297,9 +323,8 @@ export function ProductListPage() {
                   </Link>
                   <button
                     type="button"
-                    disabled={deletingId === product.id}
-                    onClick={() => handleDelete(product.id, product.name)}
-                    className="rounded-lg p-1.5 text-muted hover:bg-rose-50 hover:text-rose-600 transition-colors disabled:opacity-50"
+                    onClick={() => setDeleteTarget(product)}
+                    className="rounded-lg p-1.5 text-muted hover:bg-rose-50 hover:text-rose-600 transition-colors"
                     title="Delete product"
                   >
                     <Trash2 className="size-4" />
@@ -309,6 +334,28 @@ export function ProductListPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Accessible In-App Deletion Confirmation Modal */}
+      {deleteTarget && (
+        <ConfirmationModal
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleConfirmDelete}
+          title="Delete Product Passport"
+          subtitle="This action will remove the product from your catalog."
+          variant="danger"
+          isLoading={isDeleting}
+          confirmText="Delete Product"
+          cancelText="Cancel"
+          icon={AlertTriangle}
+          description={
+            <p>
+              Are you sure you want to permanently delete{" "}
+              <strong className="text-ink font-semibold">&ldquo;{deleteTarget.name}&rdquo;</strong>? This will remove all associated wholesale specifications and lookbook images.
+            </p>
+          }
+        />
       )}
     </div>
   );

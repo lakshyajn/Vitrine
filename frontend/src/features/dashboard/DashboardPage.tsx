@@ -11,7 +11,6 @@ import {
   Sparkles,
   CheckCircle,
   X,
-  Loader2,
 } from "lucide-react";
 import {
   ApiError,
@@ -19,30 +18,22 @@ import {
   getResearchRuns,
   getLeads,
   getOutreachDrafts,
-  getIntegrationStatus,
   type Product,
   type ResearchRun,
   type Lead,
   type OutreachDraft,
-  type IntegrationStatusResponse,
 } from "@/api";
-import { useSeedDemo } from "@/api/demo";
-import { IntegrationBanner } from "@/components/shared/IntegrationBanner";
-import { DemoBadge } from "@/components/shared/DemoBadge";
 import { ScoreBar } from "@/components/shared/ScoreBar";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ErrorState } from "@/components/shared/ErrorState";
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const seedMutation = useSeedDemo();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [runs, setRuns] = useState<ResearchRun[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [drafts, setDrafts] = useState<OutreachDraft[]>([]);
-  const [integrationStatus, setIntegrationStatus] =
-    useState<IntegrationStatusResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
@@ -51,19 +42,17 @@ export function DashboardPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [prodsData, runsData, leadsData, draftsData, statusData] =
+      const [prodsData, runsData, leadsData, draftsData] =
         await Promise.all([
           getProducts(),
           getResearchRuns(),
           getLeads({ page_size: 10 }),
           getOutreachDrafts(),
-          getIntegrationStatus(),
         ]);
       setProducts(prodsData);
       setRuns(runsData);
       setLeads(leadsData.items);
       setDrafts(draftsData);
-      setIntegrationStatus(statusData);
     } catch (err: unknown) {
       if (err instanceof ApiError && err.status === 401) {
         return;
@@ -79,18 +68,6 @@ export function DashboardPage() {
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
-  const handleSeedDemo = async () => {
-    try {
-      const res = await seedMutation.mutateAsync();
-      await fetchDashboardData();
-      setNotification(
-        `Demo workspace ready: ${res.products_seeded} products, ${res.leads_seeded} leads, and ${res.runs_seeded} discovery run.`
-      );
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load demo scenario.");
-    }
-  };
 
   if (isLoading) {
     return (
@@ -110,6 +87,25 @@ export function DashboardPage() {
 
   const qualifiedLeadsCount = leads.filter((l) => l.tier === "qualified").length;
   const pendingReviewRuns = runs.filter((r) => r.status === "awaiting_review");
+
+  // Accurate outreach pitch count (unique leads with prepared drafts, avoiding revision double-counting)
+  const uniquePitchesCount = new Set(drafts.map((d) => d.lead_id)).size;
+
+  const formatRunStatus = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "Completed";
+      case "awaiting_review":
+        return "Review Anchors";
+      case "running":
+        return "Running";
+      case "failed":
+        return "Failed";
+      case "queued":
+      default:
+        return "Queued";
+    }
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8 animate-fade-in">
@@ -138,14 +134,11 @@ export function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-display text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-              Workspace Overview
-            </h1>
-            <DemoBadge />
-          </div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+            Workspace Overview
+          </h1>
           <p className="mt-1 text-xs sm:text-sm text-muted">
-            Evidence-grounded boutique retailer discovery and wholesale outreach pipeline.
+            Your products, discovered stockists, and outreach activity at a glance.
           </p>
         </div>
 
@@ -170,9 +163,6 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Integration Status Subsystems Banner */}
-      <IntegrationBanner status={integrationStatus} />
-
       {/* Empty State Banner: Prompt when no products exist */}
       {products.length === 0 && (
         <div className="rounded-2xl border border-primary/20 bg-primary-light/40 p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xs animate-fade-in">
@@ -185,35 +175,17 @@ export function DashboardPage() {
               Your maker workspace has no products yet
             </h2>
             <p className="text-xs text-muted leading-relaxed">
-              Create your first artisan Product Passport to begin wholesale matching, or load our pre-configured demo scenario to explore the complete research pipeline.
+              Create your first artisan Product Passport to begin discovering suitable boutique stockists and managing buyer leads.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={handleSeedDemo}
-              disabled={seedMutation.isPending}
-              data-btn-primary
-              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors disabled:opacity-50"
-            >
-              {seedMutation.isPending ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  <span>Loading demo catalogue...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="size-4" />
-                  <span>Load demo catalogue</span>
-                </>
-              )}
-            </button>
             <Link
               to="/app/products/new"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-semibold text-ink hover:bg-surface-subtle transition-colors shadow-xs"
+              data-btn-primary
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors"
             >
               <Plus className="size-4" />
-              <span>Add Product</span>
+              <span>Add First Product</span>
             </Link>
           </div>
         </div>
@@ -229,7 +201,7 @@ export function DashboardPage() {
                 Action Required: Taste Anchor Review
               </h3>
               <p className="mt-0.5 text-xs text-amber-800">
-                {pendingReviewRuns.length} research run is awaiting your review of proposed brand anchors before completing retailer discovery.
+                {pendingReviewRuns.length} research run{pendingReviewRuns.length !== 1 ? "s are" : " is"} awaiting your review of proposed brand anchors before completing retailer discovery.
               </p>
             </div>
           </div>
@@ -244,7 +216,7 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Lean Data-Derived Metric Cards */}
+      {/* Data-Derived Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Products */}
         <Link
@@ -262,7 +234,7 @@ export function DashboardPage() {
             <span className="text-xs text-muted">passports</span>
           </div>
           <p className="mt-1 text-[11px] text-muted">
-            All materials &amp; wholesale parameters verified
+            Materials &amp; wholesale parameters
           </p>
         </Link>
 
@@ -282,7 +254,7 @@ export function DashboardPage() {
             <span className="text-xs text-muted">executed</span>
           </div>
           <p className="mt-1 text-[11px] text-muted">
-            Tavily web extractions &amp; Qloo taste grounding
+            Target regions &amp; boutique matching
           </p>
         </Link>
 
@@ -304,7 +276,7 @@ export function DashboardPage() {
             </span>
           </div>
           <p className="mt-1 text-[11px] text-muted">
-            Verified official boutique domains
+            Verified stockist domains
           </p>
         </Link>
 
@@ -319,12 +291,12 @@ export function DashboardPage() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="font-display text-3xl font-bold text-ink">
-              {drafts.length}
+              {uniquePitchesCount}
             </span>
-            <span className="text-xs text-muted">drafted</span>
+            <span className="text-xs text-muted">prepared</span>
           </div>
           <p className="mt-1 text-[11px] text-muted">
-            Evidence-grounded, seller controlled
+            Personalized wholesale pitches
           </p>
         </Link>
       </div>
@@ -350,43 +322,49 @@ export function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {leads.slice(0, 3).map((lead) => (
-              <div
-                key={lead.id}
-                className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface p-4 shadow-card hover:border-border-strong transition-all"
-              >
-                <div className="space-y-1 flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      to={`/app/leads/${lead.id}`}
-                      className="font-display text-sm font-semibold text-ink hover:text-primary transition-colors truncate"
-                    >
-                      {lead.name}
-                    </Link>
-                    <span className="rounded bg-surface-subtle px-1.5 py-0.5 text-[10px] font-mono text-muted border border-border">
-                      {lead.retailer_type}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted">
-                    {lead.location && (
-                      <span>{[lead.location.city, lead.location.country].filter(Boolean).join(", ")}</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="w-32 flex-shrink-0">
-                  <ScoreBar label="" score={lead.scores.overall} />
-                </div>
-
-                <Link
-                  to={`/app/outreach/${lead.id}`}
-                  className="rounded-lg p-2 text-muted hover:bg-surface-subtle hover:text-primary transition-colors"
-                  title="Compose outreach pitch"
-                >
-                  <Mail className="size-4" />
-                </Link>
+            {leads.length === 0 ? (
+              <div className="rounded-xl border border-border bg-surface p-6 text-center text-xs text-muted">
+                No stockist leads yet. Start a discovery run to populate candidates.
               </div>
-            ))}
+            ) : (
+              leads.slice(0, 3).map((lead) => (
+                <div
+                  key={lead.id}
+                  className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface p-4 shadow-card hover:border-border-strong transition-all"
+                >
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={`/app/leads/${lead.id}`}
+                        className="font-display text-sm font-semibold text-ink hover:text-primary transition-colors truncate"
+                      >
+                        {lead.name}
+                      </Link>
+                      <span className="rounded bg-surface-subtle px-1.5 py-0.5 text-[10px] font-mono text-muted border border-border">
+                        {lead.retailer_type}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted">
+                      {lead.location && (
+                        <span>{[lead.location.city, lead.location.country].filter(Boolean).join(", ")}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="w-32 flex-shrink-0">
+                    <ScoreBar label="" score={lead.scores.overall} />
+                  </div>
+
+                  <Link
+                    to={`/app/outreach/${lead.id}`}
+                    className="rounded-lg p-2 text-muted hover:bg-surface-subtle hover:text-primary transition-colors"
+                    title="Compose outreach pitch"
+                  >
+                    <Mail className="size-4" />
+                  </Link>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -409,42 +387,61 @@ export function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {runs.slice(0, 3).map((run) => (
-              <div
-                key={run.id}
-                className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface p-4 shadow-card hover:border-border-strong transition-all"
-              >
-                <div className="space-y-1 flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-display text-sm font-semibold text-ink">
-                      Run #{run.id.slice(-6)}
-                    </span>
-                    <span
-                      className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                        run.status === "completed"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : run.status === "awaiting_review"
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-surface-subtle text-muted"
-                      }`}
-                    >
-                      {(run.status || "queued").replace("_", " ")}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted truncate">
-                    Regions: {run.inputs?.regions?.join(", ") || "Global"}
-                  </p>
-                </div>
-
-                <Link
-                  to={`/app/discovery/${run.id}`}
-                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface-subtle transition-colors shadow-xs"
-                >
-                  <span>Workbench</span>
-                  <ArrowRight className="size-3" />
-                </Link>
+            {runs.length === 0 ? (
+              <div className="rounded-xl border border-border bg-surface p-6 text-center text-xs text-muted">
+                No discovery runs yet. Initiate a run to research potential stockists.
               </div>
-            ))}
+            ) : (
+              runs.slice(0, 3).map((run) => {
+                const runProduct = products.find((p) => p.id === run.product_id);
+                const runDate = run.started_at
+                  ? new Date(run.started_at).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : null;
+
+                return (
+                  <div
+                    key={run.id}
+                    className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface p-4 shadow-card hover:border-border-strong transition-all"
+                  >
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-display text-sm font-semibold text-ink truncate">
+                          {runProduct?.name || "Discovery Run"}
+                        </span>
+                        {runDate && (
+                          <span className="text-[11px] text-muted">({runDate})</span>
+                        )}
+                        <span
+                          className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                            run.status === "completed"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : run.status === "awaiting_review"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-surface-subtle text-muted"
+                          }`}
+                        >
+                          {formatRunStatus(run.status || "queued")}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted truncate">
+                        Regions: {run.inputs?.regions?.join(", ") || "Global"}
+                      </p>
+                    </div>
+
+                    <Link
+                      to={`/app/discovery/${run.id}`}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface-subtle transition-colors shadow-xs"
+                    >
+                      <span>Workbench</span>
+                      <ArrowRight className="size-3" />
+                    </Link>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>

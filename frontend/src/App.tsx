@@ -14,7 +14,6 @@ import { LeadsListPage } from "@/features/leads/LeadsListPage";
 import { LeadDetailPage } from "@/features/leads/LeadDetailPage";
 import { OutreachListPage } from "@/features/outreach/OutreachListPage";
 import { OutreachWorkspacePage } from "@/features/outreach/OutreachWorkspacePage";
-import { InsightsPage } from "@/features/insights/InsightsPage";
 
 /**
  * Backward-compatibility redirector for legacy workspace routes.
@@ -113,7 +112,6 @@ export default function App() {
         <Route path="outreach" element={<OutreachListPage />} />
         <Route path="outreach/:leadId" element={<OutreachWorkspacePage />} />
         <Route path="outreach/drafts/:leadId" element={<OutreachWorkspacePage />} />
-        <Route path="insights" element={<InsightsPage />} />
       </Route>
 
       {/* Backward-compatible redirects for legacy workspace paths & details */}
@@ -125,8 +123,6 @@ export default function App() {
       <Route path="/leads/*" element={<LegacyRedirect />} />
       <Route path="/outreach" element={<LegacyRedirect />} />
       <Route path="/outreach/*" element={<LegacyRedirect />} />
-      <Route path="/insights" element={<LegacyRedirect />} />
-      <Route path="/insights/*" element={<LegacyRedirect />} />
 
       {/* Catch-all 404 route */}
       <Route path="*" element={<NotFound />} />

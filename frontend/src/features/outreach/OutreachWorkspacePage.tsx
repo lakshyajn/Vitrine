@@ -26,9 +26,8 @@ import {
   type OutreachDraft,
   type OutreachDraftStatus,
 } from "@/api";
-import { DemoBadge } from "@/components/shared/DemoBadge";
 import { ErrorState } from "@/components/shared/ErrorState";
-import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
+import { ConfirmationModal } from "@/components/shared/Modal";
 
 export function OutreachWorkspacePage() {
   const { leadId } = useParams<{ leadId: string }>();
@@ -50,8 +49,27 @@ export function OutreachWorkspacePage() {
   const [status, setStatus] = useState<OutreachDraftStatus>("draft");
   const [followupNotes, setFollowupNotes] = useState("");
 
+  // Regeneration confirmation modal
+  const [showRegenConfirm, setShowRegenConfirm] = useState(false);
+
   // Copy Feedback Toasts & Network Resilience
   const [copiedType, setCopiedType] = useState<string | null>(null);
+  const [generationSeconds, setGenerationSeconds] = useState(0);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    if (isGeneratingDraft || isRegenerating) {
+      setGenerationSeconds(0);
+      timer = setInterval(() => {
+        setGenerationSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setGenerationSeconds(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isGeneratingDraft, isRegenerating]);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : true
@@ -197,6 +215,59 @@ export function OutreachWorkspacePage() {
     fetchWorkspace();
   }, [fetchWorkspace]);
 
+  // Save changes
+  const handleSave = useCallback(
+    async (newStatus?: OutreachDraftStatus) => {
+      if (!draft) return;
+      setIsSaving(true);
+      const targetStatus = newStatus || status;
+
+      // Save locally first
+      persistLocalEdits(subject, body, followupNotes, targetStatus);
+
+      // If offline, preserve locally and notify
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        if (newStatus) setStatus(newStatus);
+        setIsSaving(false);
+        setSaveSuccess(true);
+        setSyncNotice("Saved offline: changes stored locally on device.");
+        setTimeout(() => setSaveSuccess(false), 2500);
+        return;
+      }
+
+      try {
+        const updated = await updateOutreachDraft(draft.id, {
+          subject,
+          body,
+          status: targetStatus,
+          followup_notes: followupNotes.trim() || null,
+        });
+        setDraft(updated);
+        if (newStatus) setStatus(newStatus);
+        setSaveSuccess(true);
+        setHasOfflineBackup(false);
+        setSyncNotice(null);
+
+        // Clean storage after successful sync
+        if (activeLeadIdRef.current) {
+          try {
+            localStorage.removeItem(getStorageKey(activeLeadIdRef.current));
+          } catch {
+            // ignore
+          }
+        }
+
+        setTimeout(() => setSaveSuccess(false), 2000);
+      } catch (err: unknown) {
+        console.warn("Server save failed, kept in local backup", err);
+        setSyncNotice("Connection interrupted. Edits are preserved locally and will sync when reconnected.");
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [draft, status, persistLocalEdits, subject, body, followupNotes]
+  );
+
   // Online / Offline Detection and Auto-Sync
   useEffect(() => {
     const handleOnline = () => {
@@ -217,57 +288,7 @@ export function OutreachWorkspacePage() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [hasOfflineBackup, draft, subject, body, followupNotes, status]);
-
-  // Save changes
-  const handleSave = async (newStatus?: OutreachDraftStatus) => {
-    if (!draft) return;
-    setIsSaving(true);
-    const targetStatus = newStatus || status;
-
-    // Save locally first
-    persistLocalEdits(subject, body, followupNotes, targetStatus);
-
-    // If offline, preserve locally and notify
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
-      if (newStatus) setStatus(newStatus);
-      setIsSaving(false);
-      setSaveSuccess(true);
-      setSyncNotice("Saved offline: changes stored locally on device.");
-      setTimeout(() => setSaveSuccess(false), 2500);
-      return;
-    }
-
-    try {
-      const updated = await updateOutreachDraft(draft.id, {
-        subject,
-        body,
-        status: targetStatus,
-        followup_notes: followupNotes.trim() || null,
-      });
-      setDraft(updated);
-      if (newStatus) setStatus(newStatus);
-      setSaveSuccess(true);
-      setHasOfflineBackup(false);
-      setSyncNotice(null);
-
-      // Clean storage after successful sync
-      if (activeLeadIdRef.current) {
-        try {
-          localStorage.removeItem(getStorageKey(activeLeadIdRef.current));
-        } catch {
-          // ignore
-        }
-      }
-
-      setTimeout(() => setSaveSuccess(false), 2000);
-    } catch (err: unknown) {
-      console.warn("Server save failed, kept in local backup", err);
-      setSyncNotice("Connection interrupted. Edits are preserved locally and will sync when reconnected.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  }, [hasOfflineBackup, draft, handleSave]);
 
   // Field change handlers with automatic local persistence
   const handleSubjectChange = (val: string) => {
@@ -288,14 +309,9 @@ export function OutreachWorkspacePage() {
   // Regenerate draft
   const handleRegenerate = async () => {
     if (!draft) return;
-    if (
-      !window.confirm(
-        "Regenerate pitch draft? Nemotron-3-Ultra-550B will craft a fresh version grounded in the latest evidence."
-      )
-    ) {
-      return;
-    }
+    setShowRegenConfirm(false);
     setIsRegenerating(true);
+    setError(null);
     try {
       const regenerated = await regenerateOutreachDraft(draft.id);
       setDraft(regenerated);
@@ -311,7 +327,7 @@ export function OutreachWorkspacePage() {
         }
       }
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to regenerate draft");
+      setError(err instanceof Error ? err.message : "Failed to regenerate outreach draft.");
     } finally {
       setIsRegenerating(false);
     }
@@ -326,8 +342,61 @@ export function OutreachWorkspacePage() {
 
   if (isLoadingLead) {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-8">
-        <LoadingSkeleton variant="detail" />
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-6 animate-pulse" aria-busy="true" aria-label="Loading outreach workspace">
+        {/* Header Skeleton */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-5">
+          <div className="flex items-center gap-3">
+            <div className="size-9 rounded-xl bg-surface-subtle border border-border" />
+            <div className="space-y-1.5">
+              <div className="h-6 w-48 rounded-lg bg-surface-subtle" />
+              <div className="h-3.5 w-64 rounded bg-surface-subtle" />
+            </div>
+          </div>
+          <div className="h-9 w-40 rounded-xl bg-surface-subtle" />
+        </div>
+
+        {/* Workbench Grid Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-5">
+            <div className="flex items-center justify-between pb-1">
+              <div className="h-4 w-32 rounded bg-surface-subtle" />
+              <div className="h-6 w-24 rounded-lg bg-surface-subtle" />
+            </div>
+            <div className="rounded-2xl border border-border bg-surface p-6 space-y-4">
+              <div className="space-y-2">
+                <div className="h-3.5 w-20 rounded bg-surface-subtle" />
+                <div className="h-10 w-full rounded-xl bg-surface-subtle" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3.5 w-24 rounded bg-surface-subtle" />
+                <div className="h-64 w-full rounded-xl bg-surface-subtle" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3.5 w-36 rounded bg-surface-subtle" />
+                <div className="h-9 w-full rounded-xl bg-surface-subtle" />
+              </div>
+              <div className="pt-3 border-t border-border flex justify-end">
+                <div className="h-8 w-28 rounded-xl bg-surface-subtle" />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+              <div className="h-3 w-28 rounded bg-surface-subtle" />
+              <div className="h-5 w-40 rounded bg-surface-subtle" />
+              <div className="h-3 w-32 rounded bg-surface-subtle" />
+            </div>
+            <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+              <div className="h-3 w-36 rounded bg-surface-subtle" />
+              <div className="h-5 w-32 rounded bg-surface-subtle" />
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="h-12 rounded-lg bg-surface-subtle" />
+                <div className="h-12 rounded-lg bg-surface-subtle" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -360,14 +429,13 @@ export function OutreachWorkspacePage() {
                 Pitch Workbench: {lead.name}
               </h1>
               {draft ? (
-                <span className="text-xs font-mono text-muted">v{draft.version}</span>
+                <span className="text-xs text-muted">Revision {draft.version}</span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2.5 py-0.5 text-[10px] font-semibold text-primary border border-primary/20">
                   <Sparkles className="size-3" />
-                  <span>Synthesizing Pitch</span>
+                  <span>Preparing Pitch</span>
                 </span>
               )}
-              {draft?.is_demo && <DemoBadge />}
             </div>
             <p className="mt-0.5 text-xs text-muted">
               Grounded wholesale correspondence for {product?.name || "Product Passport"}.
@@ -437,45 +505,81 @@ export function OutreachWorkspacePage() {
         {/* Left Column: Draft Editor or Dynamic AI Generation State */}
         <div className="lg:col-span-2 space-y-5">
           {isGeneratingDraft || !draft ? (
-            /* Dedicated Dynamic Generation Spinner for Nemotron Ultra */
+            /* Polished generation state */
             <div className="rounded-2xl border border-primary/20 bg-surface p-8 shadow-card text-center space-y-5 animate-fade-in">
               <div className="flex size-14 items-center justify-center rounded-2xl bg-primary-light text-primary mx-auto animate-pulse">
                 <Sparkles className="size-7" />
               </div>
               <div className="space-y-1.5 max-w-md mx-auto">
                 <h3 className="font-display text-lg font-semibold text-ink">
-                  Composing Wholesale Pitch for {lead.name}
+                  Preparing Wholesale Pitch for {lead.name}
                 </h3>
                 <p className="text-xs text-muted leading-relaxed">
-                  Nemotron-3-Ultra-550B is analyzing verified evidence from {lead.canonical_domain} and your Product Passport specifications to draft authentic, human B2B correspondence.
+                  Reviewing verified retailer evidence from {lead.canonical_domain} and tailoring your collection specifications into a personalized outreach inquiry.
                 </p>
               </div>
 
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-light/70 px-4 py-1.5 text-xs font-semibold text-primary">
                 <Loader2 className="size-3.5 animate-spin" />
-                <span>Synthesizing brand pitch (typically ~15s)...</span>
+                <span>Preparing your draft...</span>
               </div>
+
+              {generationSeconds > 15 && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 max-w-md mx-auto text-xs text-amber-800 space-y-2 animate-fade-in">
+                  <p className="leading-relaxed">
+                    Draft preparation is taking a moment longer than usual while researching boutique evidence.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={fetchWorkspace}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900 underline hover:no-underline"
+                  >
+                    <RefreshCw className="size-3" />
+                    <span>Try again</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <>
+              {/* Revision generation notice if regenerating */}
+              {isRegenerating && (
+                <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary-light/60 p-3.5 text-xs text-primary animate-fade-in shadow-xs">
+                  <div className="flex items-center gap-2.5">
+                    <Loader2 className="size-4 animate-spin text-primary flex-shrink-0" />
+                    <div>
+                      <span className="font-semibold block">Preparing revised pitch draft...</span>
+                      <span className="text-[11px] text-muted">Synthesizing latest collection specs. Your current draft remains available below.</span>
+                    </div>
+                  </div>
+                  {generationSeconds > 15 && (
+                    <span className="text-[11px] text-amber-800 font-medium">Taking a few moments...</span>
+                  )}
+                </div>
+              )}
+
               {/* Status Tracker & Versioning Bar */}
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4 shadow-card">
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-semibold text-ink">Workflow Status:</span>
-                  {(["draft", "ready", "contacted"] as const).map((st) => (
+                  {[
+                    { id: "draft", label: "In Progress" },
+                    { id: "ready", label: "Ready to Send" },
+                    { id: "contacted", label: "Contacted" },
+                  ].map((st) => (
                     <button
-                      key={st}
+                      key={st.id}
                       type="button"
-                      onClick={() => handleSave(st)}
-                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold capitalize transition-colors ${
-                        status === st
-                          ? st === "contacted"
+                      onClick={() => handleSave(st.id as OutreachDraftStatus)}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
+                        status === st.id
+                          ? st.id === "contacted"
                             ? "bg-emerald-600 text-white shadow-xs"
                             : "bg-primary text-white shadow-xs"
                           : "bg-surface-subtle text-muted hover:text-ink"
                       }`}
                     >
-                      {st}
+                      {st.label}
                     </button>
                   ))}
                 </div>
@@ -484,22 +588,22 @@ export function OutreachWorkspacePage() {
                   <button
                     type="button"
                     disabled={isRegenerating}
-                    onClick={handleRegenerate}
+                    onClick={() => setShowRegenConfirm(true)}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-semibold text-muted hover:text-ink hover:bg-surface-subtle disabled:opacity-50 transition-colors"
-                    title="Regenerate revised draft with AI"
+                    title="Regenerate revised draft"
                   >
                     <RefreshCw className={`size-3 ${isRegenerating ? "animate-spin" : ""}`} />
-                    <span>Regenerate (v{draft.version + 1})</span>
+                    <span>Regenerate Draft</span>
                   </button>
                 </div>
               </div>
 
-              {/* Model Warnings Callout if uncorroborated claims */}
+              {/* Warnings Callout if uncorroborated claims */}
               {draft.warnings.length > 0 && (
                 <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-1.5 text-xs text-amber-900">
                   <div className="flex items-center gap-1.5 font-semibold">
                     <AlertTriangle className="size-4 text-amber-700" />
-                    <span>Model Fact-Check Alerts:</span>
+                    <span>Fact-Check Notes:</span>
                   </div>
                   <ul className="list-disc pl-5 space-y-0.5 text-[11px] text-amber-800">
                     {draft.warnings.map((w, i) => (
@@ -748,6 +852,27 @@ export function OutreachWorkspacePage() {
           </div>
         </div>
       </div>
+
+      {/* Accessible Regeneration Confirmation Modal */}
+      {showRegenConfirm && (
+        <ConfirmationModal
+          isOpen={showRegenConfirm}
+          onClose={() => setShowRegenConfirm(false)}
+          onConfirm={handleRegenerate}
+          title="Regenerate Pitch Draft?"
+          subtitle="Create a fresh draft from the latest evidence."
+          variant="primary"
+          isLoading={isRegenerating}
+          confirmText="Regenerate Draft"
+          cancelText="Keep Editing"
+          icon={RefreshCw}
+          description={
+            <p>
+              Regenerating will craft a new draft grounded in the retailer evidence and your Product Passport specifications. Any unsaved edits will be replaced.
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }

@@ -61,8 +61,9 @@ describe("Vitrine — Public Landing Page & Route Architecture", () => {
     expect(screen.getAllByText(/evidence-backed boutique discovery/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText(/100% verified boutique retailer evidence/i)).toBeNull();
 
-    // Prominent illustrative demo data labels
-    expect(screen.getAllByText(/illustrative demo data/i).length).toBeGreaterThanOrEqual(1);
+    // No misleading illustrative demo data badges or fake guarantees
+    expect(screen.queryByText(/illustrative demo data/i)).toBeNull();
+    expect(screen.queryByText(/100% verified boutique retailer evidence/i)).toBeNull();
 
     // Curated collection hero image with representative alt text
     const heroImage = screen.getByAltText(/curated independent fashion collection/i);
@@ -85,13 +86,13 @@ describe("Vitrine — Public Landing Page & Route Architecture", () => {
     // Switch to Stage 3 (Buyer Leads)
     const leadsTab = screen.getByRole("tab", { name: /buyer leads/i });
     await user.click(leadsTab);
-    const leadsMatches = screen.getAllByText(/Boutique L'Ombre/i);
+    const leadsMatches = screen.getAllByText(/Candidate Stockist/i);
     expect(leadsMatches.length).toBeGreaterThanOrEqual(1);
 
     // Switch to Stage 4 (Outreach Studio)
     const outreachTab = screen.getByRole("tab", { name: /outreach studio/i });
     await user.click(outreachTab);
-    expect(screen.getByRole("button", { name: /copy letter text/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /copy pitch draft/i })).toBeInTheDocument();
   });
 
   it("renders workspace shell and nav labels at '/app'", () => {
@@ -183,13 +184,10 @@ describe("Vitrine — Public Landing Page & Route Architecture", () => {
     ).toBeNull();
   });
 
-  it("shows AG Studio Insights on '/app/insights'", async () => {
+  it("ensures AG Studio is no longer accessible on '/app/insights'", () => {
     renderAt("/app/insights");
     expect(
-      await screen.findByRole("heading", { name: /ag studio insights/i, level: 1 }, { timeout: 5000 }),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByText(/qualification yield/i, {}, { timeout: 5000 }),
+      screen.getByRole("heading", { name: /page not found/i }),
     ).toBeInTheDocument();
   });
 

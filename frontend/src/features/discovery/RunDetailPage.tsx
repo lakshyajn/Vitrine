@@ -27,8 +27,6 @@ import {
   type Product,
 } from "@/api";
 import { StatusStepper } from "@/components/shared/StatusStepper";
-import { IntegrationBanner } from "@/components/shared/IntegrationBanner";
-import { DemoBadge } from "@/components/shared/DemoBadge";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 
@@ -127,7 +125,7 @@ export function RunDetailPage() {
         setLastAction(null);
       }
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to update anchor");
+      setError(err instanceof Error ? err.message : "Failed to update anchor");
     }
   };
 
@@ -142,7 +140,7 @@ export function RunDetailPage() {
       );
       setLastAction(null);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to undo anchor action");
+      setError(err instanceof Error ? err.message : "Failed to undo anchor action");
     }
   };
 
@@ -161,7 +159,7 @@ export function RunDetailPage() {
       setNewAnchorLabel("");
       setNewAnchorRationale("");
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to add custom anchor");
+      setError(err instanceof Error ? err.message : "Failed to add custom anchor");
     } finally {
       setIsAddingAnchor(false);
     }
@@ -175,7 +173,7 @@ export function RunDetailPage() {
       await confirmAnchors(runId, { proceed_without_anchors: false });
       await fetchRunDetails();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to confirm anchors");
+      setError(err instanceof Error ? err.message : "Failed to confirm anchors");
     } finally {
       setIsConfirmingAnchors(false);
     }
@@ -189,7 +187,7 @@ export function RunDetailPage() {
       await rerunResearchRun(runId);
       await fetchRunDetails();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to rerun discovery");
+      setError(err instanceof Error ? err.message : "Failed to rerun discovery");
     } finally {
       setIsRerunning(false);
     }
@@ -228,12 +226,9 @@ export function RunDetailPage() {
             <ArrowLeft className="size-4" />
           </Link>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-ink">
-                Discovery Run Workbench
-              </h1>
-              <DemoBadge />
-            </div>
+            <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-ink">
+              Discovery Run Workbench
+            </h1>
             <p className="text-xs text-muted">
               Grounded research for:{" "}
               <strong className="text-ink">{product?.name || "Product Passport"}</strong>
@@ -273,15 +268,6 @@ export function RunDetailPage() {
       <div className="rounded-2xl border border-border bg-surface p-6 shadow-card space-y-4">
         <StatusStepper status={run.status} stage={run.stage} />
       </div>
-
-      {/* Provider Subsystems Status */}
-      <IntegrationBanner
-        status={{
-          nebius: run.provider_modes.ai,
-          tavily: run.provider_modes.search,
-          qloo: run.provider_modes.taste,
-        }}
-      />
 
       {/* Run Inputs & Context Card */}
       <div className="rounded-2xl border border-border bg-surface p-6 shadow-card space-y-3">
@@ -331,7 +317,7 @@ export function RunDetailPage() {
               )}
             </div>
             <p className="mt-0.5 text-xs text-muted">
-              Brand and boutique taste anchors inform Tavily query formulation and Qloo cultural affinity scoring.
+              Brand and boutique taste anchors inform discovery search queries and shopper affinity matching.
             </p>
           </div>
 
@@ -530,8 +516,7 @@ export function RunDetailPage() {
                       {hyp.signals.map((sig, i) => (
                         <div key={i} className="rounded-lg border border-border bg-surface p-2.5 text-xs space-y-1">
                           <div className="flex items-center justify-between text-[10px] text-muted">
-                            <span className="font-semibold uppercase">{((sig as any).source || (sig as any).type || "signal").replace("_", " ")}</span>
-                            {sig.is_demo && <DemoBadge />}
+                            <span className="font-semibold uppercase">{(sig.source || sig.type || "signal").replace("_", " ")}</span>
                           </div>
                           <p className="text-xs text-ink">{sig.text}</p>
                           {sig.source_ref && (

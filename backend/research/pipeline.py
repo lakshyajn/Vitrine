@@ -219,20 +219,25 @@ class LiveResearchPipeline:
 
 
 def get_research_pipeline() -> ResearchPipeline:
-    """Factory returning LiveResearchPipeline if TAVILY_API_KEY is set, else FixtureResearchPipeline."""
-    if "TAVILY_API_KEY" in os.environ and not os.environ["TAVILY_API_KEY"].strip():
-        return FixtureResearchPipeline()
-
+    """Factory returning LiveResearchPipeline if TAVILY_API_KEY is set, else FixtureResearchPipeline (dev/test only)."""
     api_key = os.environ.get("TAVILY_API_KEY", "").strip()
     lead_cap = 6
+    app_env = "dev"
     try:
-        from backend.app.core.config import settings
+        from backend.app.core.config import get_settings
 
+        settings = get_settings()
         api_key = getattr(settings, "tavily_api_key", None) or getattr(settings, "TAVILY_API_KEY", None) or api_key
         lead_cap = getattr(settings, "max_leads_per_run", 6)
+        app_env = getattr(settings, "app_env", "dev") or "dev"
     except Exception:
         pass
 
     if api_key and str(api_key).strip():
         return LiveResearchPipeline(TavilyClient(api_key=str(api_key).strip()), lead_cap=lead_cap)
+
+    if str(app_env).strip().lower() in ("production", "prod"):
+        from backend.app.core.errors import AppError
+        raise AppError("upstream_unavailable", "Research provider is unconfigured or unavailable in production.")
+
     return FixtureResearchPipeline()

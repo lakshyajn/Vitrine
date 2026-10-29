@@ -18,10 +18,10 @@ import {
   type Lead,
 } from "@/api";
 import { ScoreBar } from "@/components/shared/ScoreBar";
-import { DemoBadge } from "@/components/shared/DemoBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
+import { ConfirmationModal } from "@/components/shared/Modal";
 
 export function LeadsListPage() {
   const navigate = useNavigate();
@@ -43,6 +43,10 @@ export function LeadsListPage() {
 
   // Filter input states
   const [searchInput, setSearchInput] = useState(qParam);
+
+  // Rejection confirmation modal state
+  const [rejectTarget, setRejectTarget] = useState<Lead | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
 
   const fetchLeads = useCallback(async () => {
     setIsLoading(true);
@@ -92,7 +96,28 @@ export function LeadsListPage() {
       const updated = await updateLead(leadId, { review_status: status });
       setLeads((prev) => prev.map((l) => (l.id === leadId ? updated : l)));
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to update lead status");
+      setError(err instanceof Error ? err.message : "Failed to update lead status");
+    }
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectTarget || isRejecting) return;
+    setIsRejecting(true);
+    try {
+      await updateLead(rejectTarget.id, { review_status: "rejected" });
+      // Remove from currently visible list
+      setLeads((prev) => prev.filter((l) => l.id !== rejectTarget.id));
+      setTotal((prev) => Math.max(0, prev - 1));
+
+      // If this was the last item on a page past page 1, step back
+      if (leads.length === 1 && pageParam > 1) {
+        updateParam("page", String(pageParam - 1));
+      }
+      setRejectTarget(null);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to reject lead. Please try again.");
+    } finally {
+      setIsRejecting(false);
     }
   };
 
@@ -108,7 +133,7 @@ export function LeadsListPage() {
               Buyer Leads
             </h1>
             <span className="rounded-full bg-surface-subtle px-2.5 py-0.5 text-xs font-semibold text-muted border border-border">
-              {total} verified
+              {total} stockist lead{total !== 1 ? "s" : ""}
             </span>
           </div>
           <p className="mt-1 text-xs sm:text-sm text-muted">
@@ -176,7 +201,7 @@ export function LeadsListPage() {
         {(runId || productId) && (
           <div className="flex items-center justify-between pt-2 border-t border-border-subtle text-xs text-muted">
             <span>
-              Filtered by: {runId ? `Research Run #${runId}` : `Product #${productId}`}
+              Filtered by: {runId ? "Selected Discovery Run" : "Selected Product"}
             </span>
             <button
               type="button"
@@ -188,7 +213,7 @@ export function LeadsListPage() {
               }}
               className="font-semibold text-primary hover:underline"
             >
-              Clear Run Filter
+              Clear Filter
             </button>
           </div>
         )}
@@ -218,9 +243,7 @@ export function LeadsListPage() {
           {leads.map((lead) => (
             <div
               key={lead.id}
-              className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-2xl border bg-surface p-5 shadow-card transition-all hover:border-border-strong hover:shadow-elevated ${
-                lead.review_status === "rejected" ? "opacity-60 border-border" : "border-border"
-              }`}
+              className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-5 shadow-card transition-all hover:border-border-strong hover:shadow-elevated"
             >
               {/* Left Info */}
               <div className="space-y-2 flex-1 min-w-0">
@@ -254,8 +277,6 @@ export function LeadsListPage() {
                   >
                     {lead.review_status}
                   </span>
-
-                  {lead.is_demo && <DemoBadge />}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -266,7 +287,7 @@ export function LeadsListPage() {
                     {lead.name}
                   </Link>
 
-                  {/* Duplicate Marker (DECISION-D9) */}
+                  {/* Duplicate Marker */}
                   {lead.duplicate_of && (
                     <span
                       className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900 border border-amber-300"
@@ -326,7 +347,7 @@ export function LeadsListPage() {
                 {lead.review_status !== "rejected" && (
                   <button
                     type="button"
-                    onClick={() => handleQuickStatus(lead.id, "rejected")}
+                    onClick={() => setRejectTarget(lead)}
                     className="rounded-xl border border-border bg-surface p-2 text-muted hover:bg-rose-50 hover:text-rose-600 transition-colors shadow-xs"
                     title="Reject Lead"
                   >
@@ -384,7 +405,27 @@ export function LeadsListPage() {
           )}
         </div>
       )}
+
+      {/* Accessible Lead Rejection Confirmation Modal */}
+      {rejectTarget && (
+        <ConfirmationModal
+          isOpen={!!rejectTarget}
+          onClose={() => setRejectTarget(null)}
+          onConfirm={handleConfirmReject}
+          title="Reject Stockist Lead"
+          subtitle="Mark this lead as unsuitable for outreach."
+          variant="danger"
+          isLoading={isRejecting}
+          confirmText="Reject Lead"
+          cancelText="Keep Lead"
+          icon={XCircle}
+          description={
+            <p>
+              Are you sure you want to reject <strong className="text-ink font-semibold">&ldquo;{rejectTarget.name}&rdquo;</strong>? It will be removed from your active leads list. You can review rejected leads at any time by selecting the "Rejected" status filter.
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }
-

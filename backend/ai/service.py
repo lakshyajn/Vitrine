@@ -536,10 +536,7 @@ class LiveAIService:
 
 
 def get_ai_service() -> AIService:
-    """Factory returning LiveAIService if NEBIUS_API_KEY is configured, else FixtureAIService."""
-    if "NEBIUS_API_KEY" in os.environ and not os.environ["NEBIUS_API_KEY"].strip():
-        return FixtureAIService()
-
+    """Factory returning LiveAIService if NEBIUS_API_KEY is configured, else FixtureAIService (dev/test only)."""
     api_key = os.environ.get("NEBIUS_API_KEY", "").strip()
     model_id = os.environ.get("NEBIUS_MODEL_ID", "").strip() or "nvidia/nemotron-3-ultra-550b-a55b"
     base_url = os.environ.get("NEBIUS_BASE_URL", "").strip() or "https://integrate.api.nvidia.com/v1"
@@ -588,4 +585,17 @@ def get_ai_service() -> AIService:
                 base_url=str(fast_base_url).strip(),
             )
         return LiveAIService(primary_client, fast_client=fast_client)
+
+    app_env = "dev"
+    try:
+        from backend.app.core.config import get_settings
+
+        settings = get_settings()
+        app_env = getattr(settings, "app_env", "dev") or "dev"
+    except Exception:
+        pass
+
+    if str(app_env).strip().lower() in ("production", "prod"):
+        raise AppError("ai_generation_failed", "AI service provider is unconfigured or unavailable in production.")
+
     return FixtureAIService()

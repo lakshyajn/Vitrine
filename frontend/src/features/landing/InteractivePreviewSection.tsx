@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Check, Compass, Copy, Mail, Package, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Check, Compass, Copy, Mail, Package, Users } from "lucide-react";
 
 type StageId = "passport" | "discovery" | "leads" | "outreach";
 
@@ -53,21 +53,23 @@ export function InteractivePreviewSection() {
 
   const currentTab = STAGE_TABS.find((t) => t.id === activeStage) ?? STAGE_TABS[0];
 
-  const sampleOutreachLetter = `Dear Buying Team at Boutique L'Ombre,
+  const sampleOutreachLetter = `Subject: Wholesale Inquiry: Spring/Summer Line-Sheet for Boutique Curation
 
-I have followed your curation on Rue Charlot with great admiration, particularly your thoughtful focus on European artisanal tailoring and natural fiber garments.
+Dear Buying Team,
 
-Our studio, Atelier Sylvan (Lisbon/London), creates limited-run menswear and womenswear focused on relaxed, architectural tailoring. For Spring/Summer, our Double-Breasted Belgian Linen Blazer (340gsm undyed flax, horn button closures) closely aligns with your floor curation alongside brands like Studio Nicholson and Casey Casey.
+I have followed your curation with great admiration, particularly your thoughtful focus on artisanal tailoring and natural fiber garments.
+
+Our studio creates limited-run menswear and womenswear focused on relaxed, architectural tailoring. For Spring/Summer, our Double-Breasted Belgian Linen Blazer (340gsm undyed flax, horn button closures) closely aligns with your floor curation.
 
 Key collection specifications:
 • Wholesale Price: $145 USD (Suggested Retail: $360 USD · 2.48× markup)
 • Minimum Opening Order: 12 units (customizable size curve across XS–XL)
-• Production Lead Time: 6 weeks (cut and sewn in our Lisbon studio)
+• Production Lead Time: 6 weeks (cut and sewn to order)
 
-Our complete digital linesheet and swatch cards are attached for your consideration. We would welcome the opportunity to send a sample piece to your showroom.
+Our complete digital linesheet and lookbook are available for your review. We would welcome the opportunity to share line-sheet details or send a fabric swatch card to your studio.
 
 Warm regards,
-Elena Vance · Founder & Designer, Atelier Sylvan`;
+Founder & Designer`;
 
   const handleCopy = () => {
     navigator.clipboard?.writeText(sampleOutreachLetter);
@@ -113,9 +115,8 @@ Elena Vance · Founder & Designer, Atelier Sylvan`;
                 <span className="text-xs font-bold text-ink">
                   Wholesale Discovery Sequence
                 </span>
-                <span className="inline-flex items-center gap-1 rounded bg-surface-subtle border border-border px-2 py-0.5 text-[10px] font-medium text-muted">
-                  <Sparkles size={11} className="text-accent" />
-                  Illustrative demo data
+                <span className="text-[11px] font-medium text-muted">
+                  4 Guided Stages
                 </span>
               </div>
               <div className="mt-2.5 grid grid-cols-2 gap-2 text-[11px]">
@@ -233,10 +234,7 @@ Elena Vance · Founder & Designer, Atelier Sylvan`;
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-medium text-muted">
-                      SKU: AS-JKT-06 · Collection 06 Spring/Summer
-                    </span>
-                    <span className="rounded bg-surface-subtle border border-border px-2 py-0.5 text-[10px] font-medium text-muted">
-                      Illustrative demo data
+                      Collection Specifications · Linesheet Profile
                     </span>
                   </div>
                   <h3 className="font-display text-2xl font-bold text-ink mt-1">
@@ -320,18 +318,15 @@ Elena Vance · Founder & Designer, Atelier Sylvan`;
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-medium text-muted">
-                      DISCOVERY SCAN RUN #04 · TARGET HUBS: PARIS &amp; TOKYO
-                    </span>
-                    <span className="rounded bg-surface-subtle border border-border px-2 py-0.5 text-[10px] font-medium text-muted">
-                      Illustrative demo data
+                      RESEARCH RUN · MULTI-SIGNAL BOUTIQUE SCANNING
                     </span>
                   </div>
                   <h3 className="font-display text-2xl font-bold text-ink mt-1">
-                    Independent Boutique Discovery Filter
+                    Independent Boutique Discovery &amp; Fit Analysis
                   </h3>
                 </div>
                 <span className="rounded bg-primary-light text-primary border border-primary-border px-2.5 py-1 text-xs font-semibold">
-                  Scanned 28 Boutique Stockists
+                  Multi-Signal Evaluation
                 </span>
               </div>
 
@@ -376,25 +371,22 @@ Elena Vance · Founder & Designer, Atelier Sylvan`;
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-medium text-muted">
-                      LEAD EVALUATION · RUE CHARLOT, PARIS 3E
-                    </span>
-                    <span className="rounded bg-surface-subtle border border-border px-2 py-0.5 text-[10px] font-medium text-muted">
-                      Illustrative demo data
+                      PROSPECT EVALUATION · STORE EVIDENCE REVIEW
                     </span>
                     <span className="rounded bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold">
                       VERIFIED STOREFRONT
                     </span>
                   </div>
                   <h3 className="font-display text-2xl font-bold text-ink mt-1">
-                    Boutique L&apos;Ombre · Independent Concept Store
+                    Candidate Stockist: Independent Concept Store
                   </h3>
                 </div>
                 <div className="text-right">
                   <span className="block text-[11px] font-medium text-muted">
-                    Overall Fit Score
+                    Review Status
                   </span>
-                  <span className="font-display text-3xl font-bold text-primary">
-                    92<span className="text-base font-normal text-muted">/100</span>
+                  <span className="font-display text-sm font-bold text-primary">
+                    Awaiting Review
                   </span>
                 </div>
               </div>
@@ -451,12 +443,9 @@ Elena Vance · Founder & Designer, Atelier Sylvan`;
                     <span className="text-[11px] font-medium text-muted">
                       OUTREACH STUDIO · PERSONALIZED WHOLESALE INQUIRY
                     </span>
-                    <span className="rounded bg-surface-subtle border border-border px-2 py-0.5 text-[10px] font-medium text-muted">
-                      Illustrative demo data
-                    </span>
                   </div>
                   <h3 className="font-display text-2xl font-bold text-ink mt-1">
-                    Wholesale Pitch: Boutique L&apos;Ombre (Paris)
+                    Evidence-Grounded Wholesale Pitch Draft
                   </h3>
                 </div>
                 <button
@@ -472,7 +461,7 @@ Elena Vance · Founder & Designer, Atelier Sylvan`;
                   ) : (
                     <>
                       <Copy size={14} />
-                      <span>Copy Letter Text</span>
+                      <span>Copy Pitch Draft</span>
                     </>
                   )}
                 </button>
@@ -485,7 +474,7 @@ Elena Vance · Founder & Designer, Atelier Sylvan`;
               <div className="flex items-center justify-between text-xs text-muted pt-2 border-t border-border-subtle">
                 <span className="flex items-center gap-1.5">
                   <span className="size-2 rounded-full bg-emerald-600" />
-                  Manual review completed · Ready to send from designer&apos;s email client
+                  Manual review completed · Ready to send from your studio email client
                 </span>
                 <span className="text-subtle text-[11px]">
                   Zero automated email sending

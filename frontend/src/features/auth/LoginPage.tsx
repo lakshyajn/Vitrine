@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Sparkles, ArrowRight, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
+import { ArrowRight, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 
 function mapAuthError(err: Error | null): string {
@@ -22,7 +22,7 @@ function mapAuthError(err: Error | null): string {
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signIn, isMockMode } = useAuth();
+  const { signIn } = useAuth();
 
   const [authNotice] = useState<string>(() => {
     const urlNotice = searchParams.get("message");
@@ -78,21 +78,6 @@ export function LoginPage() {
       }
     } catch (err: unknown) {
       setErrorMessage(mapAuthError(err instanceof Error ? err : new Error(String(err))));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDemoSignIn = async () => {
-    setIsSubmitting(true);
-    setErrorMessage("");
-    try {
-      const { error } = await signIn("studio@ateliersolenne.com", "demopassword");
-      if (!error) {
-        navigate(getDestination(), { replace: true });
-      } else {
-        setErrorMessage(mapAuthError(error));
-      }
     } finally {
       setIsSubmitting(false);
     }
@@ -208,28 +193,6 @@ export function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Demonstration Notice & Action: rendered only when in mock mode */}
-          {isMockMode && (
-            <div className="rounded-xl border border-border bg-surface-subtle/50 p-4 text-xs text-muted space-y-2.5">
-              <div className="flex items-center gap-1.5 font-semibold text-ink">
-                <Sparkles className="size-3.5 text-primary" />
-                <span>Demonstration Mode Active</span>
-              </div>
-              <p className="text-[11px] leading-relaxed">
-                Vitrine is currently running in local offline mock mode. Click below to explore the pre-seeded Atelier Solenne artisan workspace.
-              </p>
-              <button
-                type="button"
-                onClick={handleDemoSignIn}
-                disabled={isSubmitting}
-                className="pressable inline-flex w-full items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
-              >
-                <span>Try the demo workspace</span>
-                <ArrowRight className="size-3.5" />
-              </button>
-            </div>
-          )}
 
           <div className="text-center text-xs text-muted">
             Don't have a workspace yet?{" "}

@@ -23,7 +23,7 @@ function VitrineMark({ className }: { className?: string }) {
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
-  const { user, signOut, isMockMode } = useAuth();
+  const { user, signOut } = useAuth();
   const { data: profile } = useProfile(!!user);
 
   const businessName =
@@ -31,7 +31,6 @@ export function MobileNav() {
     (user?.user_metadata?.studio_name as string) ||
     "Studio Workspace";
   const userEmail = user?.email || "";
-  const isDemoUser = isMockMode || Boolean(user?.user_metadata?.is_demo);
 
   // Close drawer on route change
   useEffect(() => {
@@ -196,11 +195,6 @@ export function MobileNav() {
                   <span className="truncate text-xs font-semibold text-white">
                     {businessName}
                   </span>
-                  {isDemoUser && (
-                    <span className="inline-flex items-center rounded bg-amber-500/20 px-1.5 py-0.2 text-[10px] font-medium text-amber-300 border border-amber-500/30 flex-shrink-0">
-                      Demo data
-                    </span>
-                  )}
                 </div>
                 {userEmail && (
                   <p className="truncate text-[11px] text-sidebar-muted" title={userEmail}>

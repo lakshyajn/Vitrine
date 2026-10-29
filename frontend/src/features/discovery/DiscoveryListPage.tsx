@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { Compass, Plus, ArrowRight, Clock, CheckCircle2, AlertTriangle, Loader2, RotateCcw } from "lucide-react";
 import {
   getResearchRuns,
@@ -11,10 +11,10 @@ import { NewRunModal } from "./NewRunModal";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
-import { DemoBadge } from "@/components/shared/DemoBadge";
 
 export function DiscoveryListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const productFilterParam = searchParams.get("product_id");
 
@@ -23,6 +23,16 @@ export function DiscoveryListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isNewRunModalOpen, setIsNewRunModalOpen] = useState(false);
+
+  // Check if navigation passed initialProductId via route state
+  const locationState = location.state as { initialProductId?: string } | null;
+  const initialProductId = locationState?.initialProductId || productFilterParam || undefined;
+
+  useEffect(() => {
+    if (locationState?.initialProductId) {
+      setIsNewRunModalOpen(true);
+    }
+  }, [locationState]);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -88,6 +98,23 @@ export function DiscoveryListPage() {
             Queued
           </span>
         );
+    }
+  };
+
+  const getStageLabel = (stage?: string) => {
+    switch (stage) {
+      case "anchor_review":
+        return "Reviewing Taste Anchors";
+      case "web_search":
+        return "Searching for Stockists";
+      case "url_verification":
+        return "Verifying Retailer Domains";
+      case "scoring":
+        return "Scoring Retailer Fit";
+      case "done":
+        return "Research Complete";
+      default:
+        return stage ? stage.replace(/_/g, " ") : "In Progress";
     }
   };
 
@@ -172,10 +199,9 @@ export function DiscoveryListPage() {
               <div className="space-y-2 flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   {getStatusBadge(run.status)}
-                  <span className="rounded bg-surface-subtle px-2 py-0.5 text-[11px] font-mono text-muted border border-border">
-                    Stage: {(run.stage || "queued").replace("_", " ")}
+                  <span className="rounded bg-surface-subtle px-2 py-0.5 text-[11px] font-medium text-muted border border-border">
+                    {getStageLabel(run.stage)}
                   </span>
-                  <DemoBadge />
                 </div>
 
                 <h3 className="font-display text-base font-semibold text-ink truncate">
@@ -250,10 +276,9 @@ export function DiscoveryListPage() {
         isOpen={isNewRunModalOpen}
         onClose={() => setIsNewRunModalOpen(false)}
         products={products}
-        initialProductId={productFilterParam || undefined}
+        initialProductId={initialProductId}
         onRunCreated={(runId) => navigate(`/app/discovery/${runId}`)}
       />
     </div>
   );
 }
-
