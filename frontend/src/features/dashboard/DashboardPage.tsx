@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Package,
@@ -37,6 +37,14 @@ export function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -49,11 +57,13 @@ export function DashboardPage() {
           getLeads({ page_size: 10 }),
           getOutreachDrafts(),
         ]);
+      if (!isMountedRef.current) return;
       setProducts(prodsData);
       setRuns(runsData);
       setLeads(leadsData.items);
       setDrafts(draftsData);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       if (err instanceof ApiError && err.status === 401) {
         return;
       }
@@ -61,7 +71,9 @@ export function DashboardPage() {
         err instanceof Error ? err.message : "Failed to load dashboard metrics."
       );
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 

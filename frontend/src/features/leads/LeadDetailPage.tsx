@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -60,6 +60,14 @@ export function LeadDetailPage() {
   // Reject confirmation modal
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchLeadData = useCallback(async () => {
     if (!id) return;
@@ -70,13 +78,17 @@ export function LeadDetailPage() {
         getLead(id),
         getLeadEvidence(id),
       ]);
+      if (!isMountedRef.current) return;
       setLead(leadData);
       setNotes(leadData.notes || "");
       setEvidence(evData);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       setError(err instanceof Error ? err.message : "Failed to load lead details.");
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [id]);
 

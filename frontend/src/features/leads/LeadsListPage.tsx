@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -51,6 +51,14 @@ export function LeadsListPage() {
   // Rejection confirmation modal state
   const [rejectTarget, setRejectTarget] = useState<Lead | null>(null);
   const [isRejecting, setIsRejecting] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchLeads = useCallback(async () => {
     setIsLoading(true);
@@ -66,12 +74,16 @@ export function LeadsListPage() {
         page: pageParam,
         page_size: 10,
       });
+      if (!isMountedRef.current) return;
       setLeads(res.items);
       setTotal(res.total);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       setError(err instanceof Error ? err.message : "Failed to load buyer leads.");
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [runId, productId, tierParam, reviewStatusParam, qParam, sortParam, pageParam]);
 

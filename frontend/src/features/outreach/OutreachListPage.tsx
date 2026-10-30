@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Edit3, ArrowRight } from "lucide-react";
 import {
@@ -21,45 +21,54 @@ export function OutreachListPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const [draftsData, leadsData, prodsData] = await Promise.all([
-          getOutreachDrafts({ status: statusFilter !== "all" ? statusFilter : undefined }),
-          getLeads({ page_size: 100 }),
-          getProducts(),
-        ]);
-        if (!isMounted) return;
-        // Deduplicate by lead_id to show strictly the latest draft per buyer lead
-        const latestDraftsByLead = new Map<string, OutreachDraft>();
-        for (const d of draftsData) {
-          const existing = latestDraftsByLead.get(d.lead_id);
-          if (
-            !existing ||
-            d.version > existing.version ||
-            new Date(d.updated_at).getTime() > new Date(existing.updated_at).getTime()
-          ) {
-            latestDraftsByLead.set(d.lead_id, d);
-          }
-        }
-        setDrafts(Array.from(latestDraftsByLead.values()));
-        setLeads(leadsData.items);
-        setProducts(prodsData);
-      } catch (err: unknown) {
-        if (!isMounted) return;
-        setError(err instanceof Error ? err.message : "Failed to load outreach drafts.");
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    })();
+    isMountedRef.current = true;
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
     };
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [draftsData, leadsData, prodsData] = await Promise.all([
+        getOutreachDrafts({ status: statusFilter !== "all" ? statusFilter : undefined }),
+        getLeads({ page_size: 100 }),
+        getProducts(),
+      ]);
+      if (!isMountedRef.current) return;
+
+      // Deduplicate by lead_id to show strictly the latest draft per buyer lead
+      const latestDraftsByLead = new Map<string, OutreachDraft>();
+      for (const d of draftsData) {
+        const existing = latestDraftsByLead.get(d.lead_id);
+        if (
+          !existing ||
+          d.version > existing.version ||
+          new Date(d.updated_at).getTime() > new Date(existing.updated_at).getTime()
+        ) {
+          latestDraftsByLead.set(d.lead_id, d);
+        }
+      }
+      setDrafts(Array.from(latestDraftsByLead.values()));
+      setLeads(leadsData.items);
+      setProducts(prodsData);
+    } catch (err: unknown) {
+      if (!isMountedRef.current) return;
+      setError(err instanceof Error ? err.message : "Failed to load outreach drafts.");
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
   }, [statusFilter]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const getLeadName = (leadId: string) => {
     const l = leads.find((lead) => lead.id === leadId);
@@ -196,4 +205,3 @@ export function OutreachListPage() {
     </div>
   );
 }
-

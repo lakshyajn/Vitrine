@@ -11,7 +11,7 @@ vi.mock("@/api", async () => {
   };
 });
 
-describe("NewRunModal Product Selection", () => {
+describe("NewRunModal Product Selection and Effort Options", () => {
   const mockProducts = [
     {
       id: "prod-bracelet-1",
@@ -87,5 +87,55 @@ describe("NewRunModal Product Selection", () => {
 
     // Verify no error message was displayed
     expect(screen.queryByText(/Please select a product for market discovery/i)).toBeNull();
+  });
+
+  it("renders effort options and time expectations note", () => {
+    render(
+      <NewRunModal
+        isOpen={true}
+        onClose={vi.fn()}
+        products={mockProducts}
+        onRunCreated={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("Quick Probe")).toBeInTheDocument();
+    expect(screen.getByText("Standard Discovery")).toBeInTheDocument();
+    expect(screen.getByText("Deep Market Sweep")).toBeInTheDocument();
+    expect(screen.getByText(/AI Verification & Time Expectations/i)).toBeInTheDocument();
+    expect(screen.getByText(/Nemotron 3 Ultra \(550B\)/i)).toBeInTheDocument();
+  });
+
+  it("submits selected effort level and lead target in notes payload", async () => {
+    const handleCreated = vi.fn();
+    const handleClose = vi.fn();
+
+    render(
+      <NewRunModal
+        isOpen={true}
+        onClose={handleClose}
+        products={mockProducts}
+        onRunCreated={handleCreated}
+      />
+    );
+
+    // Select Deep Market Sweep
+    const deepEffortBtn = screen.getByRole("button", { name: /Deep Market Sweep/i });
+    fireEvent.click(deepEffortBtn);
+
+    const submitBtn = screen.getByRole("button", { name: /Launch Research Run/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(api.createResearchRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          product_id: "prod-bracelet-1",
+          inputs: expect.objectContaining({
+            notes: expect.stringContaining("[effort:deep] [max_leads:12]"),
+          }),
+        })
+      );
+      expect(handleCreated).toHaveBeenCalledWith("run-123");
+    });
   });
 });

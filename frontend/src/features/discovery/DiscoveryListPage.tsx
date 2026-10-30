@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { Compass, Plus, ArrowRight, Clock, CheckCircle2, AlertTriangle, Loader2, RotateCcw } from "lucide-react";
 import {
@@ -23,6 +23,14 @@ export function DiscoveryListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isNewRunModalOpen, setIsNewRunModalOpen] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Check if navigation passed initialProductId via route state
   const locationState = location.state as { initialProductId?: string } | null;
@@ -42,12 +50,16 @@ export function DiscoveryListPage() {
         getResearchRuns(productFilterParam || undefined),
         getProducts(),
       ]);
+      if (!isMountedRef.current) return;
       setRuns(runsData);
       setProducts(prodsData);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       setError(err instanceof Error ? err.message : "Failed to load discovery runs.");
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [productFilterParam]);
 

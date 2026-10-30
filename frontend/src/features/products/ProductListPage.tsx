@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, Search, Compass, Edit, Trash2, Package, CheckCircle, X, Loader2, AlertTriangle } from "lucide-react";
 import { getProducts, deleteProduct, createResearchRun, type Product } from "@/api";
@@ -25,18 +25,30 @@ export function ProductListPage() {
 
   // Discovery launch state
   const [startingDiscoveryId, setStartingDiscoveryId] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchProducts = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await getProducts();
+      if (!isMountedRef.current) return;
       setProducts(data);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       const msg = err instanceof Error ? err.message : "Failed to load products.";
       setError(msg);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
