@@ -176,14 +176,14 @@ Cultural affinity	Taste provider, when real	Stored in leads.cultural_affinity. N
 
 6.2 Overall score and completeness
 •	Weights for the four retail dimensions: category 35, aesthetic 25, evidence 20, compatibility 20.
-•	overall = weighted average over the dimensions that are not null, with weights renormalized. If all are null, overall is null.
+•	overall = weighted average over the dimensions that are not null, with weights renormalized. (DECISION-D21: When category_fit is null/unknown, overall is strictly null because category relevance is an indispensable prerequisite for computing commercial priority; if all dimensions are null, overall is null).
 •	completeness = number of non-null dimensions divided by four. If completeness < 0.75 the UI shows “Preliminary”.
 •	Keep weights and mappings in one configuration module with unit tests, so the team can adjust after the manual review without touching logic.
 6.3 Tier gates
 Tier	Condition
-qualified	Website verified AND at least one piece of retail-activity evidence AND category fit is high or medium AND evidence quality ≥ 40.
-needs_review	Promising but incomplete: for example website verified with unknown category fit, or evidence quality between 20 and 39, or a per-lead processing error.
-unqualified	Website not verifiable, or category fit low with supporting evidence, or domain is a marketplace or wholesaler excluded by rule.
+qualified	Website verified AND at least one piece of retail-activity evidence AND category fit is high or medium with cited evidence AND evidence quality ≥ 40 AND retailer_kind is retailer AND sells_product_category is yes.
+needs_review	Promising but incomplete: for example website verified with unknown category fit, or evidence quality between 20 and 39, or a per-lead processing error. Missing evidence moves toward needs_review.
+unqualified	Website not verifiable, or category fit low with supporting evidence, or domain is a marketplace/wholesaler/chain excluded by rule, or retailer_kind in (marketplace, media_reference, institution, other) with cited evidence, or sells_product_category is no with cited evidence.
 
 A missing piece of evidence moves a lead toward needs_review, never toward unqualified. Record the reasons that produced each tier in scores so WS1 can display them.
 6.4 Scoring tests

@@ -117,3 +117,12 @@ This document records the foundational architecture decisions, technology select
 - **Resolution:**
   - Add `created_at` timestamp to `ResearchRun` and `Lead`.
   - Add `parent_draft_id: UUID | None` and `updated_at: datetime` to `OutreachDraft` to support version history navigation.
+
+
+### DECISION-D21: Overall Priority Calibration when Category Fit is Unknown
+- **Resolution:**
+  - In `backend/app/scoring/engine.py`, when `category_fit` is `None` (unknown), `overall` priority score MUST be set to `None` (never renormalized from aesthetic or evidence quality alone). Relevance to the product category is a prerequisite for computing overall commercial priority.
+  - `completeness` continues to reflect the proportion of non-null dimensions (`non_null_count / 4.0`).
+  - Tier reason adds `"Category fit unknown: relevance not established"` and the lead remains in `needs_review` (or `unqualified` if verified false / excluded).
+  - Tier gates additionally enforce that `retailer_kind` in (`marketplace`, `media_reference`, `institution`, `other`) with cited evidence or `sells_product_category == "no"` with cited evidence gates the lead to `unqualified`.
+  - `GET /leads` sorts with `overall = null` placed last under `score_desc` and hides `unqualified` leads by default when `include_filtered=false`.

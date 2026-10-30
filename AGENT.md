@@ -202,11 +202,11 @@ A lead score is a **prioritisation heuristic for human review**, never a purchas
 | `cultural_affinity` | Taste provider (real Qloo only)                         | Stored separately in`lead.cultural_affinity`. **Excluded from `overall` score.** Remains **`null`** until a validated real Qloo signal exists[cite: 1, 2, 3].                                                                                                                     |
 
 - **Weights:** `category_fit: 35`, `aesthetic_fit: 25`, `evidence_quality: 20`, `seller_compat: 20`[cite: 1, 2]. Keep weights and mappings in one config module with unit tests[cite: 1, 2].
-- **`overall`:** Weighted average over **non-null** dimensions with weights renormalised to 100%[cite: 1, 2]. If all four are `null`, `overall` is `null`[cite: 1, 2].
+- **`overall`:** Weighted average over **non-null** dimensions with weights renormalised to 100%[cite: 1, 2]. (DECISION-D21: If `category_fit` is `null`/unknown, `overall` is strictly `null` because relevance is a prerequisite for computing commercial priority; if all four are `null`, `overall` is `null`)[cite: 1, 2].
 - **`completeness`:** `(count of non-null dimensions) / 4.0`[cite: 1, 2]. If `completeness < 0.75`, the UI shows a **"Preliminary"** badge[cite: 1, 2].
 - **Tier gates:**
-  - `qualified`: `website_verified == true` AND `>= 1` retail-activity evidence item (`official_site` or `product_page`) AND `category_fit` in (`high`, `medium`) AND `evidence_quality >= 40`[cite: 1, 2].
-  - `unqualified`: `website_verified == false`, OR (`category_fit == low` WITH supporting `evidence_ids`), OR domain excluded as a marketplace/wholesaler/chain[cite: 1, 2].
+  - `qualified`: `website_verified == true` AND `>= 1` retail-activity evidence item (`official_site` or `product_page`) AND `category_fit` in (`high`, `medium`) with supporting evidence citations AND `evidence_quality >= 40` AND `retailer_kind == retailer` AND `sells_product_category == yes`[cite: 1, 2].
+  - `unqualified`: `website_verified == false`, OR (`category_fit == low` WITH supporting `evidence_ids`), OR domain excluded as a marketplace/wholesaler/chain, OR `retailer_kind` in (`marketplace`, `media_reference`, `institution`, `other`) WITH cited `evidence_ids`, OR `sells_product_category == no` WITH cited `evidence_ids`[cite: 1, 2].
   - `needs_review`: Everything else (e.g., verified site with `unknown` category fit, `evidence_quality` 20–39, or per-lead AI error)[cite: 1, 2]. **Missing evidence always moves a lead toward `needs_review`, never `unqualified`**[cite: 1, 2].
 - Store human-readable `tier_reasons: string[]` inside `scores` so WS1 can display why the lead landed in its tier (D6)[cite: 1, 2].
 

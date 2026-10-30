@@ -2053,6 +2053,8 @@ export interface operations {
                 product_id?: string | null;
                 review_status?: components["schemas"]["LeadReviewStatus"] | null;
                 tier?: components["schemas"]["LeadTier"] | null;
+                /** @description Whether to include unqualified/filtered-out leads */
+                include_filtered?: boolean;
                 q?: string | null;
                 location?: string | null;
                 min_score?: number | null;

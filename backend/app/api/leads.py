@@ -86,6 +86,13 @@ def _lead_model_to_schema(model: LeadModel) -> Lead:
         else LeadReviewStatus.NEW
     )
 
+    ret_kind = None
+    if model.assessment and isinstance(model.assessment, dict):
+        rk_val = model.assessment.get("retailer_kind")
+        if rk_val:
+            from contracts.schemas import RetailerKind
+            ret_kind = RetailerKind(rk_val) if rk_val in RetailerKind._value2member_map_ else None
+
     return Lead(
         id=model.id,
         owner_id=model.owner_id,
@@ -96,6 +103,7 @@ def _lead_model_to_schema(model: LeadModel) -> Lead:
         canonical_domain=model.canonical_domain,
         contact_email=getattr(model, "contact_email", None),
         location=location_obj,
+        retailer_kind=ret_kind,
         retailer_type=model.retailer_type,
         website_verified=model.website_verified,
         website_checked_at=model.website_checked_at,
@@ -145,6 +153,7 @@ async def list_leads(
     product_id: UUID | None = None,
     review_status: LeadReviewStatus | None = None,
     tier: LeadTier | None = None,
+    include_filtered: bool = Query(False, description="Whether to include unqualified/filtered-out leads"),
     q: str | None = None,
     location: str | None = None,
     min_score: float | None = None,
@@ -170,6 +179,8 @@ async def list_leads(
     if tier is not None:
         t_val = tier.value if hasattr(tier, "value") else str(tier)
         conditions.append(LeadModel.tier == t_val)
+    elif not include_filtered:
+        conditions.append(LeadModel.tier != LeadTier.UNQUALIFIED.value)
     if q and q.strip():
         search_term = f"%{q.strip()}%"
         conditions.append(

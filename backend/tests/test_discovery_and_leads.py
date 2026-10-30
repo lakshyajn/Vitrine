@@ -554,20 +554,26 @@ async def test_get_leads_filtering_sorting_and_pagination() -> None:
         assert paged_sm.total == 2
         assert {item.name for item in paged_sm.items} == {"Alpha Living Boutique", "Beta Concept Store"}
 
-        # Sort: score_desc (NULLS LAST)
-        res_sort_score = await client.get("/api/v1/leads?sort=score_desc", headers=headers)
+        # Default GET /leads hides unqualified leads (include_filtered=False)
+        res_default = await client.get("/api/v1/leads", headers=headers)
+        assert res_default.status_code == 200
+        paged_def = LeadPagedResponse.model_validate(res_default.json())
+        assert [i.name for i in paged_def.items] == ["Alpha Living Boutique", "Beta Concept Store"]
+
+        # Sort: score_desc (NULLS LAST) with include_filtered=true
+        res_sort_score = await client.get("/api/v1/leads?sort=score_desc&include_filtered=true", headers=headers)
         assert res_sort_score.status_code == 200
         paged_ss = LeadPagedResponse.model_validate(res_sort_score.json())
         assert [i.name for i in paged_ss.items] == ["Alpha Living Boutique", "Beta Concept Store", "Gamma Home Textiles"]
 
-        # Sort: name
-        res_sort_name = await client.get("/api/v1/leads?sort=name", headers=headers)
+        # Sort: name with include_filtered=true
+        res_sort_name = await client.get("/api/v1/leads?sort=name&include_filtered=true", headers=headers)
         assert res_sort_name.status_code == 200
         paged_sn = LeadPagedResponse.model_validate(res_sort_name.json())
         assert [i.name for i in paged_sn.items] == ["Alpha Living Boutique", "Beta Concept Store", "Gamma Home Textiles"]
 
-        # Pagination: page_size=2
-        res_p1 = await client.get("/api/v1/leads?page=1&page_size=2&sort=name", headers=headers)
+        # Pagination: page_size=2 with include_filtered=true
+        res_p1 = await client.get("/api/v1/leads?page=1&page_size=2&sort=name&include_filtered=true", headers=headers)
         assert res_p1.status_code == 200
         p1 = LeadPagedResponse.model_validate(res_p1.json())
         assert p1.total == 3
@@ -575,7 +581,7 @@ async def test_get_leads_filtering_sorting_and_pagination() -> None:
         assert p1.items[0].name == "Alpha Living Boutique"
         assert p1.items[1].name == "Beta Concept Store"
 
-        res_p2 = await client.get("/api/v1/leads?page=2&page_size=2&sort=name", headers=headers)
+        res_p2 = await client.get("/api/v1/leads?page=2&page_size=2&sort=name&include_filtered=true", headers=headers)
         assert res_p2.status_code == 200
         p2 = LeadPagedResponse.model_validate(res_p2.json())
         assert p2.total == 3

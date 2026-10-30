@@ -343,11 +343,9 @@ def test_weight_renormalization_all_combinations() -> None:
     assert ov == 95.0
     assert comp == 0.75
 
-    # 1 missing: category_fit is None
-    # Remaining weights: aesthetic 25, evidence 20, seller 20 (Sum = 65)
-    # Expected: (25*60 + 20*80 + 20*60) / 65 = (1500 + 1600 + 1200) / 65 = 4300 / 65 = 66.15
+    # 1 missing: category_fit is None -> DECISION-D21: overall is None (priority not computable without relevance)
     ov, comp = compute_overall_and_completeness(None, 60.0, 80.0, 60.0)
-    assert ov == 66.15
+    assert ov is None
     assert comp == 0.75
 
     # 2 missing: aesthetic_fit and seller_compat are None
@@ -363,10 +361,9 @@ def test_weight_renormalization_all_combinations() -> None:
     assert ov == 100.0
     assert comp == 0.25
 
-    # 3 missing: only evidence_quality is present (40.0)
-    # Remaining weight: 20. Expected: (20 * 40.0) / 20 = 40.0
+    # 3 missing: only evidence_quality is present (category_fit is None -> DECISION-D21: overall is None)
     ov, comp = compute_overall_and_completeness(None, None, 40.0, None)
-    assert ov == 40.0
+    assert ov is None
     assert comp == 0.25
 
     # All 4 missing: all dimensions None
@@ -494,11 +491,12 @@ def test_tier_gate_needs_review_missing_evidence_rule() -> None:
     assert tier_empty_ev == LeadTier.NEEDS_REVIEW
     assert any("Low category fit lacks supporting evidence" in r for r in scores_empty_ev.tier_reasons)
 
-    # 2. category_fit is "unknown" (no evidence either way)
+    # 2. category_fit is "unknown" (no evidence either way) -> DECISION-D21: overall is None
     assessment_unknown = _make_assessment_dict(category_label="unknown")
     scores_unk, tier_unk = compute_scores_and_tier(candidate_verified, [ev_official], assessment_unknown)
     assert tier_unk == LeadTier.NEEDS_REVIEW
-    assert any("Category fit is unknown" in r for r in scores_unk.tier_reasons)
+    assert scores_unk.overall is None
+    assert any("Category fit unknown" in r for r in scores_unk.tier_reasons)
 
     # 3. Evidence quality below threshold (< 40)
     # Candidate with no location, single directory link (quality = 0)
@@ -705,7 +703,8 @@ def test_golden_set_10_leads_ranking_and_tiering() -> None:
     lead_8_ass = _make_assessment_dict(category_label="unknown", aesthetic_label="high")
     scores_8, tier_8 = compute_scores_and_tier(lead_8_cand, lead_8_ev, lead_8_ass, now=fixed_now)
     assert tier_8 == LeadTier.NEEDS_REVIEW
-    assert any("Category fit is unknown" in r for r in scores_8.tier_reasons)
+    assert scores_8.overall is None
+    assert any("Category fit unknown" in r for r in scores_8.tier_reasons)
 
     # --- Lead 9: Needs Review - Weak Evidence Quality (< 40) ---
     lead_9_cand = _make_candidate(

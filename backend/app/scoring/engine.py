@@ -262,6 +262,10 @@ def compute_overall_and_completeness(
     non_null_dims = {k: v for k, v in dims.items() if v is not None}
     completeness = len(non_null_dims) / 4.0
 
+    # DECISION-D21: Relevance is prerequisite to priority score
+    if category_fit is None:
+        return None, completeness
+
     if not non_null_dims:
         return None, completeness
 
@@ -332,9 +336,24 @@ def compute_scores_and_tier(
     is_category_low = (category_fit_score == 20.0) or (cat_label in ("low", "mismatch"))
     has_cat_evidence = len(cat_evidence_ids) > 0
 
+    # Retailer kind extraction
+    ret_kind = _get_item_attr(assessment, "retailer_kind")
+    if hasattr(ret_kind, "value"):
+        ret_kind = ret_kind.value
+    ret_kind = str(ret_kind).strip().lower() if ret_kind else None
+    ret_kind_ev = _get_item_attr(assessment, "retailer_kind_evidence_ids") or []
+    has_ret_kind_ev = len(ret_kind_ev) > 0
+
+    # Sells category extraction
+    sells_cat = _get_item_attr(assessment, "sells_product_category")
+    if hasattr(sells_cat, "value"):
+        sells_cat = sells_cat.value
+    sells_cat = str(sells_cat).strip().lower() if sells_cat else None
+    sells_cat_ev = _get_item_attr(assessment, "sells_product_category_evidence_ids") or []
+    has_sells_cat_ev = len(sells_cat_ev) > 0
+
     # 6. Evaluate Tier Gates
     # Gate A: unqualified
-    # Condition: website_verified is False OR (category_fit == "low" with non-empty evidence_ids) OR is_excluded_domain is True
     is_unqualified = False
     unqualified_reasons: list[str] = []
 
@@ -350,16 +369,25 @@ def compute_scores_and_tier(
         is_unqualified = True
         unqualified_reasons.append("Low category fit confirmed by evidence citations")
 
+    if ret_kind in ("marketplace", "media_reference", "institution", "other") and has_ret_kind_ev:
+        is_unqualified = True
+        unqualified_reasons.append(f"Entity classified as {ret_kind} with cited evidence")
+
+    if sells_cat == "no" and has_sells_cat_ev:
+        is_unqualified = True
+        unqualified_reasons.append("Evidence confirms retailer does not sell this product category")
+
     if is_unqualified:
         tier = LeadTier.UNQUALIFIED
         tier_reasons = unqualified_reasons
 
     # Gate B: qualified
-    # Condition: website_verified is True AND >= 1 retail-activity evidence AND category_fit in (high, medium) AND evidence_quality >= 40
     elif (
         website_verified is True
         and has_retail_activity
         and (category_fit_score in (100.0, 60.0))
+        and (ret_kind in ("retailer", None))
+        and (sells_cat in ("yes", None) or has_cat_evidence)
         and (evidence_quality_score is not None and evidence_quality_score >= QUALIFIED_MIN_EVIDENCE_QUALITY)
     ):
         tier = LeadTier.QUALIFIED
@@ -371,10 +399,12 @@ def compute_scores_and_tier(
         ]
 
     # Gate C: needs_review
-    # All other cases (missing evidence ALWAYS moves toward needs_review, never unqualified)
     else:
         tier = LeadTier.NEEDS_REVIEW
         tier_reasons = []
+
+        if category_fit_score is None:
+            tier_reasons.append("Category fit unknown: relevance not established")
 
         if website_verified is None:
             tier_reasons.append("Website verification status is pending or missing")
@@ -386,11 +416,9 @@ def compute_scores_and_tier(
         else:
             tier_reasons.append("Retail-activity evidence present")
 
-        if category_fit_score is None:
-            tier_reasons.append("Category fit is unknown or lacks sufficient evidence")
-        elif is_category_low and not has_cat_evidence:
+        if is_category_low and not has_cat_evidence:
             tier_reasons.append("Low category fit lacks supporting evidence citations (requires manual review)")
-        elif category_fit_score not in (100.0, 60.0):
+        elif category_fit_score is not None and category_fit_score not in (100.0, 60.0):
             tier_reasons.append(f"Category fit ({cat_label}) does not meet qualified threshold")
 
         if evidence_quality_score is None:
