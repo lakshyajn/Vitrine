@@ -44,7 +44,7 @@ class MockTasteProvider:
                     id=f"demo-entity-weak-{slug}",
                     name=f"{clean_q} (Sparse Demo Context)",
                     entity_type="brand",
-                    metadata={"category": "Home Decor & Living", "confidence": "low", "is_demo": True},
+                    metadata={"confidence": "low", "is_demo": True},
                 )
             ]
 
@@ -53,7 +53,7 @@ class MockTasteProvider:
                 id=f"demo-entity-{slug}",
                 name=f"{clean_q} (Aesthetic Context)",
                 entity_type="brand",
-                metadata={"category": "Home Decor & Living", "is_demo": True},
+                metadata={"is_demo": True},
             )
         ]
 
@@ -84,6 +84,13 @@ class MockTasteProvider:
                 raw={"affinity_score": 0.88, "confidence": "medium", "is_demo": True},
             )
         ]
+
+
+# Named constant for Qloo taxonomy filter
+# Qloo's V2 insights API requires an entity type URN. "urn:entity:brand" targets brand entities.
+# This can be broadened to "urn:entity:place" for geographic / brick-and-mortar venue insights
+# when regional foot-traffic or local store density analysis is enabled.
+QLOO_DEFAULT_INSIGHTS_FILTER_TYPE = "urn:entity:brand"
 
 
 class QlooTasteProvider:
@@ -151,7 +158,7 @@ class QlooTasteProvider:
                     props.get("industry")
                     or props.get("category_description")
                     or props.get("description")
-                    or "Home Decor & Living"
+                    or None
                 )
 
                 entities.append(
@@ -185,7 +192,7 @@ class QlooTasteProvider:
             "Accept": "application/json",
         }
         params = {
-            "filter.type": "urn:entity:brand",
+            "filter.type": QLOO_DEFAULT_INSIGHTS_FILTER_TYPE,
             "entity_ids": eid,
         }
 

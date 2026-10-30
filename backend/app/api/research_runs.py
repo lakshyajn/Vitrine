@@ -456,8 +456,9 @@ async def confirm_run_anchors(
     )
     confirmed_anchors = (await session.execute(confirmed_stmt)).scalars().all()
 
-    # 4. Require >= 1 confirmed anchor unless proceed_without_anchors is true
-    if len(confirmed_anchors) == 0 and not payload.proceed_without_anchors:
+    # 4. Require >= 1 confirmed anchor unless proceed_without_anchors is true or taste is not applicable
+    is_not_applicable = bool(run.plan and run.plan.get("taste_relevance") == "not_applicable")
+    if len(confirmed_anchors) == 0 and not payload.proceed_without_anchors and not is_not_applicable:
         raise AppError(
             code=ErrorCode.VALIDATION_ERROR,
             message="At least one confirmed anchor is required unless proceed_without_anchors is true",

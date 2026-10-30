@@ -76,7 +76,7 @@ async def test_cache_hit_returns_response_without_network_or_counter_increment()
     endpoint = "/v1/taste/search"
     normalized_params = {"query": "handwoven scarf"}
     cache_key = build_cache_key(endpoint, normalized_params)
-    original_retrieved_at = datetime(2026, 10, 20, 10, 0, 0, tzinfo=timezone.utc)
+    original_retrieved_at = datetime.now(timezone.utc) - timedelta(hours=2)
 
     # Pre-seed a successful provider call in the database within TTL
     async with async_session_maker() as session:
@@ -362,18 +362,105 @@ def test_does_signal_match_lead_region_and_category():
         "anchor_category": "Home Decor & Living",
     }
 
-    # Match on region
+    # Match on verified location with category fit
     loc_france = {"region": "Western Europe", "country": "France", "city": "Paris"}
-    assert does_signal_match_lead(signal_decor, lead_location=loc_france, product_category="Footwear") is True
+    assert does_signal_match_lead(
+        signal_decor,
+        lead_location=loc_france,
+        product_category="Home Textiles",
+        lead_tier="qualified",
+        category_fit_score=100.0,
+    ) is True
 
-    # Match on category
+    # Milestone F: Missing location MUST return False (never attach cultural affinity without location)
     loc_empty = {}
-    assert does_signal_match_lead(signal_decor, lead_location=loc_empty, product_category="Home Decor & Living") is True
-    assert does_signal_match_lead(signal_decor, lead_location=loc_empty, lead_retailer_type="boutique") is True
+    assert does_signal_match_lead(
+        signal_decor,
+        lead_location=loc_empty,
+        product_category="Home Decor & Living",
+        lead_tier="qualified",
+        category_fit_score=100.0,
+    ) is False
 
-    # No match
+    # Milestone F: Unqualified leads MUST return False
+    assert does_signal_match_lead(
+        signal_decor,
+        lead_location=loc_france,
+        product_category="Home Textiles",
+        lead_tier="unqualified",
+        category_fit_score=100.0,
+    ) is False
+
+    # Milestone F: Unknown category fit MUST return False
+    assert does_signal_match_lead(
+        signal_decor,
+        lead_location=loc_france,
+        product_category="Home Textiles",
+        lead_tier="needs_review",
+        category_fit_score=None,
+    ) is False
+
+    # No match on region
     loc_tokyo = {"region": "East Asia", "country": "Japan", "city": "Tokyo"}
-    assert does_signal_match_lead(signal_decor, lead_location=loc_tokyo, product_category="Automotive Parts") is False
+    assert does_signal_match_lead(
+        signal_decor,
+        lead_location=loc_tokyo,
+        product_category="Home Textiles",
+        lead_tier="qualified",
+        category_fit_score=100.0,
+    ) is False
+
+
+@pytest.mark.asyncio
+async def test_runner_with_taste_relevance_not_applicable_makes_zero_qloo_calls():
+    """
+    Milestone F: For commodity or functional goods (taste_relevance == 'not_applicable'),
+    Phase 1 and Phase 2 bypass Qloo calls entirely.
+    """
+    user_id = uuid4()
+    product_id = uuid4()
+    run_id = uuid4()
+
+    async with async_session_maker() as session:
+        session.add(
+            ProductModel(
+                id=product_id,
+                owner_id=user_id,
+                name="Drafting Pencil 2B",
+                category="stationery",
+                description="Graphite drawing pencils.",
+                moq=10,
+            )
+        )
+        session.add(
+            ResearchRunModel(
+                id=run_id,
+                owner_id=user_id,
+                product_id=product_id,
+                status="queued",
+                stage="planning",
+                plan={
+                    "taste_relevance": "not_applicable",
+                    "aesthetic_candidates": [],
+                    "target_regions": ["United Kingdom"],
+                },
+            )
+        )
+        await session.commit()
+
+    QlooOrchestrator.reset_call_counts()
+
+    # Execute Phase 1
+    await run_research_run_phase1(run_id)
+
+    # Assert zero calls to Qloo
+    assert QlooOrchestrator.get_call_count(run_id) == 0
+
+    # Execute Phase 2
+    await run_research_run_phase2(run_id)
+
+    # Assert zero calls to Qloo
+    assert QlooOrchestrator.get_call_count(run_id) == 0
 
 
 @pytest.mark.asyncio

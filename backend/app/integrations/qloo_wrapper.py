@@ -84,50 +84,59 @@ def does_signal_match_lead(
     product_category: str | None = None,
     lead_retailer_type: str | None = None,
     anchor_category: str | None = None,
+    lead_tier: str | None = None,
+    category_fit_score: float | None = None,
 ) -> bool:
     """
-    Evaluates whether a taste signal region or category match applies to a lead.
-    Returns True if either region or category matches; otherwise False.
+    Evaluates whether a taste signal applies to a lead (Milestone F).
+    Rules:
+    - Never attach a hypothesis signal to an unqualified lead.
+    - Never attach a hypothesis signal to a lead with unknown category fit.
+    - If the lead has no verified location, returns False.
+    - Requires a known location (region, city, or country matching signal text, or explicit anchor-to-region link).
+    - Loose 4-letter category token matching is removed to prevent cross-category leakage.
     """
-    if isinstance(signal_data, dict):
-        text = str(signal_data.get("text") or "").lower()
-        raw = signal_data.get("raw") or {}
-        sig_cat = str(signal_data.get("anchor_category") or anchor_category or "").lower()
-    else:
-        text = str(getattr(signal_data, "text", "") or "").lower()
-        raw = getattr(signal_data, "raw", {}) or {}
-        sig_cat = str(anchor_category or "").lower()
+    # 1. Tier and category fit check
+    if lead_tier and str(lead_tier).strip().lower() == "unqualified":
+        return False
+    if category_fit_score is None and (lead_tier is not None or category_fit_score is not None):
+        return False
 
-    raw_str = str(raw).lower()
-
-    # 1. Region match
+    # 2. Require known location
     loc = lead_location or {}
     region = str(loc.get("region") or "").strip().lower()
     country = str(loc.get("country") or "").strip().lower()
     city = str(loc.get("city") or "").strip().lower()
 
-    if region and len(region) >= 3 and (region in text or region in raw_str):
-        return True
-    if country and len(country) >= 3 and (country in text or country in raw_str):
-        return True
-    if city and len(city) >= 3 and (city in text or city in raw_str):
-        return True
+    if not region and not country and not city:
+        return False
 
-    # 2. Category match
-    prod_cat = str(product_category or "").strip().lower()
-    if prod_cat and len(prod_cat) >= 3:
-        cat_tokens = [w for w in re.split(r"[\s&/,]+", prod_cat) if len(w) >= 4]
-        if any(w in text or w in sig_cat or w in raw_str for w in cat_tokens):
+    if isinstance(signal_data, dict):
+        text = str(signal_data.get("text") or "").lower()
+        raw = signal_data.get("raw") or {}
+        sig_region = str(signal_data.get("region_hint") or signal_data.get("region") or "").strip().lower()
+    else:
+        text = str(getattr(signal_data, "text", "") or "").lower()
+        raw = getattr(signal_data, "raw", {}) or {}
+        sig_region = str(getattr(signal_data, "region_hint", "") or getattr(signal_data, "region", "") or "").strip().lower()
+
+    raw_str = str(raw).lower()
+
+    # 3. Explicit anchor-to-region linkage
+    if sig_region:
+        if region and (region == sig_region or region in sig_region or sig_region in region):
+            return True
+        if country and (country == sig_region or country in sig_region or sig_region in country):
+            return True
+        if city and (city == sig_region or city in sig_region or sig_region in city):
             return True
 
-    if sig_cat and len(sig_cat) >= 3:
-        cat_tokens = [w for w in re.split(r"[\s&/,]+", sig_cat) if len(w) >= 4]
-        if any(w in text or (prod_cat and w in prod_cat) or w in raw_str for w in cat_tokens):
-            return True
-
-    retailer = str(lead_retailer_type or "").strip().lower()
-    if retailer and len(retailer) >= 4 and (retailer in text or retailer in raw_str):
-        return True
+    # 4. Verified location match against signal text
+    for loc_token in (city, region, country):
+        if loc_token and len(loc_token) >= 3:
+            pattern = rf"\b{re.escape(loc_token)}\b"
+            if re.search(pattern, text) or re.search(pattern, raw_str):
+                return True
 
     return False
 

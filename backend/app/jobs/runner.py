@@ -108,57 +108,59 @@ async def run_research_run_phase1(run_id: UUID) -> None:
         run.heartbeat_at = datetime.now(timezone.utc)
         await session.commit()
 
-        # Resolve anchors via Qloo Orchestrator
-        qloo_orchestrator = get_qloo_orchestrator(run_id=run.id, owner_id=run.owner_id)
-        provider_name = qloo_orchestrator.name
-        provider_is_demo = qloo_orchestrator.is_demo
-        taste_source = "qloo" if not provider_is_demo and provider_name == "qloo" else "demo"
+        # Resolve anchors via Qloo Orchestrator (Milestone F: bypass if taste not applicable)
+        taste_rel = getattr(plan, "taste_relevance", "applicable") or "applicable"
+        if taste_rel != "not_applicable":
+            qloo_orchestrator = get_qloo_orchestrator(run_id=run.id, owner_id=run.owner_id)
+            provider_name = qloo_orchestrator.name
+            provider_is_demo = qloo_orchestrator.is_demo
+            taste_source = "qloo" if not provider_is_demo and provider_name == "qloo" else "demo"
 
-        candidates = (
-            plan.aesthetic_candidates
-            if hasattr(plan, "aesthetic_candidates") and plan.aesthetic_candidates
-            else plan_dict.get("aesthetic_candidates", [])
-        )
-
-        for candidate in candidates:
-            clean_label = str(candidate).strip()
-            if not clean_label:
-                continue
-
-            # (a) Create ai_proposed anchor
-            ai_anchor = TasteAnchorModel(
-                owner_id=run.owner_id,
-                run_id=run.id,
-                label=clean_label,
-                entity_type="brand",
-                external_id=None,
-                source="ai_proposed",
-                status="proposed",
-                rationale=getattr(plan, "hypotheses_rationale", None) or f"Aesthetic candidate: {clean_label}",
-                metadata_json={},
-                is_demo=True,
+            candidates = (
+                plan.aesthetic_candidates
+                if hasattr(plan, "aesthetic_candidates") and plan.aesthetic_candidates
+                else plan_dict.get("aesthetic_candidates", [])
             )
-            session.add(ai_anchor)
 
-            # (b) Call qloo_orchestrator.search_entities() on candidate labels (D15)
-            try:
-                entities = await qloo_orchestrator.search_entities(clean_label, session=session)
-                for entity in entities:
-                    entity_anchor = TasteAnchorModel(
-                        owner_id=run.owner_id,
-                        run_id=run.id,
-                        label=entity.name or clean_label,
-                        entity_type=entity.entity_type or "brand",
-                        external_id=entity.id,
-                        source=taste_source,
-                        status="proposed",
-                        rationale=f"Resolved taste entity from {provider_name}",
-                        metadata_json=entity.metadata or {},
-                        is_demo=provider_is_demo,
-                    )
-                    session.add(entity_anchor)
-            except Exception as exc:
-                logger.warning("Taste provider search_entities failed for '%s': %s", clean_label, exc)
+            for candidate in candidates:
+                clean_label = str(candidate).strip()
+                if not clean_label:
+                    continue
+
+                # (a) Create ai_proposed anchor
+                ai_anchor = TasteAnchorModel(
+                    owner_id=run.owner_id,
+                    run_id=run.id,
+                    label=clean_label,
+                    entity_type="brand",
+                    external_id=None,
+                    source="ai_proposed",
+                    status="proposed",
+                    rationale=getattr(plan, "hypotheses_rationale", None) or f"Aesthetic candidate: {clean_label}",
+                    metadata_json={},
+                    is_demo=True,
+                )
+                session.add(ai_anchor)
+
+                # (b) Call qloo_orchestrator.search_entities() on candidate labels (D15)
+                try:
+                    entities = await qloo_orchestrator.search_entities(clean_label, session=session)
+                    for entity in entities:
+                        entity_anchor = TasteAnchorModel(
+                            owner_id=run.owner_id,
+                            run_id=run.id,
+                            label=entity.name or clean_label,
+                            entity_type=entity.entity_type or "brand",
+                            external_id=entity.id,
+                            source=taste_source,
+                            status="proposed",
+                            rationale=f"Resolved taste entity from {provider_name}",
+                            metadata_json=entity.metadata or {},
+                            is_demo=provider_is_demo,
+                        )
+                        session.add(entity_anchor)
+                except Exception as exc:
+                    logger.warning("Taste provider search_entities failed for '%s': %s", clean_label, exc)
 
         # Create initial market_hypotheses (status: proposed per D13)
         target_regions = (
@@ -247,7 +249,6 @@ async def run_research_run_phase2(run_id: UUID) -> None:
             await session.commit()
 
             # 2. Taste resolution on confirmed anchors via Qloo Orchestrator (DECISION-D15)
-            qloo_orchestrator = get_qloo_orchestrator(run_id=run.id, owner_id=run.owner_id)
             anchors_stmt = select(TasteAnchorModel).where(
                 TasteAnchorModel.run_id == run.id,
                 TasteAnchorModel.status == "confirmed",
@@ -255,44 +256,50 @@ async def run_research_run_phase2(run_id: UUID) -> None:
             confirmed_models = (await session.execute(anchors_stmt)).scalars().all()
 
             signals_to_attach: list[dict[str, Any]] = []
-            for anchor_m in confirmed_models:
-                # Resolve missing entity IDs for custom or unlinked anchors
-                if not anchor_m.external_id:
-                    try:
-                        entities = await qloo_orchestrator.search_entities(anchor_m.label, session=session)
-                        if entities:
-                            anchor_m.external_id = entities[0].id
-                            if not qloo_orchestrator.is_demo and qloo_orchestrator.name == "qloo":
-                                anchor_m.source = "qloo"
-                                anchor_m.is_demo = False
-                            if entities[0].metadata:
-                                meta = dict(anchor_m.metadata_json or {})
-                                meta.update(entities[0].metadata)
-                                anchor_m.metadata_json = meta
-                    except Exception as exc:
-                        logger.warning("Entity search failed for anchor %s: %s", anchor_m.label, exc)
+            taste_rel = getattr(plan_schema, "taste_relevance", "applicable") or "applicable"
+            if taste_rel != "not_applicable" and confirmed_models:
+                qloo_orchestrator = get_qloo_orchestrator(run_id=run.id, owner_id=run.owner_id)
+                provider_name = qloo_orchestrator.name
+                provider_is_demo = qloo_orchestrator.is_demo
 
-                # Fetch insights from taste provider
-                target_entity = anchor_m.external_id or anchor_m.label
-                try:
-                    insights = await qloo_orchestrator.get_insights(
-                        target_entity,
-                        InsightOptions(entity_type=anchor_m.entity_type, max_results=5),
-                        session=session,
-                    )
-                    for sig in insights:
-                        signals_to_attach.append({
-                            "type": sig.type,
-                            "text": sig.text,
-                            "source": sig.source or qloo_orchestrator.name,
-                            "source_ref": sig.source_ref,
-                            "is_demo": getattr(sig, "is_demo", qloo_orchestrator.is_demo),
-                            "anchor_id": str(anchor_m.id),
-                            "anchor_category": anchor_m.metadata_json.get("category") if anchor_m.metadata_json else None,
-                            "raw": sig.raw or {},
-                        })
-                except Exception as exc:
-                    logger.warning("Insights lookup failed for anchor %s: %s", target_entity, exc)
+                for anchor_m in confirmed_models:
+                    # Resolve missing entity IDs for custom or unlinked anchors
+                    if not anchor_m.external_id:
+                        try:
+                            entities = await qloo_orchestrator.search_entities(anchor_m.label, session=session)
+                            if entities:
+                                anchor_m.external_id = entities[0].id
+                                if not qloo_orchestrator.is_demo and qloo_orchestrator.name == "qloo":
+                                    anchor_m.source = "qloo"
+                                    anchor_m.is_demo = False
+                                if entities[0].metadata:
+                                    meta = dict(anchor_m.metadata_json or {})
+                                    meta.update(entities[0].metadata)
+                                    anchor_m.metadata_json = meta
+                        except Exception as exc:
+                            logger.warning("Entity search failed for anchor %s: %s", anchor_m.label, exc)
+
+                    # Fetch insights from taste provider
+                    target_entity = anchor_m.external_id or anchor_m.label
+                    try:
+                        insights = await qloo_orchestrator.get_insights(
+                            target_entity,
+                            InsightOptions(entity_type=anchor_m.entity_type, max_results=5),
+                            session=session,
+                        )
+                        for sig in insights:
+                            signals_to_attach.append({
+                                "type": sig.type,
+                                "text": sig.text,
+                                "source": sig.source or qloo_orchestrator.name,
+                                "source_ref": sig.source_ref,
+                                "is_demo": getattr(sig, "is_demo", qloo_orchestrator.is_demo),
+                                "anchor_id": str(anchor_m.id),
+                                "anchor_category": anchor_m.metadata_json.get("category") if anchor_m.metadata_json else None,
+                                "raw": sig.raw or {},
+                            })
+                    except Exception as exc:
+                        logger.warning("Insights lookup failed for anchor %s: %s", target_entity, exc)
 
             # Attach signals to market hypotheses for this run (DECISION-D15)
             if signals_to_attach:
@@ -464,10 +471,13 @@ async def run_research_run_phase2(run_id: UUID) -> None:
 
                 lead_cultural_affinity = None
                 if matching_signals:
+                    q_name = qloo_orchestrator.name if 'qloo_orchestrator' in locals() else "qloo"
+                    q_demo = qloo_orchestrator.is_demo if 'qloo_orchestrator' in locals() else True
+                    q_time = (qloo_orchestrator.last_retrieved_at if 'qloo_orchestrator' in locals() else None) or datetime.now(timezone.utc)
                     lead_cultural_affinity = CulturalAffinity(
-                        provider=qloo_orchestrator.name,
-                        is_demo=qloo_orchestrator.is_demo,
-                        retrieved_at=qloo_orchestrator.last_retrieved_at or datetime.now(timezone.utc),
+                        provider=q_name,
+                        is_demo=q_demo,
+                        retrieved_at=q_time,
                         anchor_ids=list(matching_anchor_ids),
                         signals=matching_signals,
                     ).model_dump(mode="json")
@@ -667,15 +677,20 @@ async def run_research_run_phase2(run_id: UUID) -> None:
             )
 
             for lead_id, assessment_dict, scores_dict, tier_str, note in assessment_results:
+                cat_fit = scores_dict.get("dimensions", {}).get("category_fit", {}).get("score") if isinstance(scores_dict.get("dimensions"), dict) else None
+                vals = {
+                    "assessment": assessment_dict,
+                    "scores": scores_dict,
+                    "tier": tier_str,
+                    "notes": note,
+                }
+                if tier_str == "unqualified" or cat_fit is None:
+                    vals["cultural_affinity"] = None
+
                 await session.execute(
                     update(LeadModel)
                     .where(LeadModel.id == lead_id)
-                    .values(
-                        assessment=assessment_dict,
-                        scores=scores_dict,
-                        tier=tier_str,
-                        notes=note,
-                    )
+                    .values(**vals)
                 )
             await session.commit()
 
