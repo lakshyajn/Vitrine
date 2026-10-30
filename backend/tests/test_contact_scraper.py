@@ -78,6 +78,24 @@ def test_score_and_rank_email():
     assert score_wholesale > score_info > score_unrelated
 
 
+def test_placeholder_and_non_retailer_email_rejection():
+    """Verify that fake, placeholder, and non-retailer emails are strictly rejected."""
+    sample = """
+    Contact: yourname@example.com, test@company.com, user@domain.com,
+    info@email.com, test@test.com, noreply@myboutique.com,
+    image@photo.png, and genuine@myboutique.com.
+    """
+    extracted = extract_emails_from_text(sample, "myboutique.com")
+    assert "genuine@myboutique.com" in extracted
+    assert "yourname@example.com" not in extracted
+    assert "test@company.com" not in extracted
+    assert "user@domain.com" not in extracted
+    assert "info@email.com" not in extracted
+    assert "test@test.com" not in extracted
+    assert "noreply@myboutique.com" not in extracted
+    assert "image@photo.png" not in extracted
+
+
 @pytest.mark.asyncio
 async def test_scrape_contact_email_offline_fallback():
     # Test fixture domain in test environment (TAVILY_API_KEY="")
@@ -85,10 +103,11 @@ async def test_scrape_contact_email_offline_fallback():
     assert res["email"] == "contact@atelierlivingdemo.com"
     assert not res["is_fallback"]
 
-    # Test unknown domain fallback
+    # Test unknown domain fallback: NEVER returns synthetic wholesale@
     res2 = await scrape_contact_email("unknownboutiquexyz.co.uk", tavily_client=None)
-    assert res2["email"] == "wholesale@unknownboutiquexyz.co.uk"
-    assert res2["is_fallback"]
+    assert res2["email"] == ""
+    assert "wholesale@unknownboutiquexyz.co.uk" not in str(res2)
+    assert res2["note"] == "No contact email found on public website" 
 
 
 @pytest.mark.asyncio

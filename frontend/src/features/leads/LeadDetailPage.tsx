@@ -200,37 +200,57 @@ export function LeadDetailPage() {
                 </span>
               )}
               <span>·</span>
-              <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-subtle px-2 py-0.5 text-xs font-mono text-ink">
-                <Mail className="size-3 text-primary" />
-                <span>{lead.contact_email || `wholesale@${lead.canonical_domain}`}</span>
-                {lead.contact_email && (
+              {lead.contact_email ? (
+                <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-subtle px-2 py-0.5 text-xs font-mono text-ink">
+                  <Mail className="size-3 text-primary" />
+                  <a
+                    href={`mailto:${lead.contact_email}`}
+                    className="hover:underline text-primary"
+                    title="Draft email in default mail client"
+                  >
+                    {lead.contact_email}
+                  </a>
                   <span className="rounded bg-emerald-100 px-1.5 py-0.2 text-[10px] font-sans font-semibold text-emerald-800">
                     Tavily Verified
                   </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(lead.contact_email || `wholesale@${lead.canonical_domain}`);
-                    setCopiedEmail(true);
-                    setTimeout(() => setCopiedEmail(false), 2000);
-                  }}
-                  className="ml-1 text-primary hover:underline flex items-center gap-0.5 text-[11px]"
-                  title="Copy contact email"
-                >
-                  {copiedEmail ? <span className="text-emerald-700 font-sans">Copied!</span> : <Copy className="size-3" />}
-                </button>
-                <button
-                  type="button"
-                  disabled={isScrapingContact}
-                  onClick={handleScrapeContact}
-                  className="ml-1 text-primary hover:underline text-[11px] font-sans font-semibold flex items-center gap-1"
-                  title="Scrape official recipient email with Tavily"
-                >
-                  <Sparkles className={`size-3 text-purple-600 ${isScrapingContact ? "animate-spin" : ""}`} />
-                  <span>{isScrapingContact ? "Scraping..." : lead.contact_email ? "Re-scrape (Tavily)" : "Scrape Email (Tavily)"}</span>
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(lead.contact_email!);
+                      setCopiedEmail(true);
+                      setTimeout(() => setCopiedEmail(false), 2000);
+                    }}
+                    className="ml-1 text-primary hover:underline flex items-center gap-0.5 text-[11px]"
+                    title="Copy contact email"
+                  >
+                    {copiedEmail ? <span className="text-emerald-700 font-sans">Copied!</span> : <Copy className="size-3" />}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isScrapingContact}
+                    onClick={handleScrapeContact}
+                    className="ml-1 text-primary hover:underline text-[11px] font-sans font-semibold flex items-center gap-1"
+                    title="Re-scrape official recipient email with Tavily"
+                  >
+                    <Sparkles className={`size-3 text-purple-600 ${isScrapingContact ? "animate-spin" : ""}`} />
+                    <span>{isScrapingContact ? "Scraping..." : "Re-scrape (Tavily)"}</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2">
+                  <span className="text-xs text-muted italic">No contact email found</span>
+                  <button
+                    type="button"
+                    disabled={isScrapingContact}
+                    onClick={handleScrapeContact}
+                    className="rounded border border-border bg-surface px-2 py-0.5 text-xs font-medium text-primary hover:bg-surface-subtle flex items-center gap-1"
+                    title="Scrape official recipient email with Tavily"
+                  >
+                    <Sparkles className={`size-3 text-purple-600 ${isScrapingContact ? "animate-spin" : ""}`} />
+                    <span>{isScrapingContact ? "Scraping..." : "Scrape Email (Tavily)"}</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

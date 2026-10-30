@@ -376,27 +376,35 @@ export function LeadsListPage() {
                     <ExternalLink className="size-3" />
                   </a>
                   <span>·</span>
-                  <div className="inline-flex items-center gap-1 font-mono text-muted bg-surface-subtle px-2 py-0.5 rounded border border-border">
-                    <Mail className="size-3 text-primary" />
-                    <span>{lead.contact_email || `wholesale@${lead.canonical_domain}`}</span>
-                    {lead.contact_email && (
+                  {lead.contact_email ? (
+                    <div className="inline-flex items-center gap-1 font-mono text-muted bg-surface-subtle px-2 py-0.5 rounded border border-border">
+                      <Mail className="size-3 text-primary" />
+                      <a
+                        href={`mailto:${lead.contact_email}`}
+                        className="hover:underline text-primary"
+                        title="Draft email in default mail client"
+                      >
+                        {lead.contact_email}
+                      </a>
                       <span className="rounded bg-emerald-100 px-1 py-0.2 text-[9px] font-sans font-semibold text-emerald-800 ml-0.5">
                         Tavily
                       </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleCopyEmail(lead.id, lead.contact_email || `wholesale@${lead.canonical_domain}`)}
-                      className="ml-1 text-primary hover:text-ink"
-                      title="Copy contact email"
-                    >
-                      {copiedEmailId === lead.id ? (
-                        <Check className="size-3 text-emerald-600" />
-                      ) : (
-                        <Copy className="size-3" />
-                      )}
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyEmail(lead.id, lead.contact_email!)}
+                        className="ml-1 text-primary hover:text-ink"
+                        title="Copy contact email"
+                      >
+                        {copiedEmailId === lead.id ? (
+                          <Check className="size-3 text-emerald-600" />
+                        ) : (
+                          <Copy className="size-3" />
+                        )}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted italic">No contact email found</span>
+                  )}
                 </div>
 
                 {lead.assessment?.summary && (

@@ -2,8 +2,10 @@
 backend/research/contact_scraper.py
 Tavily-Powered B2B Receiver Contact Email Scraper.
 
-Extracts official contact, buyer, wholesale, and customer care email addresses
+Extracts official contact, buyer, and customer care email addresses
 for discovered retailer domains using live Tavily search snippets and extract results.
+Enforces strict provenance: only page-extracted, domain-matched addresses.
+Never constructs synthetic wholesale@{domain} guesses.
 """
 
 from __future__ import annotations
@@ -24,22 +26,31 @@ EMAIL_REGEX = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 
 # Asset & non-contact exclusions
 EXCLUDED_EMAIL_EXTS = (
-    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".css", ".js", ".bmp", ".tiff"
-)
-EXCLUDED_DOMAINS = {
-    "example.com", "domain.com", "sentry.io", "wix.com", "wixpress.com",
-    "shopify.com", "myshopify.com", "squarespace.com", "schema.org",
-    "google.com", "facebook.com", "instagram.com", "cloudflare.com",
-    "wordpress.com", "gravatar.com", "apple.com"
-}
-EXCLUDED_PREFIXES = (
-    "noreply", "no-reply", "donotreply", "mailer-daemon", "abuse", "privacy"
+    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".css", ".js", ".bmp", ".tiff",
+    ".pdf", ".ico", ".woff", ".woff2", ".mp4", ".mp3",
 )
 
-# Known demo fixtures for offline resilience
+EXCLUDED_DOMAINS = {
+    "example.com", "example.org", "example.net", "company.com", "domain.com",
+    "email.com", "test.com", "yourdomain.com", "sentry.io", "wix.com", "wixpress.com",
+    "shopify.com", "myshopify.com", "squarespace.com", "schema.org",
+    "google.com", "facebook.com", "instagram.com", "cloudflare.com",
+    "wordpress.com", "gravatar.com", "apple.com", "mail.com", "gmail.com",
+}
+
+EXCLUDED_PREFIXES = (
+    "noreply", "no-reply", "donotreply", "do-not-reply", "mailer-daemon",
+    "abuse", "privacy", "test", "yourname", "name", "user", "admin", "sample",
+)
+
+PLACEHOLDER_LOCAL_PARTS = {
+    "yourname", "name", "email", "username", "test", "user", "sample", "admin",
+}
+
+# Known demo fixtures for offline resilience (NO synthetic wholesale@ defaults)
 FIXTURE_CONTACTS: dict[str, str] = {
     "atelierlivingdemo.com": "contact@atelierlivingdemo.com",
-    "thebotanistshopdemo.co.uk": "wholesale@thebotanistshopdemo.co.uk",
+    "thebotanistshopdemo.co.uk": "hello@thebotanistshopdemo.co.uk",
     "colmershill.com": "customerservices@colmershill.com",
     "yavistudio.com": "hello@yavistudio.com",
 }
@@ -47,7 +58,7 @@ FIXTURE_CONTACTS: dict[str, str] = {
 
 def clean_domain(raw_domain: str) -> str:
     """Normalize domain string by stripping protocols, ports, www, and query paths."""
-    dom = raw_domain.strip().lower()
+    dom = (raw_domain or "").strip().lower()
     if dom.startswith("http://") or dom.startswith("https://"):
         parsed = urlparse(dom)
         dom = parsed.netloc or parsed.path
@@ -55,6 +66,47 @@ def clean_domain(raw_domain: str) -> str:
     if dom.startswith("www."):
         dom = dom[4:]
     return dom
+
+
+def is_valid_contact_email(email: str, canonical_domain: str | None = None, context_text: str = "") -> bool:
+    """
+    Validate extracted email against placeholders, file extensions, and domain provenance rules.
+    """
+    cleaned = email.strip().lower().rstrip(".,;:)")
+    if any(cleaned.endswith(ext) for ext in EXCLUDED_EMAIL_EXTS):
+        return False
+
+    parts = cleaned.split("@")
+    if len(parts) != 2:
+        return False
+    local_part, email_domain = parts
+
+    if local_part in PLACEHOLDER_LOCAL_PARTS:
+        return False
+    if any(local_part.startswith(prefix) for prefix in EXCLUDED_PREFIXES):
+        return False
+    if email_domain in EXCLUDED_DOMAINS or email_domain.startswith("example."):
+        return False
+    if len(local_part) < 2 or len(email_domain) < 4:
+        return False
+
+    # Domain integrity check
+    if canonical_domain:
+        clean_dom = clean_domain(canonical_domain)
+        domain_matches = (
+            email_domain == clean_dom
+            or email_domain.endswith(f".{clean_dom}")
+            or clean_dom.endswith(f".{email_domain}")
+            or clean_dom in email_domain
+        )
+        if not domain_matches:
+            # If domain differs, only accept if the page text explicitly labels it as retailer contact
+            contact_labels = ("contact", "email:", "write to us", "get in touch", "wholesale inquiry", "customer service")
+            ctx_lower = context_text.lower()
+            if not any(lbl in ctx_lower for lbl in contact_labels):
+                return False
+
+    return True
 
 
 def extract_emails_from_text(text: str, canonical_domain: str | None = None) -> list[str]:
@@ -67,23 +119,9 @@ def extract_emails_from_text(text: str, canonical_domain: str | None = None) -> 
 
     for email in raw_matches:
         cleaned = email.strip().lower().rstrip(".,;:)")
-        if any(cleaned.endswith(ext) for ext in EXCLUDED_EMAIL_EXTS):
-            continue
-
-        parts = cleaned.split("@")
-        if len(parts) != 2:
-            continue
-        local_part, email_domain = parts
-
-        if email_domain in EXCLUDED_DOMAINS:
-            continue
-        if any(local_part.startswith(prefix) for prefix in EXCLUDED_PREFIXES):
-            continue
-        if len(local_part) < 2 or len(email_domain) < 4:
-            continue
-
-        if cleaned not in valid_emails:
-            valid_emails.append(cleaned)
+        if is_valid_contact_email(cleaned, canonical_domain=canonical_domain, context_text=text):
+            if cleaned not in valid_emails:
+                valid_emails.append(cleaned)
 
     return valid_emails
 
@@ -133,24 +171,26 @@ async def scrape_contact_email(
         "source_url": str | None,
         "is_fallback": bool,
         "confidence": float,
-        "all_candidates": list[str]
+        "all_candidates": list[str],
+        "note": str | None
     }
+    Never generates synthetic wholesale@{domain} guesses.
     """
     clean_dom = clean_domain(canonical_domain)
     if not clean_dom:
         return {
-            "email": "wholesale@unknown.com",
-            "source": "fallback",
+            "email": "",
+            "source": "not_found",
             "source_url": None,
-            "is_fallback": True,
+            "is_fallback": False,
             "confidence": 0.0,
             "all_candidates": [],
+            "note": "No contact email found on public website",
         }
 
     # If Tavily client not supplied, attempt to initialize from environment/settings
     if tavily_client is None:
         if "TAVILY_API_KEY" in os.environ and not os.environ["TAVILY_API_KEY"].strip():
-            # Explicitly disabled via test environment or offline mode
             api_key = ""
         else:
             api_key = os.environ.get("TAVILY_API_KEY", "").strip()
@@ -164,7 +204,7 @@ async def scrape_contact_email(
         if api_key and str(api_key).strip():
             tavily_client = TavilyClient(api_key=str(api_key).strip())
 
-    # If no live Tavily client available, check fixture dictionary or derive default
+    # If no live Tavily client available, check fixture dictionary or return not_found
     if tavily_client is None:
         if clean_dom in FIXTURE_CONTACTS:
             return {
@@ -174,14 +214,16 @@ async def scrape_contact_email(
                 "is_fallback": False,
                 "confidence": 0.9,
                 "all_candidates": [FIXTURE_CONTACTS[clean_dom]],
+                "note": None,
             }
         return {
-            "email": f"wholesale@{clean_dom}",
-            "source": "domain_fallback",
-            "source_url": f"https://{clean_dom}",
-            "is_fallback": True,
-            "confidence": 0.5,
+            "email": "",
+            "source": "not_found",
+            "source_url": None,
+            "is_fallback": False,
+            "confidence": 0.0,
             "all_candidates": [],
+            "note": "No contact email found on public website",
         }
 
     # Execute targeted live Tavily search
@@ -193,7 +235,6 @@ async def scrape_contact_email(
         logger.warning("Targeted Tavily email search failed for %s: %s", clean_dom, exc)
 
     if not hits:
-        # Fallback broader search query
         try:
             hits = await tavily_client.search(f'"{clean_dom}" (email OR "contact us" OR wholesale)')
         except Exception as exc:
@@ -210,7 +251,6 @@ async def scrape_contact_email(
             s = score_and_rank_email(e, clean_dom)
             extracted_emails_with_meta.append((e, s, hit_url))
 
-        # Check for contact/wholesale page links for deep extract if needed
         lower_url = hit_url.lower()
         if any(slug in lower_url for slug in ("/contact", "/about", "/wholesale", "/stockists", "/pages/contact")):
             if hit_url not in contact_urls_to_extract:
@@ -231,7 +271,6 @@ async def scrape_contact_email(
         except Exception as exc:
             logger.warning("Tavily extract failed for %s: %s", contact_urls_to_extract, exc)
 
-    # Sort candidates by score descending
     extracted_emails_with_meta.sort(key=lambda x: x[1], reverse=True)
 
     if extracted_emails_with_meta and extracted_emails_with_meta[0][1] > 20:
@@ -244,9 +283,10 @@ async def scrape_contact_email(
             "is_fallback": False,
             "confidence": 0.95 if best_score >= 80 else 0.8,
             "all_candidates": unique_candidates[:5],
+            "note": None,
         }
 
-    # If nothing verified via Tavily, check known fixtures or fallback to wholesale@
+    # If nothing verified via Tavily, check known fixtures or return not_found
     if clean_dom in FIXTURE_CONTACTS:
         return {
             "email": FIXTURE_CONTACTS[clean_dom],
@@ -255,13 +295,15 @@ async def scrape_contact_email(
             "is_fallback": False,
             "confidence": 0.9,
             "all_candidates": [FIXTURE_CONTACTS[clean_dom]],
+            "note": None,
         }
 
     return {
-        "email": f"wholesale@{clean_dom}",
-        "source": "domain_fallback",
-        "source_url": f"https://{clean_dom}",
-        "is_fallback": True,
-        "confidence": 0.5,
+        "email": "",
+        "source": "not_found",
+        "source_url": None,
+        "is_fallback": False,
+        "confidence": 0.0,
         "all_candidates": [],
+        "note": "No contact email found on public website",
     }
