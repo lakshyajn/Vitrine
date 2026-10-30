@@ -55,7 +55,7 @@ EXCLUDED_JOB_CLASSIFIEDS = {
 
 # 6. Government and education TLD regex patterns
 GOV_EDU_PATTERN = re.compile(
-    r"(?:\.(?:gov|edu|mil|ac)\.[a-z]{2,3}$)|(?:\.(?:gov|edu|mil)$)",
+    r"(?:(?:\.|\b)(?:gov|edu|mil|ac)\.[a-z]{2,3}$)|(?:(?:\.|\b)(?:gov|edu|mil)$)",
     re.IGNORECASE,
 )
 
@@ -75,12 +75,14 @@ def is_domain_excluded_detailed(url_or_domain: str) -> tuple[bool, str | None]:
         return False, None
 
     raw = str(url_or_domain).strip().lower()
+    parsed = urlparse(raw if "://" in raw else f"https://{raw}")
+    full_host = (parsed.netloc or parsed.path).split(":")[0].lower()
+    if full_host.startswith("www."):
+        full_host = full_host[4:]
+
     dom = extract_canonical_domain(raw)
     if not dom:
-        # Fall back to basic netloc extraction if canonical extractor returns empty
-        parsed = urlparse(raw if "://" in raw else f"https://{raw}")
-        dom = (parsed.netloc or parsed.path).split(":")[0].lower()
-
+        dom = full_host
     if dom.startswith("www."):
         dom = dom[4:]
 
@@ -120,13 +122,12 @@ def is_domain_excluded_detailed(url_or_domain: str) -> tuple[bool, str | None]:
             return True, f"Excluded classifieds or employment listing domain: {dom}"
 
     # 6. Government & Educational institutions (.gov, .gov.*, .edu, .ac.*, .mil)
-    if GOV_EDU_PATTERN.search(dom):
-        return True, f"Excluded government or academic institution domain: {dom}"
+    if GOV_EDU_PATTERN.search(dom) or GOV_EDU_PATTERN.search(full_host):
+        return True, f"Excluded government or academic institution domain: {dom or full_host}"
 
     # 7. Institutional / Museum domain keywords
-    dom_parts = dom.split(".")[0]
-    if INSTITUTION_KEYWORD_PATTERN.search(dom_parts):
-        return True, f"Excluded non-retail institution, museum, or cultural archive: {dom}"
+    if INSTITUTION_KEYWORD_PATTERN.search(dom) or INSTITUTION_KEYWORD_PATTERN.search(full_host):
+        return True, f"Excluded non-retail institution, museum, or cultural archive: {dom or full_host}"
 
     return False, None
 
@@ -134,3 +135,8 @@ def is_domain_excluded_detailed(url_or_domain: str) -> tuple[bool, str | None]:
 def is_excluded_retailer_domain(url_or_domain: str) -> tuple[bool, str | None]:
     """Compatibility alias for is_domain_excluded_detailed."""
     return is_domain_excluded_detailed(url_or_domain)
+
+
+def is_domain_excluded(url_or_domain: str) -> bool:
+    """Convenience boolean check for domain exclusion."""
+    return is_domain_excluded_detailed(url_or_domain)[0]

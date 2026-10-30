@@ -1,20 +1,103 @@
-[
-  {
-    "canonical_domain": "atelierterraloom.example.com",
-    "expected_tier": "qualified",
-    "expected_category_fit": "high",
-    "is_duplicate": false
-  },
-  {
-    "canonical_domain": "massmarket-wholesale.example.com",
-    "expected_tier": "unqualified",
-    "expected_category_fit": "low",
-    "is_duplicate": false
-  },
-  {
-    "canonical_domain": "atelierterraloom-clone.example.com",
-    "expected_tier": "qualified",
-    "expected_category_fit": "high",
-    "is_duplicate": true
-  }
-]
+{
+  "products": [
+    {
+      "name": "Natural Cedar Wood HB Pencil",
+      "category": "stationery",
+      "materials": ["cedar wood", "graphite"],
+      "fixture_file": "fixtures/search_hits_pencil.json",
+      "forbidden_query_words": ["cotton", "botanical", "earthy", "artisanal", "textile", "decor"],
+      "expected_retailers": [
+        {
+          "canonical_domain": "grafandquill-shop-demo.com",
+          "expected_tier": "qualified",
+          "allowed_tiers": ["qualified", "needs_review"]
+        },
+        {
+          "canonical_domain": "thepapeteriestudio-demo.co.uk",
+          "expected_tier": "qualified",
+          "allowed_tiers": ["qualified", "needs_review"]
+        },
+        {
+          "canonical_domain": "nordicdeskgoods-fixture.store",
+          "expected_tier": "qualified",
+          "allowed_tiers": ["qualified", "needs_review"]
+        }
+      ],
+      "expected_junk_domains": [
+        "reddit.com",
+        "nationalmuseum.gov.in",
+        "tripadvisor.com",
+        "pencil-chronicles.fandom.com"
+      ]
+    },
+    {
+      "name": "Handthrown Ceramic Coffee Mug",
+      "category": "ceramics",
+      "materials": ["stoneware", "clay", "mineral glaze"],
+      "fixture_file": "fixtures/search_hits_ceramics.json",
+      "forbidden_query_words": ["cotton", "textile", "linen", "block-printed"],
+      "expected_retailers": [
+        {
+          "canonical_domain": "clayandkiln-demo.com",
+          "expected_tier": "qualified",
+          "allowed_tiers": ["qualified", "needs_review"]
+        },
+        {
+          "canonical_domain": "terracottaliving-demo.co.uk",
+          "expected_tier": "qualified",
+          "allowed_tiers": ["qualified", "needs_review"]
+        }
+      ],
+      "expected_junk_domains": [
+        "reddit.com",
+        "britishceramicsmuseum.ac.uk"
+      ]
+    },
+    {
+      "name": "Refillable Leather Journal",
+      "category": "leather goods",
+      "materials": ["full-grain leather", "recycled paper"],
+      "fixture_file": "fixtures/search_hits_leather.json",
+      "forbidden_query_words": ["cotton", "botanical", "silk", "textile"],
+      "expected_retailers": [
+        {
+          "canonical_domain": "leatherboundgoods-demo.com",
+          "expected_tier": "qualified",
+          "allowed_tiers": ["qualified", "needs_review"]
+        },
+        {
+          "canonical_domain": "nordicatelierstationery-demo.co.uk",
+          "expected_tier": "qualified",
+          "allowed_tiers": ["qualified", "needs_review"]
+        }
+      ],
+      "expected_junk_domains": [
+        "quora.com",
+        "leather-crafting.fandom.com"
+      ]
+    },
+    {
+      "name": "Hand Block-Printed Cushion Covers",
+      "category": "textiles",
+      "materials": ["organic cotton", "linen", "vegetable dye"],
+      "fixture_file": "fixtures/search_hits_textile.json",
+      "forbidden_query_words": ["pencil", "graphite", "ceramic", "leather"],
+      "expected_retailers": [
+        {
+          "canonical_domain": "atelierloomandthread-demo.com",
+          "expected_tier": "qualified",
+          "allowed_tiers": ["qualified", "needs_review"]
+        },
+        {
+          "canonical_domain": "marigoldlivingdecor-demo.co.uk",
+          "expected_tier": "qualified",
+          "allowed_tiers": ["qualified", "needs_review"]
+        }
+      ],
+      "expected_junk_domains": [
+        "wikipedia.org",
+        "pinterest.com"
+      ]
+    }
+  ]
+}

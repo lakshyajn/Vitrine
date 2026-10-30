@@ -11,7 +11,8 @@ from contracts.schemas import LeadCandidate
 
 MARKETPLACE_DOMAINS = {"etsy.com", "faire.com", "ankorstore.com"}
 MULTI_PART_TLDS = {
-    "co.uk", "org.uk", "ac.uk", "com.au", "co.nz", "co.jp", "co.in", "com.br", "com.sg"
+    "co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "gov.au", "edu.au",
+    "co.nz", "ac.nz", "co.jp", "co.in", "gov.in", "ac.in", "com.br", "com.sg"
 }
 LEGAL_SUFFIX_PATTERN = re.compile(
     r"\b(ltd|limited|llc|inc|incorporated|gmbh|sarl|bv|pvt|co|company|boutique|shop|store|studio|living|home)\b",

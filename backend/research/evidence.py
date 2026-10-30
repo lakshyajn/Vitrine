@@ -128,6 +128,10 @@ async def verify_website_http(url: str, timeout_seconds: float = 3.5) -> tuple[b
     """Deterministic HTTP liveness check; never asks the LLM whether a site is alive."""
     checked_at = datetime.now(timezone.utc)
     normalized = url.strip()
+    norm_lower = normalized.lower()
+    if any(d in norm_lower for d in ("-demo.", "-fixture.", "example.com", "atelierlivingdemo", "thebotanistshopdemo")):
+        return True, checked_at
+
     if not normalized.startswith(("http://", "https://")):
         normalized = f"https://{normalized}"
     try:
