@@ -272,6 +272,8 @@ class ResearchPlan(ContractModel):
     target_retailer_types: list[str] = Field(default_factory=list)
     aesthetic_candidates: list[str] = Field(default_factory=list)
     search_queries: list[str] = Field(default_factory=list)
+    taste_relevance: str | None = "applicable"
+    taste_relevance_reason: str | None = None
     hypotheses_rationale: str | None = None
     notes: str | None = None
 

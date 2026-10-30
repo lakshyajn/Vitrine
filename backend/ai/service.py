@@ -117,16 +117,16 @@ class FixtureAIService:
             uncertain.append("certifications")
 
         result = ProductAttributes(
-            style=known_input.style or ["handcrafted", "botanical", "artisanal"],
-            materials=known_input.materials or ["cotton", "natural linen"],
-            motifs=known_input.motifs or ["floral", "botanical"],
-            colours=known_input.colours or ["terracotta", "indigo", "ochre"],
+            style=known_input.style or (["minimalist"] if any(w in desc_text.lower() for w in ("pencil", "stationery", "minimal")) else ["handcrafted", "artisanal"]),
+            materials=known_input.materials or ([m for m in ("cedar wood", "graphite", "wood", "ceramic", "leather", "cotton", "linen") if m in desc_text.lower()] or ["mixed materials"]),
+            motifs=known_input.motifs or ([mo for mo in ("geometric", "botanical", "plain", "striped") if mo in desc_text.lower()]),
+            colours=known_input.colours or ([c for c in ("black", "natural", "indigo", "terracotta", "white") if c in desc_text.lower()] or ["natural"]),
             price_segment=known_input.price_segment or PriceSegment.MID_PREMIUM,
             target_retailer_types=known_input.target_retailer_types
-            or ["boutique", "concept store", "home decor"],
+            or ["independent boutique", "concept store"],
             uncertain_fields=uncertain,
-            assumptions=["Inferred botanical style from text description"],
-            category=known_input.category or "Home Textiles",
+            assumptions=["Inferred product attributes from description text"],
+            category=known_input.category or ("stationery" if any(w in desc_text.lower() or (known_input.name and w in known_input.name.lower()) for w in ("pencil", "pen", "notebook", "journal")) else ("ceramics" if any(w in desc_text.lower() for w in ("mug", "ceramic", "pottery")) else ("Home Textiles" if any(w in desc_text.lower() or (known_input.name and w in known_input.name.lower()) for w in ("textile", "linen", "cushion", "runner", "throw", "fabric")) else "handcrafted goods"))),
             price_min=known_input.price_min if known_input.price_min is not None else 30.0,
             price_max=known_input.price_max if known_input.price_max is not None else 120.0,
             currency=known_input.currency or "USD",
@@ -146,17 +146,22 @@ class FixtureAIService:
         plan = ResearchPlan(
             target_regions=["Western Europe", "North America"],
             target_retailer_types=product.target_retailer_types
-            or ["independent home boutique", "concept store"],
-            aesthetic_candidates=[
-                "Block Print Aesthetic",
-                "Artisanal Home Textiles",
-                "Botanical Living",
-            ],
+            or [f"independent {product.category} boutique", "concept store"],
+            aesthetic_candidates=([] if any(w in product.category.lower() for w in ("stationery", "pencil", "pen", "tool", "office")) else [f"{product.category.title()} Aesthetic", f"Curated {product.category.title()}"]),
+
+
+
+
             search_queries=[
-                f"independent home decor boutique {product.name}",
-                "artisan textile boutique stockists",
-                f"independent lifestyle shop {product.category} block print cotton",
+                f"independent {product.category} boutique {product.name}",
+                f"curated {product.category} retailer stockists",
+                f"buy {product.name} online store",
             ],
+
+
+
+            taste_relevance=("not_applicable" if any(w in product.category.lower() for w in ("stationery", "pencil", "pen", "tool", "office")) else "applicable"),
+            taste_relevance_reason="Utility category where aesthetic affinity is secondary to stockist availability." if any(w in product.category.lower() for w in ("stationery", "pencil", "pen", "tool", "office")) else f"Aesthetic affinity for {product.category}",
             hypotheses_rationale="Small independent design shops value provenance and artisan stories.",
             notes="Fixture-backed initial research plan",
         )
@@ -198,6 +203,7 @@ class FixtureAIService:
                     "No verified retailer evidence excerpts available",
                     "Specific MOQ requirements not stated on public website",
                 ],
+    
                 model_id=self.model_id,
             )
             log_ai_call(
@@ -212,12 +218,12 @@ class FixtureAIService:
         assessment = LeadAssessment(
             category_fit=DimensionAssessment(
                 label=DimensionLabel.HIGH,
-                reasons=["Carries curated table linens and home textiles."],
+                reasons=[f"Carries curated collections matching {product.category}."],
                 evidence_ids=primary_id,
             ),
             aesthetic_fit=DimensionAssessment(
                 label=DimensionLabel.HIGH,
-                reasons=["Visual identity emphasizes warm earth tones and botanical motifs."],
+                reasons=[f"Visual identity emphasizes design profile matching {product.category}."],
                 evidence_ids=primary_id,
             ),
             seller_compat=DimensionAssessment(
@@ -225,7 +231,7 @@ class FixtureAIService:
                 reasons=["Stockist price point matches mid-premium range."],
                 evidence_ids=primary_id,
             ),
-            summary=f"Strong potential boutique partner for {product.name}.",
+            summary=f"Strong potential boutique partner for {product.name} ({product.category}).",
             unknowns=["Specific MOQ requirements not stated on public website"],
             model_id=self.model_id,
         )
@@ -422,7 +428,26 @@ class LiveAIService:
         self, product: Product, lead: LeadCandidate, evidence: list[EvidenceItem]
     ) -> LeadAssessment:
         if not evidence:
-            return await FixtureAIService().assess_lead(product, lead, evidence)
+            return LeadAssessment(
+                category_fit=DimensionAssessment(
+                    label=DimensionLabel.UNKNOWN,
+                    reasons=[],
+                    evidence_ids=[],
+                ),
+                aesthetic_fit=DimensionAssessment(
+                    label=DimensionLabel.UNKNOWN,
+                    reasons=[],
+                    evidence_ids=[],
+                ),
+                seller_compat=DimensionAssessment(
+                    label=DimensionLabel.UNKNOWN,
+                    reasons=[],
+                    evidence_ids=[],
+                ),
+                summary=f"Insufficient stored evidence to assess {lead.name}.",
+                unknowns=["No evidence collected"],
+                model_id=self.fast_client.model_id,
+            )
 
         t0 = time.monotonic()
         messages = build_task_c_prompt(product, lead, evidence)

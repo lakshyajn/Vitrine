@@ -74,13 +74,18 @@ def build_task_b_prompt(product: Product) -> list[dict[str, str]]:
         "Output ONLY a valid JSON object matching ResearchPlan.\n"
         "RULES:\n"
         "1. Output PROPOSALS ONLY. Never state that Qloo, Tavily, or any external provider already returned results.\n"
-        "2. `aesthetic_candidates` and `search_queries` must be lists of concise strings.\n"
-        "3. `hypotheses_rationale` explains what signals would support market fit without claiming those signals exist."
+        "2. All search queries MUST target businesses that sell this specific product category.\n"
+        "3. Search queries MUST use ONLY words from the product record plus generic retail terms (shop, store, retailer, stockist, boutique, buy, wholesale, independent, online, supplier).\n"
+        "4. Set `taste_relevance` to 'applicable', 'limited', or 'not_applicable' with a one-line `taste_relevance_reason`.\n"
+        "5. `aesthetic_candidates` must be a list of concise strings, or an empty list `[]` when taste does not meaningfully apply (commodity or functional goods).\n"
+        "6. `hypotheses_rationale` explains what signals would support market fit without claiming those signals exist."
     )
     user = (
         f"Product:\n{json.dumps(prod_summary, default=str)}\n\n"
         "Return JSON with keys: target_regions (list[str]), target_retailer_types (list[str]), "
         "aesthetic_candidates (list[str]), search_queries (list[str]), "
+        "taste_relevance (str: 'applicable'|'limited'|'not_applicable'), "
+        "taste_relevance_reason (str), "
         "hypotheses_rationale (str), notes (str)."
     )
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]

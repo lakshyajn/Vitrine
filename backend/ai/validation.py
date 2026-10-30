@@ -74,6 +74,13 @@ def validate_research_plan_claims(plan: ResearchPlan) -> None:
                 f"ResearchPlan contains unsupported claim that a provider already returned data: '{phrase}'"
             )
 
+    if getattr(plan, "taste_relevance", None):
+        clean_tr = str(plan.taste_relevance).strip().lower()
+        if clean_tr not in ("applicable", "limited", "not_applicable"):
+            raise_ai_output_invalid(
+                f"Invalid taste_relevance '{plan.taste_relevance}'; must be 'applicable', 'limited', or 'not_applicable'"
+            )
+
 
 def validate_lead_assessment_claims(
     assessment: LeadAssessment, evidence: list[EvidenceItem]
