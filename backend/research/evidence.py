@@ -22,6 +22,7 @@ from backend.ai.schemas import (
     ShipmentMilestoneVerdict,
 )
 from backend.research.dedupe import extract_canonical_domain
+from backend.research.exclusions import is_domain_excluded_detailed, is_excluded_retailer_domain
 from contracts.schemas import EvidenceSourceType
 
 EXCLUDED_WHOLESALE_OR_CHAIN_DOMAINS = {
@@ -78,7 +79,11 @@ GSTIN_FORMAT = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z
 IEC_FORMAT = re.compile(r"^[A-Z0-9]{10}$")
 
 
-def classify_evidence_source_type(url: str, excerpt: str = "") -> EvidenceSourceType:
+def classify_evidence_source_type(
+    url: str,
+    excerpt: str = "",
+    lead_domain: str | None = None,
+) -> EvidenceSourceType:
     """Rule-based source_type classification (WS3 Section 4.1)."""
     u = (url or "").lower()
     ex = (excerpt or "").lower()
@@ -92,17 +97,31 @@ def classify_evidence_source_type(url: str, excerpt: str = "") -> EvidenceSource
         return EvidenceSourceType.PRESS
     if any(p in u for p in ("/products/", "/collections/", "/shop/", "/product/")) or "add to cart" in ex:
         return EvidenceSourceType.PRODUCT_PAGE
-    return EvidenceSourceType.OFFICIAL_SITE
+    url_dom = extract_canonical_domain(u)
+    is_own_domain = True
+    if lead_domain:
+        clean_lead = extract_canonical_domain(lead_domain)
+        is_own_domain = (url_dom == clean_lead) or (clean_lead in url_dom)
+
+    parsed = urlparse(u if "://" in u else f"https://{u}")
+    path = parsed.path.lower().rstrip("/")
+    is_home_or_business = (
+        path in ("", "/", "/about", "/contact", "/about-us", "/contact-us", "/pages/about-us", "/pages/contact")
+        or any(sig in ex for sig in ("welcome to", "independent boutique", "retailer", "stockist", "founded in"))
+    )
+    if is_own_domain and is_home_or_business:
+        return EvidenceSourceType.OFFICIAL_SITE
+    return EvidenceSourceType.OTHER
 
 
 def is_excluded_retailer_domain(url_or_domain: str) -> tuple[bool, str | None]:
     """Configurable exclusion rule check for mass marketplaces, chains, directories, and aggregators."""
-    dom = extract_canonical_domain(url_or_domain)
-    base_dom = dom.split("/")[0].lower()
-    for excl in EXCLUDED_WHOLESALE_OR_CHAIN_DOMAINS:
-        if base_dom == excl or base_dom.endswith("." + excl):
-            return True, f"Excluded aggregator, directory or mass marketplace domain: {base_dom}"
-    return False, None
+    return is_domain_excluded_detailed(url_or_domain)
+
+
+
+
+
 
 
 async def verify_website_http(url: str, timeout_seconds: float = 3.5) -> tuple[bool, datetime]:

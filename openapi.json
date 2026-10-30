@@ -1260,6 +1260,55 @@
         }
       }
     },
+    "/api/v1/leads/{id}/scrape-contact": {
+      "post": {
+        "tags": [
+          "Leads"
+        ],
+        "summary": "Scrape Lead Contact",
+        "description": "Scrape receiver wholesale/buyer contact email using live Tavily Search & Extract.",
+        "operationId": "scrape_lead_contact_api_v1_leads__id__scrape_contact_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactScrapeResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/leads/{id}/evidence": {
       "get": {
         "tags": [
@@ -1668,6 +1717,58 @@
         },
         "type": "object",
         "title": "ConfirmAnchorsRequest"
+      },
+      "ContactScrapeResult": {
+        "properties": {
+          "lead_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Lead Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "is_fallback": {
+            "type": "boolean",
+            "title": "Is Fallback",
+            "default": false
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "default": 1.0
+          },
+          "all_candidates": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "All Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lead_id",
+          "email",
+          "source"
+        ],
+        "title": "ContactScrapeResult"
       },
       "CreateAnchorRequest": {
         "properties": {
@@ -2091,10 +2192,26 @@
               }
             ]
           },
+          "retailer_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetailerKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "retailer_type": {
-            "type": "string",
-            "title": "Retailer Type",
-            "default": "boutique"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retailer Type"
           },
           "website_verified": {
             "type": "boolean",
@@ -2167,6 +2284,17 @@
             ],
             "title": "Duplicate Of"
           },
+          "contact_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Email"
+          },
           "is_demo": {
             "type": "boolean",
             "title": "Is Demo",
@@ -2198,6 +2326,56 @@
           },
           "seller_compat": {
             "$ref": "#/components/schemas/DimensionAssessment"
+          },
+          "retailer_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetailerKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retailer_kind_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Retailer Kind Reasons"
+          },
+          "retailer_kind_evidence_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Retailer Kind Evidence Ids"
+          },
+          "sells_product_category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SellsCategoryAnswer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sells_product_category_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sells Product Category Reasons"
+          },
+          "sells_product_category_evidence_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Sells Product Category Evidence Ids"
           },
           "summary": {
             "type": "string",
@@ -3530,6 +3708,29 @@
             "type": "array",
             "title": "Search Queries"
           },
+          "taste_relevance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taste Relevance",
+            "default": "applicable"
+          },
+          "taste_relevance_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taste Relevance Reason"
+          },
           "hypotheses_rationale": {
             "anyOf": [
               {
@@ -3743,6 +3944,19 @@
         ],
         "title": "ResearchRunStatus"
       },
+      "RetailerKind": {
+        "type": "string",
+        "enum": [
+          "retailer",
+          "maker_brand",
+          "marketplace",
+          "media_reference",
+          "institution",
+          "other",
+          "unknown"
+        ],
+        "title": "RetailerKind"
+      },
       "RunError": {
         "properties": {
           "code": {
@@ -3771,6 +3985,15 @@
           "message"
         ],
         "title": "RunError"
+      },
+      "SellsCategoryAnswer": {
+        "type": "string",
+        "enum": [
+          "yes",
+          "no",
+          "unknown"
+        ],
+        "title": "SellsCategoryAnswer"
       },
       "TasteAnchor": {
         "properties": {
@@ -3943,6 +4166,17 @@
               }
             ],
             "title": "Notes"
+          },
+          "contact_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Email"
           }
         },
         "type": "object",

@@ -377,6 +377,26 @@ export interface paths {
         patch: operations["update_lead_api_v1_leads__id__patch"];
         trace?: never;
     };
+    "/api/v1/leads/{id}/scrape-contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Scrape Lead Contact
+         * @description Scrape receiver wholesale/buyer contact email using live Tavily Search & Extract.
+         */
+        post: operations["scrape_lead_contact_api_v1_leads__id__scrape_contact_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/leads/{id}/evidence": {
         parameters: {
             query?: never;
@@ -519,6 +539,32 @@ export interface components {
              * @default false
              */
             proceed_without_anchors: boolean;
+        };
+        /** ContactScrapeResult */
+        ContactScrapeResult: {
+            /**
+             * Lead Id
+             * Format: uuid
+             */
+            lead_id: string;
+            /** Email */
+            email: string;
+            /** Source */
+            source: string;
+            /** Source Url */
+            source_url?: string | null;
+            /**
+             * Is Fallback
+             * @default false
+             */
+            is_fallback: boolean;
+            /**
+             * Confidence
+             * @default 1
+             */
+            confidence: number;
+            /** All Candidates */
+            all_candidates?: string[];
         };
         /** CreateAnchorRequest */
         CreateAnchorRequest: {
@@ -718,11 +764,9 @@ export interface components {
             /** Canonical Domain */
             canonical_domain: string;
             location?: components["schemas"]["LeadLocation"] | null;
-            /**
-             * Retailer Type
-             * @default boutique
-             */
-            retailer_type: string;
+            retailer_kind?: components["schemas"]["RetailerKind"] | null;
+            /** Retailer Type */
+            retailer_type?: string | null;
             /**
              * Website Verified
              * @default false
@@ -741,6 +785,8 @@ export interface components {
             notes?: string | null;
             /** Duplicate Of */
             duplicate_of?: string | null;
+            /** Contact Email */
+            contact_email?: string | null;
             /**
              * Is Demo
              * @default false
@@ -757,6 +803,16 @@ export interface components {
             category_fit: components["schemas"]["DimensionAssessment"];
             aesthetic_fit: components["schemas"]["DimensionAssessment"];
             seller_compat: components["schemas"]["DimensionAssessment"];
+            retailer_kind?: components["schemas"]["RetailerKind"] | null;
+            /** Retailer Kind Reasons */
+            retailer_kind_reasons?: string[];
+            /** Retailer Kind Evidence Ids */
+            retailer_kind_evidence_ids?: string[];
+            sells_product_category?: components["schemas"]["SellsCategoryAnswer"] | null;
+            /** Sells Product Category Reasons */
+            sells_product_category_reasons?: string[];
+            /** Sells Product Category Evidence Ids */
+            sells_product_category_evidence_ids?: string[];
             /** Summary */
             summary: string;
             /** Unknowns */
@@ -1190,6 +1246,13 @@ export interface components {
             aesthetic_candidates?: string[];
             /** Search Queries */
             search_queries?: string[];
+            /**
+             * Taste Relevance
+             * @default applicable
+             */
+            taste_relevance: string | null;
+            /** Taste Relevance Reason */
+            taste_relevance_reason?: string | null;
             /** Hypotheses Rationale */
             hypotheses_rationale?: string | null;
             /** Notes */
@@ -1259,6 +1322,11 @@ export interface components {
          * @enum {string}
          */
         ResearchRunStatus: "queued" | "running" | "awaiting_review" | "completed" | "failed";
+        /**
+         * RetailerKind
+         * @enum {string}
+         */
+        RetailerKind: "retailer" | "maker_brand" | "marketplace" | "media_reference" | "institution" | "other" | "unknown";
         /** RunError */
         RunError: {
             code: components["schemas"]["ErrorCode"];
@@ -1269,6 +1337,11 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /**
+         * SellsCategoryAnswer
+         * @enum {string}
+         */
+        SellsCategoryAnswer: "yes" | "no" | "unknown";
         /** TasteAnchor */
         TasteAnchor: {
             /**
@@ -1333,6 +1406,8 @@ export interface components {
             review_status?: components["schemas"]["LeadReviewStatus"] | null;
             /** Notes */
             notes?: string | null;
+            /** Contact Email */
+            contact_email?: string | null;
         };
         /** UpdateOutreachDraftRequest */
         UpdateOutreachDraftRequest: {
@@ -2064,6 +2139,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Lead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scrape_lead_contact_api_v1_leads__id__scrape_contact_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactScrapeResult"];
                 };
             };
             /** @description Validation Error */

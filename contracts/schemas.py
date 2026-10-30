@@ -54,6 +54,22 @@ class LeadTier(str, Enum):
     UNQUALIFIED = "unqualified"
 
 
+class RetailerKind(str, Enum):
+    RETAILER = "retailer"
+    MAKER_BRAND = "maker_brand"
+    MARKETPLACE = "marketplace"
+    MEDIA_REFERENCE = "media_reference"
+    INSTITUTION = "institution"
+    OTHER = "other"
+    UNKNOWN = "unknown"
+
+
+class SellsCategoryAnswer(str, Enum):
+    YES = "yes"
+    NO = "no"
+    UNKNOWN = "unknown"
+
+
 class OutreachDraftStatus(str, Enum):
     DRAFT = "draft"
     READY = "ready"
@@ -390,6 +406,12 @@ class LeadAssessment(ContractModel):
     category_fit: DimensionAssessment
     aesthetic_fit: DimensionAssessment
     seller_compat: DimensionAssessment
+    retailer_kind: RetailerKind | None = None
+    retailer_kind_reasons: list[str] = Field(default_factory=list)
+    retailer_kind_evidence_ids: list[UUID] = Field(default_factory=list)
+    sells_product_category: SellsCategoryAnswer | None = None
+    sells_product_category_reasons: list[str] = Field(default_factory=list)
+    sells_product_category_evidence_ids: list[UUID] = Field(default_factory=list)
     summary: str
     unknowns: list[str] = Field(default_factory=list)
     model_id: str | None = None
@@ -419,7 +441,8 @@ class Lead(ContractModel):
     website: str
     canonical_domain: str
     location: LeadLocation | None = None
-    retailer_type: str = "boutique"
+    retailer_kind: RetailerKind | None = None
+    retailer_type: str | None = None
     website_verified: bool = False
     website_checked_at: datetime | None = None
     tier: LeadTier = LeadTier.NEEDS_REVIEW
@@ -439,7 +462,8 @@ class LeadCandidate(ContractModel):
     website: str
     canonical_domain: str
     location: LeadLocation | None = None
-    retailer_type: str = "boutique"
+    retailer_kind: RetailerKind | None = None
+    retailer_type: str | None = None
     website_verified: bool = False
     evidence: list[EvidenceItem] = Field(default_factory=list)
     possible_duplicate_of_domain: str | None = None  # DECISION-D9

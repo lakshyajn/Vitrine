@@ -40,6 +40,8 @@ from contracts.schemas import (
     ProductAttributes,
     ProductInput,
     ResearchPlan,
+    RetailerKind,
+    SellsCategoryAnswer,
 )
 
 
@@ -231,6 +233,12 @@ class FixtureAIService:
                 reasons=["Stockist price point matches mid-premium range."],
                 evidence_ids=primary_id,
             ),
+            retailer_kind=RetailerKind.RETAILER,
+            retailer_kind_reasons=["Independent retail business selling curated products."],
+            retailer_kind_evidence_ids=primary_id,
+            sells_product_category=SellsCategoryAnswer.YES,
+            sells_product_category_reasons=[f"Store catalog verifies active offerings in {product.category}."],
+            sells_product_category_evidence_ids=primary_id,
             summary=f"Strong potential boutique partner for {product.name} ({product.category}).",
             unknowns=["Specific MOQ requirements not stated on public website"],
             model_id=self.model_id,

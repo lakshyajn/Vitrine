@@ -108,15 +108,21 @@ def build_task_c_prompt(
         "1. Allowed labels for `category_fit`, `aesthetic_fit`, and `seller_compat`: ONLY 'high', 'medium', 'low', or 'unknown'.\n"
         "2. When evidence does not address a dimension, set label='unknown' and record the gap in `unknowns`. Missing info is NEVER 'low'.\n"
         "3. Every 'high', 'medium', or 'low' dimension MUST include reasons[] and cite at least one UUID from `allowed_evidence_ids`.\n"
-        f"4. allowed_evidence_ids: {json.dumps(valid_ids)}. Never invent an ID or URL."
+        f"4. allowed_evidence_ids: {json.dumps(valid_ids)}. Never invent an ID or URL.\n"
+        "5. Classify `retailer_kind`: 'retailer', 'maker_brand', 'marketplace', 'media_reference', 'institution', 'other', or 'unknown'. Include reasons[] and cite evidence_ids.\n"
+        "6. Classify `sells_product_category`: 'yes', 'no', or 'unknown'. Does the retailer genuinely sell this product category? Include reasons[] and cite evidence_ids."
     )
     user = (
         f"Product: {product.name} (category={product.category}, materials={product.materials}, "
         f"motifs={product.motifs}, segment={product.price_segment}, MOQ={product.moq})\n"
-        f"Candidate Retailer: {lead.name} ({lead.website}, type={lead.retailer_type})\n"
+        f"Candidate Retailer: {lead.name} ({lead.website})\n"
         f"Counterparty Verification Warnings: {json.dumps(trust_warnings or [])}\n\n"
         f"Evidence:\n{evidence_xml}\n\n"
-        "Return JSON with keys: category_fit, aesthetic_fit, seller_compat "
+        "Return JSON with keys: category_fit, aesthetic_fit, seller_compat (each {label, reasons: [str], evidence_ids: [uuid_str]}), "
+        "retailer_kind (str: 'retailer'|'maker_brand'|'marketplace'|'media_reference'|'institution'|'other'|'unknown'), "
+        "retailer_kind_reasons (list[str]), retailer_kind_evidence_ids (list[uuid_str]), "
+        "sells_product_category (str: 'yes'|'no'|'unknown'), "
+        "sells_product_category_reasons (list[str]), sells_product_category_evidence_ids (list[uuid_str]), "
         "(each {label, reasons: [str], evidence_ids: [uuid_str]}), summary (str), unknowns (list[str])."
     )
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]

@@ -125,12 +125,32 @@ def validate_lead_assessment_claims(
                     {"dimension": dim_name, "invalid_evidence_id": str(eid)},
                 )
 
+    if assessment.retailer_kind and str(assessment.retailer_kind).lower() not in ("unknown", "other"):
+        if not assessment.retailer_kind_reasons:
+            raise_ai_output_invalid("retailer_kind is specified but has no reasons.", {"field": "retailer_kind"})
+        if not assessment.retailer_kind_evidence_ids:
+            raise_ai_output_invalid("retailer_kind is specified but cites zero evidence_ids.", {"field": "retailer_kind"})
+    for eid in (assessment.retailer_kind_evidence_ids or []):
+        if eid not in valid_ids:
+            raise_ai_output_invalid(f"retailer_kind cites non-existent evidence_id '{eid}'.", {"invalid_evidence_id": str(eid)})
+
+    if assessment.sells_product_category and str(assessment.sells_product_category).lower() in ("yes", "no"):
+        if not assessment.sells_product_category_reasons:
+            raise_ai_output_invalid("sells_product_category is 'yes' or 'no' but has no reasons.", {"field": "sells_product_category"})
+        if not assessment.sells_product_category_evidence_ids:
+            raise_ai_output_invalid("sells_product_category is 'yes' or 'no' but cites zero evidence_ids.", {"field": "sells_product_category"})
+    for eid in (assessment.sells_product_category_evidence_ids or []):
+        if eid not in valid_ids:
+            raise_ai_output_invalid(f"sells_product_category cites non-existent evidence_id '{eid}'.", {"invalid_evidence_id": str(eid)})
+
     all_text = " ".join(
         [
             assessment.summary,
             *assessment.category_fit.reasons,
             *assessment.aesthetic_fit.reasons,
             *assessment.seller_compat.reasons,
+            *(assessment.retailer_kind_reasons or []),
+            *(assessment.sells_product_category_reasons or []),
         ]
     )
     for url in URL_PATTERN.findall(all_text):
