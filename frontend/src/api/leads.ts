@@ -22,6 +22,7 @@ export interface GetLeadsParams {
   location?: string;
   q?: string;
   sort?: "score_desc" | "name" | "newest" | string;
+  include_filtered?: boolean;
   page?: number;
   page_size?: number;
 }
@@ -41,6 +42,8 @@ export async function getLeads(
     }
     if (params.tier && params.tier !== "all") {
       filtered = filtered.filter((l) => l.tier === params.tier);
+    } else if (!params.include_filtered) {
+      filtered = filtered.filter((l) => l.tier !== "unqualified");
     }
     if (params.review_status && params.review_status !== "all") {
       filtered = filtered.filter((l) => l.review_status === params.review_status);
@@ -65,7 +68,7 @@ export async function getLeads(
         (l) =>
           l.name.toLowerCase().includes(q) ||
           l.canonical_domain.toLowerCase().includes(q) ||
-          l.retailer_type.toLowerCase().includes(q)
+          (l.retailer_type && l.retailer_type.toLowerCase().includes(q))
       );
     }
 
@@ -75,8 +78,13 @@ export async function getLeads(
     } else if (params.sort === "newest") {
       filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     } else {
-      // default score_desc
-      filtered.sort((a, b) => (b.scores.overall ?? -1) - (a.scores.overall ?? -1));
+      // default score_desc: null overall goes last
+      filtered.sort((a, b) => {
+        if (a.scores.overall === null && b.scores.overall === null) return 0;
+        if (a.scores.overall === null) return 1;
+        if (b.scores.overall === null) return -1;
+        return (b.scores.overall ?? 0) - (a.scores.overall ?? 0);
+      });
     }
 
     const page = params.page || 1;
@@ -101,6 +109,7 @@ export async function getLeads(
   if (params.location) query.set("location", params.location);
   if (params.q) query.set("q", params.q);
   if (params.sort) query.set("sort", params.sort);
+  if (params.include_filtered !== undefined) query.set("include_filtered", String(params.include_filtered));
   if (params.page) query.set("page", String(params.page));
   if (params.page_size) query.set("page_size", String(params.page_size));
 

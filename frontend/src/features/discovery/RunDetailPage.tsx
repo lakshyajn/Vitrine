@@ -11,6 +11,7 @@ import {
   Sparkles,
   Loader2,
   RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 import {
   getResearchRun,
@@ -554,23 +555,52 @@ export function RunDetailPage() {
 
       {/* Completion Banner */}
       {run.status === "completed" && (
-        <div className="rounded-2xl border border-emerald-300 bg-emerald-50/70 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h3 className="font-display text-base font-semibold text-emerald-950">
-              Discovery Run Completed
-            </h3>
-            <p className="text-xs text-emerald-800">
-              Web evidence extraction, official domain verification, and dimensional fit scoring have concluded.
-            </p>
+        <div className="rounded-2xl border border-emerald-300 bg-emerald-50/70 p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="font-display text-base font-semibold text-emerald-950">
+                Discovery Run Completed
+              </h3>
+              <p className="text-xs text-emerald-800">
+                Web evidence extraction, official domain verification, and dimensional fit scoring have concluded.
+              </p>
+              {run.plan?.notes && (
+                <div className="mt-2 text-xs font-medium text-emerald-900 bg-emerald-100/90 rounded-lg px-3 py-1.5 border border-emerald-200 inline-block">
+                  {run.plan.notes}
+                </div>
+              )}
+            </div>
+            <Link
+              to={`/app/leads?run_id=${run.id}`}
+              data-btn-primary
+              className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors whitespace-nowrap self-start sm:self-auto"
+            >
+              <Compass className="size-4" />
+              <span>View Discovered Buyer Leads</span>
+            </Link>
           </div>
-          <Link
-            to={`/app/leads?run_id=${run.id}`}
-            data-btn-primary
-            className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors whitespace-nowrap"
-          >
-            <Compass className="size-4" />
-            <span>View Discovered Buyer Leads</span>
-          </Link>
+
+          {/* When all results were filtered out */}
+          {run.plan?.notes && run.plan.notes.includes("0 candidate leads found") && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs">
+                <AlertTriangle className="size-4 text-amber-600" />
+                <span>No relevant retailers found. Try a more specific category or region.</span>
+              </div>
+              <p className="text-xs text-amber-800">
+                All candidates were excluded by quality/relevance filters (e.g. non-retail domains, educational sites, or non-matching product categories).
+              </p>
+              <button
+                type="button"
+                disabled={isRerunning}
+                onClick={handleRerun}
+                className="inline-flex items-center gap-2 rounded-lg border border-amber-400 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-950 hover:bg-amber-200 transition-colors shadow-xs"
+              >
+                <RefreshCw className={`size-3.5 ${isRerunning ? "animate-spin" : ""}`} />
+                <span>Adjust Parameters & Rerun</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

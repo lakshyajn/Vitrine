@@ -38,6 +38,7 @@ export function LeadsListPage() {
   const qParam = searchParams.get("q") || "";
   const sortParam = searchParams.get("sort") || "score_desc";
   const pageParam = parseInt(searchParams.get("page") || "1", 10);
+  const includeFilteredParam = searchParams.get("include_filtered") === "true";
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
@@ -71,6 +72,7 @@ export function LeadsListPage() {
         review_status: reviewStatusParam !== "all" ? reviewStatusParam : undefined,
         q: qParam || undefined,
         sort: sortParam,
+        include_filtered: includeFilteredParam || undefined,
         page: pageParam,
         page_size: 10,
       });
@@ -85,7 +87,7 @@ export function LeadsListPage() {
         setIsLoading(false);
       }
     }
-  }, [runId, productId, tierParam, reviewStatusParam, qParam, sortParam, pageParam]);
+  }, [runId, productId, tierParam, reviewStatusParam, qParam, sortParam, pageParam, includeFilteredParam]);
 
   useEffect(() => {
     fetchLeads();
@@ -256,6 +258,27 @@ export function LeadsListPage() {
               </button>
             );
           })}
+
+          <button
+            type="button"
+            onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              if (includeFilteredParam) {
+                next.delete("include_filtered");
+              } else {
+                next.set("include_filtered", "true");
+              }
+              next.set("page", "1");
+              setSearchParams(next);
+            }}
+            className={`rounded-full px-3 py-1 font-medium transition-colors ml-auto border ${
+              includeFilteredParam
+                ? "bg-rose-100 text-rose-800 border-rose-300 font-semibold"
+                : "bg-surface-subtle text-muted hover:bg-surface-subtle/80 hover:text-ink border-border"
+            }`}
+          >
+            {includeFilteredParam ? "✓ Showing Filtered Leads" : "Show Filtered-Out Results"}
+          </button>
         </div>
 
         {/* Active run or product banner */}
@@ -321,9 +344,15 @@ export function LeadsListPage() {
                     {(lead.tier || "needs_review").replace("_", " ")}
                   </span>
 
-                  <span className="rounded bg-surface-subtle px-2 py-0.5 text-[11px] font-semibold text-muted border border-border">
-                    {lead.retailer_type}
-                  </span>
+                  {(lead.retailer_kind && lead.retailer_kind !== "unknown") ? (
+                    <span className="rounded bg-surface-subtle px-2 py-0.5 text-[11px] font-semibold text-muted border border-border capitalize">
+                      {lead.retailer_kind.replace("_", " ")}
+                    </span>
+                  ) : (lead.retailer_type && lead.retailer_type !== "unknown" && lead.retailer_type !== "boutique") ? (
+                    <span className="rounded bg-surface-subtle px-2 py-0.5 text-[11px] font-semibold text-muted border border-border capitalize">
+                      {lead.retailer_type}
+                    </span>
+                  ) : null}
 
                   <span
                     className={`rounded px-2 py-0.5 text-[11px] font-semibold uppercase ${
@@ -411,6 +440,20 @@ export function LeadsListPage() {
                   <p className="text-xs text-muted line-clamp-1 italic">
                     "{lead.assessment.summary}"
                   </p>
+                )}
+
+                {lead.tier === "unqualified" && lead.scores.tier_reasons && lead.scores.tier_reasons.length > 0 && (
+                  <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50/90 p-2.5 text-xs text-rose-900 space-y-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-rose-800">
+                      <XCircle className="size-3.5 text-rose-600 flex-shrink-0" />
+                      <span>Filtered out (Unqualified)</span>
+                    </div>
+                    <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-rose-800">
+                      {lead.scores.tier_reasons.map((reason, idx) => (
+                        <li key={idx}>{reason}</li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
 

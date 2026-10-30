@@ -170,9 +170,15 @@ export function LeadDetailPage() {
               <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-ink">
                 {lead.name}
               </h1>
-              <span className="rounded bg-surface-subtle px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-muted border border-border">
-                {lead.retailer_type}
-              </span>
+              {(lead.retailer_kind && lead.retailer_kind !== "unknown") ? (
+                <span className="rounded bg-surface-subtle px-2 py-0.5 text-xs font-semibold capitalize tracking-wider text-muted border border-border">
+                  {lead.retailer_kind.replace("_", " ")}
+                </span>
+              ) : (lead.retailer_type && lead.retailer_type !== "unknown" && lead.retailer_type !== "boutique") ? (
+                <span className="rounded bg-surface-subtle px-2 py-0.5 text-xs font-semibold capitalize tracking-wider text-muted border border-border">
+                  {lead.retailer_type}
+                </span>
+              ) : null}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted">
               {lead.location && (
@@ -377,7 +383,7 @@ export function LeadDetailPage() {
             label="Aesthetic Fit"
             score={lead.scores.aesthetic_fit}
             dimensionLabel={lead.assessment?.aesthetic_fit.label}
-            description="Alignment with maker's botanical, artisanal, and slow-craft aesthetic."
+            description="Alignment with maker's aesthetic candidates and design vocabulary."
           />
           <ScoreBar
             label="Seller Compatibility"

@@ -313,6 +313,15 @@ export interface EvidenceItem {
   is_demo: boolean;
 }
 
+export type RetailerKind =
+  | "retailer"
+  | "maker_brand"
+  | "marketplace"
+  | "media_reference"
+  | "institution"
+  | "other"
+  | "unknown";
+
 export interface Lead {
   id: string;
   owner_id?: string | null;
@@ -322,7 +331,8 @@ export interface Lead {
   website: string;
   canonical_domain: string;
   location?: LeadLocation | null;
-  retailer_type: string;
+  retailer_type?: string | null;
+  retailer_kind?: RetailerKind | null;
   website_verified: boolean;
   website_checked_at?: string | null;
   tier: LeadTier;
