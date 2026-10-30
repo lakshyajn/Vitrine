@@ -1,33 +1,31 @@
 
-# AGENT.md — Shared Project Context (Read Before Touching Any Code)
+# AGENT.md: Shared Project Context (Read Before Touching Any Code)
 
 > **Product name:** Not final (working options: *Stockist*, *Vitrine*, *Shelfmark*, *Serai*, *Weft*).
-> Call it **"the product"** in code comments, docs, and UI-copy drafts[cite: 1].
-> The three workstream specs carry an earlier placeholder title in their headers, file names, a repo-folder example, and one UI note[cite: 1]. **Never use that old placeholder name.** Never hard-code any product name into package names, env vars, DB names, repo paths, or scattered UI strings[cite: 1].
+> Call it **"the product"** in code comments, docs, and UI-copy drafts.
+> The three workstream specs carry an earlier placeholder title in their headers, file names, a repo-folder example, and one UI note. **Never use that old placeholder name.** Never hard-code any product name into package names, env vars, DB names, repo paths, or scattered UI strings.
 >
-> - **Frontend:** Use ONE constant (`frontend/src/config/brand.ts` exporting `BRAND_NAME`)[cite: 1].
-> - **Backend / AI / Repo:** Stay completely name-agnostic[cite: 1].
+> - **Frontend:** Use ONE constant (`frontend/src/config/brand.ts` exporting `BRAND_NAME`).
+> - **Backend / AI / Repo:** Stay completely name-agnostic.
 
 ---
 
 ## 0. How to use this file
 
-Give your LLM: **this file + your own workstream spec + `contracts/` once it exists**[cite: 1].
-Tell it which workstream you own[cite: 1]:
+Give your LLM: **this file + your own workstream spec + `contracts/` once it exists**.
+Tell it which workstream you own:
 
-- **WS1:** Frontend & UX (`frontend/**`)[cite: 1]
-- **WS2:** Backend, Data & Workflow (`backend/app/**`, `supabase/**`)[cite: 1]
-- **WS3:** AI & Research Integrations (`backend/ai/**`, `backend/research/**`, `backend/integrations/qloo/**`, `fixtures/**`, `eval/**`)[cite: 1]
+- **WS1:** Frontend & UX (`frontend/**`)
+- **WS2:** Backend, Data & Workflow (`backend/app/**`, `supabase/**`)
+- **WS3:** AI & Research Integrations (`backend/ai/**`, `backend/research/**`, `backend/integrations/qloo/**`, `fixtures/**`, `eval/**`)
 
-If your LLM does not know which workstream it is acting for, **it must ask before writing code**[cite: 1].
+If your LLM does not know which workstream it is acting for, **it must ask before writing code**.
 
 ### Precedence when sources disagree
 
-| Rank | Source                                                      | Wins for                                                                                         |
-| :--- | :---------------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
-| 1    | `contracts/` in the repo + committed schemas              | Exact paths, field names, enums, payload shapes, error codes[cite: 1]                            |
-| 2    | Your workstream spec (Appendix A is identical in all three) | Your layer's internal architecture, day-by-day plan, acceptance criteria[cite: 1]                |
-| 3    | This`AGENT.md` file                                       | Cross-workstream integration rules, resolves spec contradictions, edge cases, debugging[cite: 1] |
+* **Rank 1: `contracts/` in the repo + committed schemas:** Wins for exact paths, field names, enums, payload shapes, and error codes.
+* **Rank 2: Your workstream spec (Appendix A is identical in all three):** Wins for your layer's internal architecture, day-by-day plan, and acceptance criteria.
+* **Rank 3: This `AGENT.md` file:** Wins for cross-workstream integration rules, resolving spec contradictions, edge cases, and debugging.
 
 This file is the cross-workstream integration contract and guardrail digest[cite: 1]. If it contradicts `contracts/`, `contracts/` wins and this file needs a fix PR[cite: 1]. If two sources conflict and the answer is not already resolved in **Section 11** of this file, **do not pick silently**: state the conflict, propose a resolution, and record it in `docs/decisions.md`[cite: 1].
 
@@ -55,35 +53,41 @@ An AI-assisted **retailer-discovery and outreach-preparation tool** for small ph
 
 **In scope for v0.1:** Everything in the 8-step journey above[cite: 1].
 
-**Out of scope — Do NOT build, stub, scaffold, "prepare for", or add dependencies for:**
+**Out of scope: Do NOT build, stub, scaffold, "prepare for", or add dependencies for:**
 
-- **Any payment provider (PayPal or other):** No SDK, invoice, webhook, payment-state, or payment UI anywhere[cite: 1, 2, 3, 4].
-- **Orders & quotes:** No order tracking, quote builders, buyer-reply parsing, or "Orders & Payments" screens[cite: 1].
-- **Outbound email sending:** No SMTP/SendGrid/Resend, no `send` endpoint, and **no Send button** in the UI[cite: 1, 3]. Outreach is draft, edit, copy to clipboard, and manual status tracking only[cite: 1, 2, 3, 4].
-- **Bloat:** No large agent frameworks (LangChain/CrewAI/AutoGen), fine-tuning, computer vision, voice, or multi-tenant admin portals[cite: 1].
-- **Scraping abuse:** Never bypass logins, paywalls, robots restrictions, or anti-bot walls[cite: 1, 4].
-- **Guessed Qloo schemas:** Never invent Qloo API endpoints, parameter names, or response fields before real API docs/responses are in hand[cite: 1, 4]. Use the internal `TasteResearchProvider` interface and `MockTasteProvider` (`is_demo: true`) until the key arrives[cite: 1, 4].
+- **Any payment provider (PayPal or other):** No SDK, invoice, webhook, payment-state, or payment UI anywhere.
+- **Orders & quotes:** No order tracking, quote builders, buyer-reply parsing, or "Orders & Payments" screens.
+- **Outbound email sending:** No SMTP/SendGrid/Resend, no `send` endpoint, and **no Send button** in the UI. Outreach is draft, edit, copy to clipboard, and manual status tracking only.
+- **Bloat:** No large agent frameworks (LangChain/CrewAI/AutoGen), fine-tuning, computer vision, voice, or multi-tenant admin portals.
+- **Scraping abuse:** Never bypass logins, paywalls, robots restrictions, or anti-bot walls.
+- **Guessed Qloo schemas:** Never invent Qloo API endpoints, parameter names, or response fields before real API docs/responses are in hand. Use the internal `TasteResearchProvider` interface and `MockTasteProvider` (`is_demo: true`) until the key arrives.
 
-If a task seems to require anything above, **stop and ask**[cite: 1]. A later phase can only start after an explicit team decision, a reviewed contract PR, and a recorded owner[cite: 1].
+If a task seems to require anything above, **stop and ask**. A later phase can only start after an explicit team decision, a reviewed contract PR, and a recorded owner.
 
 ### Fixed demo scenario (all three workstreams build and test against this)
 
-- **Seller:** "Sample Seller" (small textile workshop; origin country is an optional field, never hard-coded)[cite: 1, 2, 3, 4].
-- **Catalogue:** Block-printed cotton table runner; cushion cover set; table linen set; throw[cite: 1, 2, 3, 4].
-- **Core attributes:** Botanical motifs; warm earthy colours (`terracotta`, `indigo`, `ochre`); `mid_premium` positioning; MOQ `50` sets; monthly capacity `1500` units (placeholders)[cite: 1, 2, 3, 4].
-- **Target buyers:** Independent home-decor boutiques, home-textile retailers, interior and lifestyle shops[cite: 1, 2, 3, 4].
-- **Truth rule:** Seeded seller/product data is fictional and **labelled demo** (`is_demo: true`); retailer claims and URLs shown as live results must be real and verifiable[cite: 1].
+- **Seller:** "Sample Seller" (small textile workshop; origin country is an optional field, never hard-coded).
+- **Catalogue:** Block-printed cotton table runner; cushion cover set; table linen set; throw.
+- **Core attributes:** Botanical motifs; warm earthy colours (`terracotta`, `indigo`, `ochre`); `mid_premium` positioning; MOQ `50` sets; monthly capacity `1500` units (placeholders).
+- **Target buyers:** Independent home-decor boutiques, home-textile retailers, interior and lifestyle shops.
+- **Truth rule:** Seeded seller/product data is fictional and **labelled demo** (`is_demo: true`); retailer claims and URLs shown as live results must be real and verifiable.
 
 ---
 
 ## 2. Ownership and dependency direction
 
-| Workstream                               | Owns                                                                                                                                                                                                      | Never touches                                                                                                                 |
-| :--------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- |
-| **WS1 (Frontend & UX)**            | `frontend/**`: screens, routing, design system, forms, Zod schemas, typed API client, mock-data layer (`VITE_USE_MOCK`), loading/empty/error states, responsive + a11y[cite: 1, 3]                    | DB, auth verification rules, backend endpoints, scoring math, prompts, any provider client, any secret API key[cite: 1, 3]    |
-| **WS2 (Backend, Data & Workflow)** | `backend/app/**` (api, db + SQL migrations, auth, jobs, scoring), Supabase + RLS, run state machine and async runner, persistence of every AI/Tavily/taste output, `/integrations/status`[cite: 1, 2] | React code, prompt templates, direct Nebius/Tavily/Qloo HTTP calls (must call WS3 factories only), model tuning[cite: 1, 2]   |
-| **WS3 (AI & Research)**            | `backend/ai/**`, `backend/research/**`, `backend/integrations/qloo/**`, `fixtures/**`, `eval/**`, model call logging[cite: 1, 4]                                                                | FastAPI endpoints, DB queries/writes, auth, job runner, scoring math/weights, React code, invented Qloo behaviour[cite: 1, 4] |
-| **Shared**                         | `contracts/`, `docs/decisions.md`, `docs/readiness.md`[cite: 1, 2, 3, 4]                                                                                                                            | Changes require a PR reviewed by all three owners[cite: 1, 2, 3, 4]                                                           |
+* **WS1 (Frontend & UX):**
+  * **Owns:** `frontend/**`: screens, routing, design system, forms, Zod schemas, typed API client, mock-data layer (`VITE_USE_MOCK`), loading/empty/error states, responsive layout, and accessibility.
+  * **Never touches:** DB, auth verification rules, backend endpoints, scoring math, prompts, provider clients, or secret API keys.
+* **WS2 (Backend, Data & Workflow):**
+  * **Owns:** `backend/app/**` (API, DB and SQL migrations, auth, background jobs, deterministic scoring), Supabase and RLS, run state machine and async runner, persistence of AI/Tavily/taste outputs, and `/integrations/status`.
+  * **Never touches:** React code, prompt templates, direct Nebius/Tavily/Qloo HTTP calls (must call WS3 factories only), or model tuning.
+* **WS3 (AI & Research):**
+  * **Owns:** `backend/ai/**`, `backend/research/**`, `backend/integrations/qloo/**`, `fixtures/**`, `eval/**`, model call logging.
+  * **Never touches:** FastAPI endpoints, DB queries/writes, auth, job runner, scoring math/weights, React code, or invented Qloo schemas.
+* **Shared:**
+  * **Owns:** `contracts/`, `docs/decisions.md`, `docs/readiness.md`.
+  * **Governance:** Changes require a PR reviewed by all three owners.
 
 ### Direction of calls (no shortcuts)
 
@@ -103,46 +107,83 @@ If a task seems to require anything above, **stop and ask**[cite: 1]. A later ph
 
 ## 3. End-to-end flow: exact hand-offs at each step
 
-| #  | Step                         | WS1 (UI / Client)                                                                                                                                                                                                                              | WS2 (API / State / DB)                                                                                                                                                                                                                                                                                                                                                         | WS3 (AI / Research / Taste)                                                                                                                                                                                                                             |
-| :- | :--------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0  | Auth & Profile               | Supabase sign-in; first-time seller profile form (`GET/PUT /profile`)[cite: 3]                                                                                                                                                               | Verifies Supabase JWT (`user_id` from token); upserts `profiles` row[cite: 2]                                                                                                                                                                                                                                                                                              | —                                                                                                                                                                                                                                                      |
-| 1  | Create Product               | Product Passport form (Zod mirrors contract);`POST /products`, `POST /products/{id}/images`[cite: 1, 3]                                                                                                                                    | Validates (`price_min <= price_max`, `moq >= 1`), sets `owner_id` from JWT, persists[cite: 1, 2]                                                                                                                                                                                                                                                                         | —                                                                                                                                                                                                                                                      |
-| 2  | AI Suggest                   | Sends description + known fields to`POST /products/extract-profile`; renders side-by-side diff review panel; **nothing saved until seller accepts**; form survives any error[cite: 1, 3]                                               | Calls`get_ai_service().structure_product(...)`; returns suggestion **without writing to DB**[cite: 1, 2]                                                                                                                                                                                                                                                               | Task A (`structure_product`) -> `ProductAttributes` (+ `uncertain_fields[]`, `assumptions[]`)[cite: 1, 4]                                                                                                                                       |
-| 3  | Start Run                    | Start panel; sends`POST /research-runs` with `Idempotency-Key` header[cite: 1, 2, 3]                                                                                                                                                       | Creates`research_runs` row (`status: queued`, `stage: planning`), snapshots `provider_modes` (`live` vs `mock`)[cite: 1, 2]                                                                                                                                                                                                                                        | —                                                                                                                                                                                                                                                      |
-| 4  | Plan & Propose Anchors       | StatusStepper polls`GET /research-runs/{id}` every 2–3s while `queued` or `running`[cite: 1, 3]                                                                                                                                         | Runner calls`plan_research(product)`; saves `plan`; creates `taste_anchors` (`source: ai_proposed`, `status: proposed`) and initial `market_hypotheses`; sets `status: awaiting_review`, `stage: anchor_review` (see D15)[cite: 1, 2]                                                                                                                          | Task B (`plan_research`) -> `ResearchPlan` (proposals only; never claims a provider returned data)[cite: 1, 4]                                                                                                                                      |
-| 5  | Anchor Review                | Lists anchors with source/demo badges; confirm / reject / edit (`PATCH /taste-anchors/{id}`) / add custom (`POST /research-runs/{id}/anchors`); clicks Continue (`POST .../confirm-anchors`)[cite: 1, 3]                                 | Updates anchors;`confirm-anchors` requires `>= 1` confirmed anchor (or `proceed_without_anchors: true`); transitions run to `status: queued`[cite: 1, 2]                                                                                                                                                                                                               | —                                                                                                                                                                                                                                                      |
-| 6  | Taste Resolution & Discovery | Stepper shows`discovery` stage and elapsed time[cite: 1, 3]                                                                                                                                                                                  | Runner resolves confirmed anchors via`get_taste_provider()` (`search_entities` + `get_insights`), copies `source` & `is_demo` to anchors/hypothesis signals; calls `ResearchPipeline.run(..., on_progress)`; enforces lead cap (default 40)[cite: 1, 2, 4]                                                                                                         | Taste provider (`MockTasteProvider` until Qloo key) -> entities/signals; Tavily search -> extract -> deterministic HTTP verify -> domain match -> dedupe -> `LeadCandidate[]`[cite: 1, 4]                                                           |
-| 7  | Assess & Score               | Stepper shows`assessment` -> `scoring` -> `done`[cite: 1, 2]                                                                                                                                                                             | **First** upserts lead + `lead_evidence` rows so each `EvidenceItem` has a real UUID (D8); **then** calls `assess_lead(product, candidate, evidence_items)`; **then** runs deterministic scoring + tiering (Section 6) and updates the lead[cite: 1, 2]. Per-lead failure -> sets `tier: needs_review` + error note without aborting run[cite: 1, 2] | Task C (`assess_lead`) -> `LeadAssessment` (labels, reasons, cited `evidence_ids[]`, `unknowns[]`); post-checks reject any claim citing a non-existent `evidence_id`[cite: 1, 4]                                                              |
-| 8  | Buyer Leads                  | Table with search/filters/sort/pagination; detail drawer with`ScoreBar`s, `tier_reasons`, `unknowns`, `EvidenceCard`s, separate Cultural Affinity box; Save/Reject/Note with optimistic update[cite: 1, 3]                             | `GET /leads` (filtered/paged), `GET/PATCH /leads/{id}`, `GET /leads/{id}/evidence`[cite: 1, 2]                                                                                                                                                                                                                                                                           | —                                                                                                                                                                                                                                                      |
-| 9  | Outreach Studio              | Shows product facts & lead evidence; Generate (`POST /leads/{id}/outreach-drafts`), edit subject/body (auto-save via `PATCH`), view version history, Regenerate (`POST /outreach-drafts/{id}/regenerate`), copy to clipboard[cite: 1, 3] | Persists drafts with`version` incrementing per lead; regeneration **inserts a new version row** (never overwrites); `PATCH` updates subject/body/status/notes[cite: 1, 2, 3]                                                                                                                                                                                         | Task D (`draft_outreach`) -> builds numbered fact list from approved product fields + stored evidence -> returns `OutreachDraft` (`subject`, `body`, `facts_used[]`, `warnings[]`); post-checks block hallucinated URLs/numbers[cite: 1, 4] |
-| 10 | Manual Status                | Seller switches`draft -> ready -> contacted` and writes follow-up notes. **No send button**[cite: 1, 3].                                                                                                                               | When`PATCH /outreach-drafts/{id}` sets `status = contacted`, WS2 atomically sets parent `lead.review_status = contacted` (D11)[cite: 1, 3]                                                                                                                                                                                                                               | —                                                                                                                                                                                                                                                      |
+<div align="justify">
+
+* **Step 0: Auth & Profile:**
+  * *WS1 (UI):* Supabase sign-in; first-time seller profile form (`GET/PUT /profile`).
+  * *WS2 (API/DB):* Verifies Supabase JWT (`user_id` from token); upserts `profiles` row.
+  * *WS3 (AI/Taste):* None.
+* **Step 1: Create Product:**
+  * *WS1 (UI):* Product Passport form (Zod mirrors contract); `POST /products`, `POST /products/{id}/images`.
+  * *WS2 (API/DB):* Validates (`price_min <= price_max`, `moq >= 1`), sets `owner_id` from JWT, persists.
+  * *WS3 (AI/Taste):* None.
+* **Step 2: AI Suggest:**
+  * *WS1 (UI):* Sends description + known fields to `POST /products/extract-profile`; renders side-by-side diff review panel; nothing saved until seller accepts; form survives any error.
+  * *WS2 (API/DB):* Calls `get_ai_service().structure_product(...)`; returns suggestion without writing to DB.
+  * *WS3 (AI/Taste):* Task A (`structure_product`) -> `ProductAttributes` (+ `uncertain_fields[]`, `assumptions[]`).
+* **Step 3: Start Run:**
+  * *WS1 (UI):* Start panel; sends `POST /research-runs` with `Idempotency-Key` header.
+  * *WS2 (API/DB):* Creates `research_runs` row (`status: queued`, `stage: planning`), snapshots `provider_modes` (`live` vs `mock`).
+  * *WS3 (AI/Taste):* None.
+* **Step 4: Plan & Propose Anchors:**
+  * *WS1 (UI):* StatusStepper polls `GET /research-runs/{id}` every 2-3s while `queued` or `running`.
+  * *WS2 (API/DB):* Runner calls `plan_research(product)`; saves `plan`; creates `taste_anchors` (`source: ai_proposed`, `status: proposed`) and initial `market_hypotheses`; sets `status: awaiting_review`, `stage: anchor_review`.
+  * *WS3 (AI/Taste):* Task B (`plan_research`) -> `ResearchPlan` (proposals only; never claims a provider returned data).
+* **Step 5: Anchor Review:**
+  * *WS1 (UI):* Lists anchors with source/demo badges; confirm, reject, edit (`PATCH /taste-anchors/{id}`), or add custom (`POST /research-runs/{id}/anchors`); clicks Continue (`POST .../confirm-anchors`).
+  * *WS2 (API/DB):* Updates anchors; `confirm-anchors` requires `>= 1` confirmed anchor (or `proceed_without_anchors: true`); transitions run to `status: queued`.
+  * *WS3 (AI/Taste):* None.
+* **Step 6: Taste Resolution & Discovery:**
+  * *WS1 (UI):* Stepper shows `discovery` stage and elapsed time.
+  * *WS2 (API/DB):* Runner resolves confirmed anchors via `get_taste_provider()` (`search_entities` + `get_insights`), copies `source` & `is_demo` to anchors/hypothesis signals; calls `ResearchPipeline.run(..., on_progress)`; enforces lead cap (default 40).
+  * *WS3 (AI/Taste):* Taste provider (`MockTasteProvider` until Qloo key) -> entities/signals; Tavily search -> extract -> deterministic HTTP verify -> domain match -> dedupe -> `LeadCandidate[]`.
+* **Step 7: Assess & Score:**
+  * *WS1 (UI):* Stepper shows `assessment` -> `scoring` -> `done`.
+  * *WS2 (API/DB):* First upserts lead + `lead_evidence` rows so each `EvidenceItem` has a real UUID; then calls `assess_lead(product, candidate, evidence_items)`; then runs deterministic scoring + tiering and updates the lead.
+  * *WS3 (AI/Taste):* Task C (`assess_lead`) -> `LeadAssessment` (labels, reasons, cited `evidence_ids[]`, `unknowns[]`); post-checks reject any claim citing a non-existent `evidence_id`.
+* **Step 8: Buyer Leads:**
+  * *WS1 (UI):* Table with search/filters/sort/pagination; detail drawer with `ScoreBar`s, `tier_reasons`, `unknowns`, `EvidenceCard`s, separate Cultural Affinity box; Save/Reject/Note with optimistic update.
+  * *WS2 (API/DB):* `GET /leads` (filtered/paged), `GET/PATCH /leads/{id}`, `GET /leads/{id}/evidence`.
+  * *WS3 (AI/Taste):* None.
+* **Step 9: Outreach Studio:**
+  * *WS1 (UI):* Shows product facts & lead evidence; Generate (`POST /leads/{id}/outreach-drafts`), edit subject/body (auto-save via `PATCH`), view version history, Regenerate (`POST /outreach-drafts/{id}/regenerate`), copy to clipboard.
+  * *WS2 (API/DB):* Persists drafts with `version` incrementing per lead; regeneration inserts a new version row (never overwrites); `PATCH` updates subject/body/status/notes.
+  * *WS3 (AI/Taste):* Task D (`draft_outreach`) -> builds numbered fact list from approved product fields + stored evidence -> returns `OutreachDraft` (`subject`, `body`, `facts_used[]`, `warnings[]`); post-checks block hallucinated URLs/numbers.
+* **Step 10: Manual Status:**
+  * *WS1 (UI):* Seller switches `draft -> ready -> contacted` and writes follow-up notes. No send button.
+  * *WS2 (API/DB):* When `PATCH /outreach-drafts/{id}` sets `status = contacted`, WS2 atomically sets parent `lead.review_status = contacted`.
+  * *WS3 (AI/Taste):* None.
+
+</div>
 
 ---
 
-## 4. Contract digest (v0.1 — verify against `contracts/`)
+## 4. Contract digest (v0.1: verify against `contracts/`)
 
-- **Format:** IDs are UUIDs[cite: 1, 2, 3, 4]. Timestamps are ISO 8601 UTC strings[cite: 1, 2, 3, 4]. Base path `/api/v1`[cite: 1, 2, 3, 4].
-- **Auth:** Every route except `GET /health` requires `Authorization: Bearer <Supabase JWT>`[cite: 1, 2, 3, 4].
-- **Wire case:** **`snake_case` end-to-end** (`is_demo`, `review_status`, `price_min`, `facts_used`)[cite: 1]. Frontend TypeScript interfaces, Zod schemas, and mock fixtures **must use `snake_case`** to match the API exactly[cite: 1]. Do not use `isDemo` in frontend mocks[cite: 1].
-- **Evolution:** Optional fields may be added via coordinated update; **renames and removals require a PR approved by all three owners**[cite: 1, 2, 3, 4].
+- **Format:** IDs are UUIDs. Timestamps are ISO 8601 UTC strings. Base path `/api/v1`.
+- **Auth:** Every route except `GET /health` requires `Authorization: Bearer <Supabase JWT>`.
+- **Wire case:** **`snake_case` end-to-end** (`is_demo`, `review_status`, `price_min`, `facts_used`). Frontend TypeScript interfaces, Zod schemas, and mock fixtures **must use `snake_case`** to match the API exactly. Do not use `isDemo` in frontend mocks.
+- **Evolution:** Optional fields may be added via coordinated update; **renames and removals require a PR approved by all three owners**.
 
 ### 4.1 Enumerations (Exact Values)
 
-| Enum                         | Exact Allowed Values                                                                                                         | Critical Rule                                                                                                                                    |
-| :--------------------------- | :--------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `research_run.status`      | `queued`, `running`, `awaiting_review`, `completed`, `failed`[cite: 1, 2, 3, 4]                                    | Runner stops at`awaiting_review` until seller confirms[cite: 1, 2]                                                                             |
-| `research_run.stage`       | `planning`, `anchor_proposal`, `anchor_review`, `discovery`, `assessment`, `scoring`, `done`[cite: 1, 2, 3, 4] | Updated at every transition[cite: 1, 2]                                                                                                          |
-| `lead.review_status`       | `new`, `saved`, `rejected`, `contacted`[cite: 1, 2, 3, 4]                                                            | "Saved leads" =`review_status == 'saved'` (no separate table)[cite: 2]                                                                         |
-| `lead.tier`                | `qualified`, `needs_review`, `unqualified`[cite: 1, 2, 3, 4]                                                           | Missing evidence pushes toward`needs_review`, never `unqualified`[cite: 1, 2]                                                                |
-| `outreach_draft.status`    | `draft`, `ready`, `contacted`[cite: 1, 2, 3, 4]                                                                        | Manual tracking only[cite: 1, 2, 3, 4]                                                                                                           |
-| `taste_anchor.status`      | `proposed`, `confirmed`, `rejected`[cite: 1, 2, 3, 4]                                                                  | —                                                                                                                                               |
-| `taste_anchor.source`      | `ai_proposed`, `user_added`, `qloo`, `demo`[cite: 1, 2, 3, 4]                                                        | `qloo` is **ONLY** set from a real Qloo API response[cite: 1, 2, 3, 4]                                                                   |
-| `market_hypothesis.status` | `proposed`, `confirmed`, `rejected`[cite: 1]                                                                           | Default`proposed` (see D13)[cite: 1]                                                                                                           |
-| **Dimension label**    | `high`, `medium`, `low`, `unknown`[cite: 1, 2, 3, 4]                                                                 | Applies to`category_fit`, `aesthetic_fit`, **and** `seller_compat` (see D14). `unknown` = no evidence either way[cite: 1, 2, 3, 4] |
-| `evidence.source_type`     | `official_site`, `product_page`, `social`, `directory`, `press`, `marketplace`, `other`[cite: 1, 2, 3, 4]      | Classified deterministically where possible[cite: 4]                                                                                             |
-| **Provenance tag**     | `verified_fact`, `ai_assessment`, `unknown`, `demo_data`[cite: 1, 2, 3, 4]                                           | Every claim in the UI carries one[cite: 2, 3, 4]                                                                                                 |
-| **Integration state**  | `live`, `mock`, `pending`, `disabled`[cite: 1, 2, 3, 4]                                                              | Used by`/integrations/status` and `provider_modes` (D1)[cite: 1]                                                                             |
-| `price_segment`            | `budget`, `mid`, `mid_premium`, `premium`, `luxury`[cite: 1, 2, 3, 4]                                              | —                                                                                                                                               |
+<div align="justify">
+
+* `research_run.status`: `queued`, `running`, `awaiting_review`, `completed`, `failed`. Runner stops at `awaiting_review` until seller confirms.
+* `research_run.stage`: `planning`, `anchor_proposal`, `anchor_review`, `discovery`, `assessment`, `scoring`, `done`. Updated at every transition.
+* `lead.review_status`: `new`, `saved`, `rejected`, `contacted`. "Saved leads" equals `review_status == 'saved'` (no separate table).
+* `lead.tier`: `qualified`, `needs_review`, `unqualified`. Missing evidence pushes toward `needs_review`, never `unqualified`.
+* `outreach_draft.status`: `draft`, `ready`, `contacted`. Manual tracking only.
+* `taste_anchor.status`: `proposed`, `confirmed`, `rejected`.
+* `taste_anchor.source`: `ai_proposed`, `user_added`, `qloo`, `demo`. Note that `qloo` is only set from a real Qloo API response.
+* `market_hypothesis.status`: `proposed`, `confirmed`, `rejected`. Default `proposed`.
+* Dimension labels (`category_fit`, `aesthetic_fit`, `seller_compat`): `high`, `medium`, `low`, `unknown`. Note that `unknown` indicates no evidence either way.
+* `evidence.source_type`: `official_site`, `product_page`, `social`, `directory`, `press`, `marketplace`, `other`. Classified deterministically where possible.
+* Provenance tags: `verified_fact`, `ai_assessment`, `unknown`, `demo_data`. Every claim in the UI carries one.
+* Integration states: `live`, `mock`, `pending`, `disabled`. Used by `/integrations/status` and `provider_modes`.
+* `price_segment`: `budget`, `mid`, `mid_premium`, `premium`, `luxury`.
+
+</div>
 
 ### 4.2 Core Data Objects (Agreed Minimum Fields)
 
@@ -193,13 +234,15 @@ If a task seems to require anything above, **stop and ask**[cite: 1]. A later ph
 
 A lead score is a **prioritisation heuristic for human review**, never a purchase probability[cite: 1, 2]. UI labels it **"Priority score"** (never "probability", "likelihood to buy", or "conversion")[cite: 1, 2, 3].
 
-| Dimension             | Source                                                  | Label-to-Score Mapping (0–100)                                                                                                                                                                                                                                                                     |
-| :-------------------- | :------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `category_fit`      | WS3 (`LeadAssessment.category_fit.label`)             | `high` -> `100`, `medium` -> `60`, `low` -> `20`, `unknown` -> **`null`**[cite: 1, 2]                                                                                                                                                                                         |
-| `aesthetic_fit`     | WS3 (`LeadAssessment.aesthetic_fit.label`)            | `high` -> `100`, `medium` -> `60`, `low` -> `20`, `unknown` -> **`null`**[cite: 1, 2]                                                                                                                                                                                         |
-| `evidence_quality`  | Computed deterministically by WS2 from`lead_evidence` | Start at`0`. `+40` `official_site` page present; `+20` `>= 2` distinct source URLs; `+20` `product_page` excerpt present; `+10` published/retrieved within 24 months where a date exists (no date = `+0`); `+10` location/contact verified in excerpt. Cap `100`[cite: 1, 2]. |
-| `seller_compat`     | WS3 (`LeadAssessment.seller_compat.label`)            | `high` (match) -> `100`, `medium` (adjacent) -> `60`, `low` (mismatch) -> `20`, `unknown` (no evidence) -> **`null`** *(See D14: wire enum is `high/medium/low/unknown`)*[cite: 2, 3, 4]                                                                                  |
-| `cultural_affinity` | Taste provider (real Qloo only)                         | Stored separately in`lead.cultural_affinity`. **Excluded from `overall` score.** Remains **`null`** until a validated real Qloo signal exists[cite: 1, 2, 3].                                                                                                                     |
+<div align="justify">
+
+* **`category_fit` (Source: WS3 `LeadAssessment.category_fit.label`):** `high` -> `100`, `medium` -> `60`, `low` -> `20`, `unknown` -> **`null`**.
+* **`aesthetic_fit` (Source: WS3 `LeadAssessment.aesthetic_fit.label`):** `high` -> `100`, `medium` -> `60`, `low` -> `20`, `unknown` -> **`null`**.
+* **`evidence_quality` (Source: Computed deterministically by WS2 from `lead_evidence`):** Start at `0`. `+40` `official_site` page present; `+20` `>= 2` distinct source URLs; `+20` `product_page` excerpt present; `+10` published or retrieved within 24 months; `+10` location/contact verified in excerpt. Capped at `100`.
+* **`seller_compat` (Source: WS3 `LeadAssessment.seller_compat.label`):** `high` (match) -> `100`, `medium` (adjacent) -> `60`, `low` (mismatch) -> `20`, `unknown` (no evidence) -> **`null`**.
+* **`cultural_affinity` (Source: Taste provider, real Qloo only):** Stored separately in `lead.cultural_affinity`. Excluded from `overall` score. Remains `null` until a validated real Qloo signal exists.
+
+</div>
 
 - **Weights:** `category_fit: 35`, `aesthetic_fit: 25`, `evidence_quality: 20`, `seller_compat: 20`[cite: 1, 2]. Keep weights and mappings in one config module with unit tests[cite: 1, 2].
 - **`overall`:** Weighted average over **non-null** dimensions with weights renormalised to 100%[cite: 1, 2]. If all four are `null`, `overall` is `null`[cite: 1, 2].
@@ -244,92 +287,201 @@ A lead score is a **prioritisation heuristic for human review**, never a purchas
 
 ## 9. Edge-case matrix: what each layer must do
 
-| Situation                                                     | WS3 (AI / Research)                                                                                                  | WS2 (Backend / Runner)                                                                                                                                                        | WS1 (Frontend / UI)                                                                                                 |
-| :------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------ |
-| Optional API key missing                                      | Factory returns fixture-backed service (`is_demo=True`)[cite: 1, 4]                                                | Run succeeds;`/integrations/status` & `provider_modes` report `mock`[cite: 1, 2]                                                                                        | `IntegrationBanner` shows `Mock (demo data)`; `<DemoBadge/>` shown on items[cite: 1, 3]                       |
-| Tavily returns 0 results                                      | Return`[]` + reason; never invent shops[cite: 1, 4]                                                                | Run finishes as`completed` with 0 leads + explanatory note in `plan`[cite: 1, 2]                                                                                          | `EmptyState` explains why and offers "Edit inputs & Rerun"[cite: 1, 3]                                            |
-| Model returns invalid JSON or unsupported claim               | 1 automatic repair retry passing validation errors; if still bad, raise`ai_output_invalid`[cite: 1, 4]             | Do not save invalid output. Global task (Task A/B/D) -> return error / fail stage. Per-lead (Task C) -> set lead`tier: needs_review` + error note, continue run[cite: 1, 2] | Show error message (no Retry button for`ai_output_invalid`); **preserve user form data**[cite: 1, 3]        |
-| Assessment cites unknown`evidence_id`                       | Rejected by deterministic claim check[cite: 1, 4]                                                                    | Never persisted[cite: 1]                                                                                                                                                      | —                                                                                                                  |
-| Provider timeout / 429 / 5xx                                  | Bounded retries with exponential backoff + jitter; raise`upstream_timeout` or `upstream_unavailable`[cite: 1, 4] | Map to A.5 error format; if in runner, fail run and record failing`stage`[cite: 1, 2]                                                                                       | Show`ErrorState` with **Retry / Rerun** button[cite: 1, 3]                                                  |
-| Taste provider returns empty or weak signals                  | Return empty/weak list as-is (`MockTasteProvider` includes these cases)[cite: 1, 4]                                | Store as returned; run continues; no fabricated score[cite: 1, 4]                                                                                                             | Show`"No signals returned for this anchor"`; do not hide section or pad with fake data[cite: 1, 3]                |
-| Seller clicks Continue with 0 confirmed anchors               | —                                                                                                                   | Return`422 validation_error` unless body has `{"proceed_without_anchors": true}`[cite: 1, 2]                                                                              | Disable Continue button until`>= 1` anchor confirmed, or offer explicit "Proceed without anchors" toggle[cite: 1] |
-| Duplicate lead: same`canonical_domain`                      | Merge evidence in pipeline[cite: 1, 4]                                                                               | `ON CONFLICT (owner_id, product_id, canonical_domain)` merges new evidence into existing lead[cite: 1, 2]                                                                   | Single lead row shown with combined evidence count[cite: 1]                                                         |
-| Duplicate lead: same normalized name + city, different domain | Flag via`possible_duplicate_of_domain` (D9)[cite: 1, 4]                                                            | Insert lead and set`duplicate_of = primary_lead.id`[cite: 1, 2]                                                                                                             | Render`"Possible duplicate"` badge linking to the primary lead; never silently hide[cite: 1, 3]                   |
-| Marketplace storefront URL (e.g. Etsy shop)                   | Key canonical identity by full shop path, not root marketplace domain[cite: 1, 4]                                    | Persist with shop-path canonical key or exclude if root marketplace[cite: 4]                                                                                                  | Displays shop URL accurately                                                                                        |
-| Server restarts mid-run                                       | —                                                                                                                   | Startup hook marks stale`running` rows (`heartbeat_at` expired) as `failed` (`"interrupted"`); leaves `awaiting_review` alone[cite: 1, 2]                           | Shows failed stage with Rerun button[cite: 1, 3]                                                                    |
-| Double-click on Start Research                                | —                                                                                                                   | `Idempotency-Key` header prevents duplicate run creation[cite: 1, 2]                                                                                                        | Sends`Idempotency-Key` header and disables button while submitting[cite: 1, 3]                                    |
-| Qloo key arrives                                              | Enable real provider behind`get_taste_provider()` per runbook[cite: 1, 4]                                          | Set`QLOO_API_KEY`; confirm `taste: live`; new runs get `source: qloo`, `is_demo: false`, real `external_id`[cite: 1, 2]                                             | Verify real signals render; old runs keep demo badges and are never mixed[cite: 1, 2]                               |
+<div align="justify">
+
+* **Optional API key missing:**
+  * *WS3 (AI/Research):* Factory returns fixture-backed service (`is_demo=True`).
+  * *WS2 (Backend/Runner):* Run succeeds; `/integrations/status` & `provider_modes` report `mock`.
+  * *WS1 (Frontend/UI):* `IntegrationBanner` shows `Mock (demo data)`; `<DemoBadge/>` shown on items.
+* **Tavily returns 0 results:**
+  * *WS3 (AI/Research):* Return `[]` + reason; never invent shops.
+  * *WS2 (Backend/Runner):* Run finishes as `completed` with 0 leads + explanatory note in `plan`.
+  * *WS1 (Frontend/UI):* `EmptyState` explains why and offers "Edit inputs & Rerun".
+* **Model returns invalid JSON or unsupported claim:**
+  * *WS3 (AI/Research):* 1 automatic repair retry passing validation errors; if still bad, raise `ai_output_invalid`.
+  * *WS2 (Backend/Runner):* Do not save invalid output. Global task (Task A/B/D) -> return error / fail stage. Per-lead (Task C) -> set lead `tier: needs_review` + error note, continue run.
+  * *WS1 (Frontend/UI):* Show error message (no Retry button for `ai_output_invalid`); preserve user form data.
+* **Assessment cites unknown `evidence_id`:**
+  * *WS3 (AI/Research):* Rejected by deterministic claim check.
+  * *WS2 (Backend/Runner):* Never persisted.
+  * *WS1 (Frontend/UI):* None.
+* **Provider timeout / 429 / 5xx:**
+  * *WS3 (AI/Research):* Bounded retries with exponential backoff + jitter; raise `upstream_timeout` or `upstream_unavailable`.
+  * *WS2 (Backend/Runner):* Map to A.5 error format; if in runner, fail run and record failing `stage`.
+  * *WS1 (Frontend/UI):* Show `ErrorState` with Retry / Rerun button.
+* **Taste provider returns empty or weak signals:**
+  * *WS3 (AI/Research):* Return empty/weak list as-is (`MockTasteProvider` includes these cases).
+  * *WS2 (Backend/Runner):* Store as returned; run continues; no fabricated score.
+  * *WS1 (Frontend/UI):* Show `"No signals returned for this anchor"`; do not hide section or pad with fake data.
+* **Seller clicks Continue with 0 confirmed anchors:**
+  * *WS3 (AI/Research):* None.
+  * *WS2 (Backend/Runner):* Return `422 validation_error` unless body has `{"proceed_without_anchors": true}`.
+  * *WS1 (Frontend/UI):* Disable Continue button until `>= 1` anchor confirmed, or offer explicit "Proceed without anchors" toggle.
+* **Duplicate lead: same `canonical_domain`:**
+  * *WS3 (AI/Research):* Merge evidence in pipeline.
+  * *WS2 (Backend/Runner):* `ON CONFLICT (owner_id, product_id, canonical_domain)` merges new evidence into existing lead.
+  * *WS1 (Frontend/UI):* Single lead row shown with combined evidence count.
+* **Duplicate lead: same normalized name + city, different domain:**
+  * *WS3 (AI/Research):* Flag via `possible_duplicate_of_domain` (D9).
+  * *WS2 (Backend/Runner):* Insert lead and set `duplicate_of = primary_lead.id`.
+  * *WS1 (Frontend/UI):* Render `"Possible duplicate"` badge linking to the primary lead; never silently hide.
+* **Marketplace storefront URL (e.g. Etsy shop):**
+  * *WS3 (AI/Research):* Key canonical identity by full shop path, not root marketplace domain.
+  * *WS2 (Backend/Runner):* Persist with shop-path canonical key or exclude if root marketplace.
+  * *WS1 (Frontend/UI):* Displays shop URL accurately.
+* **Server restarts mid-run:**
+  * *WS3 (AI/Research):* None.
+  * *WS2 (Backend/Runner):* Startup hook marks stale `running` rows (`heartbeat_at` expired) as `failed` (`"interrupted"`); leaves `awaiting_review` alone.
+  * *WS1 (Frontend/UI):* Shows failed stage with Rerun button.
+* **Double-click on Start Research:**
+  * *WS3 (AI/Research):* None.
+  * *WS2 (Backend/Runner):* `Idempotency-Key` header prevents duplicate run creation.
+  * *WS1 (Frontend/UI):* Sends `Idempotency-Key` header and disables button while submitting.
+* **Qloo key arrives:**
+  * *WS3 (AI/Research):* Enable real provider behind `get_taste_provider()` per runbook.
+  * *WS2 (Backend/Runner):* Set `QLOO_API_KEY`; confirm `taste: live`; new runs get `source: qloo`, `is_demo: false`, real `external_id`.
+  * *WS1 (Frontend/UI):* Verify real signals render; old runs keep demo badges and are never mixed.
+
+</div>
 
 ---
 
 ## 10. Influence map: "If I change X, who must know?"
 
-| Change                                                   | Impacts       | Required Action                                                                                              |
-| :------------------------------------------------------- | :------------ | :----------------------------------------------------------------------------------------------------------- |
-| Rename/remove any field or enum value                    | WS1, WS2, WS3 | PR to`contracts/` approved by all 3 owners. Avoid after Day 1 meeting[cite: 1, 2, 3, 4]                    |
-| Add an optional field                                    | WS1, WS2, WS3 | Add to`contracts/`; update WS2 Pydantic + migration, WS1 TS types + mocks, WS3 schemas + fixtures[cite: 1] |
-| Score weights, label mappings, or tier gates             | WS2, WS1, WS3 | Update WS2 scoring config module + unit tests + log in`docs/decisions.md`[cite: 1, 2]                      |
-| Progress callback stage names                            | WS3, WS2, WS1 | Must match`research_run.stage` enum values word-for-word[cite: 1]                                          |
-| Fixture files in`fixtures/` or `frontend/src/mocks/` | WS1, WS2, WS3 | Must validate against`contracts/` schemas and carry `is_demo: true`[cite: 1, 3, 4]                       |
+<div align="justify">
+
+* **Rename or remove any field or enum value:** Impacts WS1, WS2, WS3. Required Action: PR to `contracts/` approved by all 3 owners.
+* **Add an optional field:** Impacts WS1, WS2, WS3. Required Action: Add to `contracts/`; update WS2 Pydantic + migration, WS1 TS types + mocks, WS3 schemas + fixtures.
+* **Score weights, label mappings, or tier gates:** Impacts WS2, WS1, WS3. Required Action: Update WS2 scoring config module + unit tests + log in `docs/decisions.md`.
+* **Progress callback stage names:** Impacts WS3, WS2, WS1. Required Action: Must match `research_run.stage` enum values word-for-word.
+* **Fixture files in `fixtures/` or `frontend/src/mocks/`:** Impacts WS1, WS2, WS3. Required Action: Must validate against `contracts/` schemas and carry `is_demo: true`.
+
+</div>
 
 ---
 
 ## 11. Resolved & proposed defaults for all 20 spec gaps (`DECISION-D1` to `D20`)
 
-Comparing the WS1, WS2, and WS3 specs revealed 20 places where a field, endpoint, or workflow step was mismatched or missing[cite: 1, 2, 3, 4]. **Use the proposed defaults below so all three workstreams code to the exact same shape from Day 1**[cite: 1]. Tag implementations `# DECISION-Dn` and confirm at the Day 1 meeting[cite: 1].
+Comparing the WS1, WS2, and WS3 specs revealed 20 places where a field, endpoint, or workflow step was mismatched or missing. **Use the proposed defaults below so all three workstreams code to the exact same shape from Day 1**. Tag implementations `# DECISION-Dn` and confirm at the Day 1 meeting.
 
-| ID            | Spec Contradiction / Gap                                                                                                                                                                                                                        | Affects       | Agreed Default Resolution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| :------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **D1**  | `provider_modes` uses `"live or fixture"` in WS2 text, while the Integration State enum is `live, mock, pending, disabled`[cite: 1, 2]. Also `Lead`, `EvidenceItem`, and `OutreachDraft` lack `is_demo` in A.3[cite: 1].          | All           | Use the A.2 enum (`live \| mock \| pending \| disabled`) everywhere[cite: 1]. Add `is_demo: bool = False` to `Lead`, `EvidenceItem`, and `OutreachDraft`[cite: 1].                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| **D2**  | `leads` is unique on `(owner_id, product_id, canonical_domain)`[cite: 1, 2]. If a seller reruns research on the same product, merged leads still have the old `run_id` and won't show up under `GET /leads?run_id=new_run`[cite: 1].    | WS2, WS1      | Update`leads.run_id` to the latest `run_id` on conflict merge (or maintain a `run_leads(run_id, lead_id)` join table) so `GET /leads?run_id=` always returns all leads found/updated in that run[cite: 1].                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| **D3**  | WS1 Sec 4.3 requires "Add a custom anchor", but A.4 has no`POST` endpoint for anchors[cite: 1, 3].                                                                                                                                            | WS1, WS2      | Add`POST /api/v1/research-runs/{id}/anchors` accepting `{label, entity_type, rationale?}` and creating a row with `source="user_added"`, `status="confirmed"`, `is_demo=False`[cite: 1].                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| **D4**  | WS2 Sec 5.1 allows confirming anchors with an explicit "proceed without anchors" flag, but no request body is defined[cite: 1, 2].                                                                                                              | WS1, WS2      | `POST /api/v1/research-runs/{id}/confirm-anchors` accepts optional JSON body `{"proceed_without_anchors": false}`[cite: 1].                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| **D5**  | WS3 Task D outputs`warnings: list[str]` on `OutreachDraft` and WS1 Sec 4.5 renders them, but WS2's `outreach_drafts` table and A.3 omit `warnings`[cite: 1, 2, 3, 4].                                                                   | All           | Add`warnings jsonb default '[]'` to `outreach_drafts` table and `warnings: list[str] = []` to `OutreachDraft`[cite: 1].                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| **D6**  | WS2 Sec 6.3 says to record "reasons that produced each tier in`scores`" so WS1 can display them, and uses "retail-activity evidence" and "location/contact verified" without formal definitions[cite: 1, 2].                                  | All           | Add`tier_reasons: list[str]` inside `Lead.scores`[cite: 1]. Define **retail-activity evidence** = at least one `EvidenceItem` with `source_type` in `("official_site", "product_page")`[cite: 1]. Define **location/contact verified** = `lead.location` is non-null or contact info is cited in an evidence excerpt[cite: 1].                                                                                                                                                                                                                                                                                             |
-| **D7**  | `GET /leads` pagination envelope is unspecified; WS1 sorts by `"date"` vs WS2 `"newest"`; WS1 filters by `location` which is missing in A.4; `min_score` behaviour on `null` overall score is unspecified[cite: 1, 2, 3].           | WS1, WS2      | `GET /leads` returns `{items: Lead[], total: int, page: int, page_size: int}`[cite: 1]. Add optional `location: str` query param to `GET /leads`. Standardize sort values on `score_desc \| name \| newest` (WS1 maps UI "Date" label to `newest`)[cite: 1]. When `min_score` is set, leads with `overall == null` are excluded[cite: 1].                                                                                                                                                                                                                                                                                            |
-| **D8**  | WS3`assess_lead` requires `evidence: list[EvidenceItem]` where each item has a UUID `id` so the LLM can cite `evidence_ids[]`, but `ResearchPipeline` returns unpersisted candidates[cite: 1, 2, 4].                                  | WS2, WS3      | During discovery/assessment, WS2**first** upserts the `Lead` and its `lead_evidence` rows into PostgreSQL to generate real UUIDs, **then** passes those persisted `EvidenceItem` objects (with `id` populated) to `AIService.assess_lead()`[cite: 1].                                                                                                                                                                                                                                                                                                                                                                        |
-| **D9**  | WS3 dedupe flags secondary matches (same normalized name + city, different domain) as possible duplicates, but`LeadCandidate` has no field to pass that to WS2[cite: 1, 4].                                                                   | WS2, WS3      | Add`possible_duplicate_of_domain: str \| None = None` to `LeadCandidate`[cite: 1]. WS2 resolves that domain to the primary lead's `id` and stores it in `lead.duplicate_of`[cite: 1].                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| **D10** | Retries stack if both WS2 and WS3 retry 2x;`STAGE_TIMEOUT_SECONDS=120` is tight for serial Tavily calls; `awaiting_review` pause would trip `RUN_MAX_SECONDS=600`[cite: 1, 2, 4].                                                         | WS2, WS3      | WS3 handles per-call retries (max 2) and runs Tavily extractions concurrently (`asyncio.gather` with semaphore)[cite: 1]. WS2 does **not** re-retry inside a stage except once on a transient stage crash[cite: 1]. `RUN_MAX_SECONDS` measures active execution time only (excludes time spent in `awaiting_review`)[cite: 1].                                                                                                                                                                                                                                                                                                         |
-| **D11** | WS1 Sec 4.5 says marking an outreach draft`contacted` "also sets the lead's review status"[cite: 1, 3].                                                                                                                                       | WS1, WS2      | WS2 handles this atomically on the backend inside`PATCH /outreach-drafts/{id}`: when `draft.status` becomes `"contacted"`, WS2 updates the parent `lead.review_status = "contacted"`[cite: 1].                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| **D12** | Deleting or editing a product that already has research runs or leads is unspecified[cite: 1].                                                                                                                                                  | WS1, WS2      | `DELETE /products/{id}` cascades (or returns `409 conflict` if preferred—default: cascade delete with a clear confirmation dialog in WS1)[cite: 1]. Editing a product never mutates historical runs/leads[cite: 1].                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| **D13** | `MarketHypothesis.status` enum is missing from A.2; WS2 says `lead.cultural_affinity` is `null` until Qloo is live, whereas WS1 tests `null`, weak, and demo variants[cite: 1, 2, 3].                                                   | All           | `MarketHypothesis.status` enum is `proposed \| confirmed \| rejected` (default `proposed`)[cite: 1]. In backend runs without a live Qloo key, WS2 keeps `lead.cultural_affinity = null` (mock taste signals attach to anchors/hypotheses with `is_demo: true`)[cite: 1]. WS1 unit tests/mocks may also pass a mock `cultural_affinity` object with `is_demo: true` to test the UI component[cite: 1, 3].                                                                                                                                                                                                                               |
-| **D14** | **CRITICAL:** A.2 and WS3 Sec 3.3 define `seller_compat.label` as `high \| medium \| low \| unknown`[cite: 2, 3, 4], but WS2 Sec 6.1 writes `match 100; adjacent 60; mismatch 20`[cite: 2].                                            | All           | **Wire format is strictly `high \| medium \| low \| unknown` across all 3 dimensions** (`category_fit`, `aesthetic_fit`, `seller_compat`)[cite: 2, 3, 4]. WS2 maps `high -> 100, medium -> 60, low -> 20, unknown -> null` (and may accept `match/adjacent/mismatch` as aliases defensively).                                                                                                                                                                                                                                                                                                                                       |
-| **D15** | **CRITICAL:** WS2 Sec 5.1 calls `get_taste_provider()` *before* `awaiting_review`[cite: 2], whereas WS3 Sec 5.3 calls `search_entities` + `get_insights` *after* the seller confirms anchors in `awaiting_review`[cite: 4]. | WS2, WS3, WS1 | **Unified flow:** (1) Before `awaiting_review` (`anchor_proposal` stage): Task B generates `ai_proposed` anchors (`status: proposed`) and initial hypotheses; WS2 calls `get_taste_provider().search_entities()` on candidate labels so demo/Qloo entity matches are visible during review[cite: 2, 3]. (2) On `confirm-anchors`: for all `confirmed` anchors (including any `user_added` or edited anchors), WS2 resolves any missing entity IDs and calls `get_insights()`, attaches the returned signals to `market_hypotheses`, and passes the confirmed anchors + plan into `ResearchPipeline.run()`[cite: 2, 4]. |
-| **D16** | WS2 Sec 3 has a`profiles` table[cite: 2] and WS1 Sec 3 has a first-time seller profile screen[cite: 3], but A.4 has no profile endpoint[cite: 2, 3, 4].                                                                                       | WS1, WS2      | Add`GET /api/v1/profile` and `PUT /api/v1/profile` (authenticated by JWT; auto-creates an empty profile row on first `GET` if none exists).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| **D17** | WS1 Dashboard needs pending outreach drafts count (`draft` or `ready`) and `/outreach` route needs to list drafts when no `leadId` is in the URL[cite: 3], but A.4 only has `/leads/{id}/outreach-drafts`[cite: 2, 3, 4].             | WS1, WS2      | Add`GET /api/v1/outreach-drafts` supporting optional query params `status`, `product_id`, `lead_id` (returns `OutreachDraft[]` ordered by `updated_at desc`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| **D18** | `Product.images` element shape and image removal mechanism are unspecified[cite: 2, 3].                                                                                                                                                       | WS1, WS2      | `Product.images` is `list[str]` (array of public/signed URLs)[cite: 2]. `POST /products/{id}/images` accepts `multipart/form-data` (`file`), uploads to Supabase Storage, appends the URL, and returns the updated `images: list[str]`[cite: 2, 3, 4]. Removing or reordering images is done by passing the updated `images: list[str]` array in `PUT /products/{id}`.                                                                                                                                                                                                                                                             |
-| **D19** | WS3 Task A (`ProductAttributes`) lists 6 fields[cite: 4], while WS1's AI-suggest panel compares suggested vs current values across the Product Passport form[cite: 3].                                                                        | WS1, WS3      | `ProductAttributes` always returns `style[], materials[], motifs[], colours[], price_segment, target_retailer_types[], uncertain_fields[], assumptions[]`[cite: 4], plus optional `category, price_min, price_max, currency, moq, monthly_capacity` when explicitly mentioned in the description.                                                                                                                                                                                                                                                                                                                                            |
-| **D20** | `ResearchRun` and `Lead` in A.3 omit `created_at`; `OutreachDraft` in A.3 omits `parent_draft_id` and `updated_at`[cite: 2, 3, 4].                                                                                                  | WS1, WS2      | Include`created_at` on `ResearchRun` and `Lead`, and `parent_draft_id: UUID \| None` + `updated_at` on `OutreachDraft`[cite: 2].                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+<div align="justify">
+
+* **DECISION-D1 (Integration states & demo flags):**
+  * *Affects:* All workstreams.
+  * *Resolution:* Use the A.2 enum (`live | mock | pending | disabled`) everywhere. Add `is_demo: bool = False` to `Lead`, `EvidenceItem`, and `OutreachDraft`.
+* **DECISION-D2 (Lead run affiliation on rerun):**
+  * *Affects:* WS2, WS1.
+  * *Resolution:* Update `leads.run_id` to the latest `run_id` on conflict merge (or maintain a `run_leads(run_id, lead_id)` join table) so `GET /leads?run_id=` always returns all leads found or updated in that run.
+* **DECISION-D3 (Custom taste anchor creation):**
+  * *Affects:* WS1, WS2.
+  * *Resolution:* Add `POST /api/v1/research-runs/{id}/anchors` accepting `{label, entity_type, rationale?}` and creating a row with `source="user_added"`, `status="confirmed"`, and `is_demo=False`.
+* **DECISION-D4 (Proceed without anchors payload):**
+  * *Affects:* WS1, WS2.
+  * *Resolution:* `POST /api/v1/research-runs/{id}/confirm-anchors` accepts optional JSON body `{"proceed_without_anchors": false}`.
+* **DECISION-D5 (Outreach warnings field):**
+  * *Affects:* All workstreams.
+  * *Resolution:* Add `warnings jsonb default '[]'` to `outreach_drafts` table and `warnings: list[str] = []` to `OutreachDraft`.
+* **DECISION-D6 (Tier reasons & evidence criteria):**
+  * *Affects:* All workstreams.
+  * *Resolution:* Add `tier_reasons: list[str]` inside `Lead.scores`. Define retail-activity evidence as at least one `EvidenceItem` with `source_type` in `("official_site", "product_page")`. Define location/contact verified as `lead.location` is non-null or contact info is cited in an evidence excerpt.
+* **DECISION-D7 (Leads pagination, sorting & filters):**
+  * *Affects:* WS1, WS2.
+  * *Resolution:* `GET /leads` returns `{items: Lead[], total: int, page: int, page_size: int}`. Add optional `location: str` query param to `GET /leads`. Standardize sort values on `score_desc | name | newest` (WS1 maps UI "Date" label to `newest`). When `min_score` is set, leads with `overall == null` are excluded.
+* **DECISION-D8 (EvidenceItem UUID generation for AI citations):**
+  * *Affects:* WS2, WS3.
+  * *Resolution:* During discovery/assessment, WS2 first upserts the `Lead` and its `lead_evidence` rows into PostgreSQL to generate real UUIDs, then passes those persisted `EvidenceItem` objects (with `id` populated) to `AIService.assess_lead()`.
+* **DECISION-D9 (Duplicate lead resolution):**
+  * *Affects:* WS2, WS3.
+  * *Resolution:* Add `possible_duplicate_of_domain: str | None = None` to `LeadCandidate`. WS2 resolves that domain to the primary lead's `id` and stores it in `lead.duplicate_of`.
+* **DECISION-D10 (Retry isolation & timeouts):**
+  * *Affects:* WS2, WS3.
+  * *Resolution:* WS3 handles per-call retries (max 2) and runs Tavily extractions concurrently (`asyncio.gather` with semaphore). WS2 does not re-retry inside a stage except once on a transient stage crash. `RUN_MAX_SECONDS` measures active execution time only (excludes time spent in `awaiting_review`).
+* **DECISION-D11 (Outreach status sync to lead review):**
+  * *Affects:* WS1, WS2.
+  * *Resolution:* WS2 handles this atomically on the backend inside `PATCH /outreach-drafts/{id}`: when `draft.status` becomes `"contacted"`, WS2 updates the parent `lead.review_status = "contacted"`.
+* **DECISION-D12 (Product deletion cascade):**
+  * *Affects:* WS1, WS2.
+  * *Resolution:* `DELETE /products/{id}` cascades with a clear confirmation dialog in WS1. Editing a product never mutates historical runs or leads.
+* **DECISION-D13 (Market hypothesis status & taste affinity):**
+  * *Affects:* All workstreams.
+  * *Resolution:* `MarketHypothesis.status` enum is `proposed | confirmed | rejected` (default `proposed`). In backend runs without a live Qloo key, WS2 keeps `lead.cultural_affinity = null` (mock taste signals attach to anchors/hypotheses with `is_demo: true`). WS1 unit tests and mocks may pass a mock `cultural_affinity` object with `is_demo: true` to test the UI component.
+* **DECISION-D14 (Three-dimension label wire format):**
+  * *Affects:* All workstreams.
+  * *Resolution:* Wire format is strictly `high | medium | low | unknown` across all 3 dimensions (`category_fit`, `aesthetic_fit`, `seller_compat`). WS2 maps `high -> 100, medium -> 60, low -> 20, unknown -> null` (and defensively accepts `match/adjacent/mismatch` aliases).
+* **DECISION-D15 (Taste provider sequencing & two-phase review):**
+  * *Affects:* WS1, WS2, WS3.
+  * *Resolution:* (1) Before `awaiting_review` (`anchor_proposal` stage): Task B generates `ai_proposed` anchors (`status: proposed`) and initial hypotheses; WS2 calls `get_taste_provider().search_entities()` on candidate labels so entity matches are visible during review. (2) On `confirm-anchors`: for all `confirmed` anchors, WS2 resolves missing entity IDs, calls `get_insights()`, attaches returned signals to `market_hypotheses`, and initiates `ResearchPipeline.run()`.
+* **DECISION-D16 (Seller profile endpoints):**
+  * *Affects:* WS1, WS2.
+  * *Resolution:* Add `GET /api/v1/profile` and `PUT /api/v1/profile` (authenticated by JWT; auto-creates an empty profile row on first `GET` if none exists).
+* **DECISION-D17 (Outreach drafts listing endpoint):**
+  * *Affects:* WS1, WS2.
+  * *Resolution:* Add `GET /api/v1/outreach-drafts` supporting optional query params `status`, `product_id`, `lead_id` (returns `OutreachDraft[]` ordered by `updated_at desc`).
+* **DECISION-D18 (Product image management):**
+  * *Affects:* WS1, WS2.
+  * *Resolution:* `Product.images` is `list[str]` (array of public or signed URLs). `POST /products/{id}/images` accepts `multipart/form-data`, uploads to storage, and returns updated `images: list[str]`. Removing or reordering images is performed via `PUT /products/{id}`.
+* **DECISION-D19 (AI product attribute suggestions):**
+  * *Affects:* WS1, WS3.
+  * *Resolution:* `ProductAttributes` always returns `style[], materials[], motifs[], colours[], price_segment, target_retailer_types[], uncertain_fields[], assumptions[]`, plus optional fields when explicitly mentioned.
+* **DECISION-D20 (Timestamps & draft lineage):**
+  * *Affects:* WS1, WS2.
+  * *Resolution:* Include `created_at` on `ResearchRun` and `Lead`, and `parent_draft_id: UUID | None` + `updated_at` on `OutreachDraft`.
+
+</div>
 
 ---
 
 ## 12. Debugging playbook: symptom -> where to look first
 
-| Symptom                                                   | Likely Layer  | First Check                                                                                                                                                        |
-| :-------------------------------------------------------- | :------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Field is`undefined` in UI                               | WS1 / WS2     | Check raw network JSON against`contracts/`. Look for `camelCase` vs `snake_case` drift or a Pydantic response model dropping a field[cite: 1].               |
-| Works on mocks, breaks on real backend                    | WS1 mocks     | Diff`frontend/src/mocks/` against `/openapi.json`. Fix the mock to match the contract, not the UI component[cite: 1].                                          |
-| `422 validation_error` on submit                        | WS1 / WS2     | Compare request payload against Zod schema and FastAPI Pydantic model (`error.details`)[cite: 1].                                                                |
-| `401 unauthorized` on every API call                    | Config / Auth | Check`VITE_SUPABASE_URL` matches backend `SUPABASE_URL`, verify `SUPABASE_JWT_SECRET`, and ensure `Authorization: Bearer <access_token>` is sent[cite: 1]. |
-| Newly created record returns`404`                       | WS2           | Background job or insert forgot to set`owner_id = current_user.id`, or RLS policy is blocking read[cite: 1, 2].                                                  |
-| Score bar shows`0` instead of `"Not enough evidence"` | Any           | A`null` score was coerced to `0` (`x or 0`, `value                                                                                                           |
-| Crash or`null` on `seller_compat` score               | WS2 / WS3     | Check D14: ensure both layers use`high / medium / low / unknown`[cite: 2, 4].                                                                                    |
-| Demo badge missing on mock outputs                        | WS2 / WS1     | `is_demo` was stripped by a Pydantic response model or ignored by the component[cite: 1].                                                                        |
-| Run stuck in`awaiting_review` after clicking Continue   | WS1 / WS2     | Check if`POST /research-runs/{id}/confirm-anchors` succeeded (needs `>= 1` confirmed anchor or `proceed_without_anchors: true`)[cite: 1, 2].                 |
-| Duplicate leads visible in table                          | WS3 / WS2     | Check canonical domain normalisation,`www.` stripping, public-suffix handling, and `(owner_id, product_id, canonical_domain)` upsert logic[cite: 1, 2, 4].     |
+<div align="justify">
+
+* **Field is `undefined` in UI:**
+  * *Likely Layer:* WS1 / WS2.
+  * *First Check:* Check raw network JSON against `contracts/`. Look for `camelCase` vs `snake_case` drift or a Pydantic response model dropping a field.
+* **Works on mocks, breaks on real backend:**
+  * *Likely Layer:* WS1 mocks.
+  * *First Check:* Diff `frontend/src/mocks/` against `/openapi.json`. Fix the mock to match the contract, not the UI component.
+* **`422 validation_error` on submit:**
+  * *Likely Layer:* WS1 / WS2.
+  * *First Check:* Compare request payload against Zod schema and FastAPI Pydantic model (`error.details`).
+* **`401 unauthorized` on every API call:**
+  * *Likely Layer:* Config / Auth.
+  * *First Check:* Check `VITE_SUPABASE_URL` matches backend `SUPABASE_URL`, verify `SUPABASE_JWT_SECRET`, and ensure `Authorization: Bearer <access_token>` is sent.
+* **Newly created record returns `404`:**
+  * *Likely Layer:* WS2.
+  * *First Check:* Background job or insert forgot to set `owner_id = current_user.id`, or RLS policy is blocking read.
+* **Score bar shows `0` instead of `"Not enough evidence"`:**
+  * *Likely Layer:* Any.
+  * *First Check:* A `null` score was coerced to `0` (`x or 0`, `value || 0`, or fallback formatting).
+* **Crash or `null` on `seller_compat` score:**
+  * *Likely Layer:* WS2 / WS3.
+  * *First Check:* Check D14: ensure both layers use `high / medium / low / unknown`.
+* **Demo badge missing on mock outputs:**
+  * *Likely Layer:* WS2 / WS1.
+  * *First Check:* `is_demo` was stripped by a Pydantic response model or ignored by the component.
+* **Run stuck in `awaiting_review` after clicking Continue:**
+  * *Likely Layer:* WS1 / WS2.
+  * *First Check:* Check if `POST /research-runs/{id}/confirm-anchors` succeeded (needs `>= 1` confirmed anchor or `proceed_without_anchors: true`).
+* **Duplicate leads visible in table:**
+  * *Likely Layer:* WS3 / WS2.
+  * *First Check:* Check canonical domain normalisation, `www.` stripping, public-suffix handling, and `(owner_id, product_id, canonical_domain)` upsert logic.
+
+</div>
 
 ---
 
 ## 13. Integration timeline and checkpoints
 
-| Milestone                  | Target               | Required Deliverables                                                                                                                                                                                                                                                                                                                                                                                                 |
-| :------------------------- | :------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Contract Freeze**  | Day 1 (first 90 min) | Confirm`contracts/` v0.1 schemas, resolve Section 11 (D1–D20) in `docs/decisions.md`, pick ONE UI library for WS1, pick SQLAlchemy vs `supabase-py` for WS2[cite: 1, 2, 3, 4].                                                                                                                                                                                                                                 |
-| **End of Day 1**     | Day 1 EOD            | **WS1** runs on mocks (`VITE_USE_MOCK=true`) with `<DemoBadge/>`, shell, Dashboard, and Product Passport form[cite: 1, 3]. **WS2** serves `/health`, `/integrations/status`, `/openapi.json`, and contract-shaped stub routes[cite: 1, 2]. **WS3** commits interfaces, factories, and labelled fixtures in `fixtures/`[cite: 1, 4]. App runs end-to-end with zero secret keys[cite: 1]. |
-| **Checkpoint 1**     | Day 2 EOD            | Real Auth + Products CRUD + Image upload working between WS1 and WS2[cite: 1, 2, 3]. WS3 Task A (`structure_product`), Task B (`plan_research`), and `MockTasteProvider` integrated[cite: 1, 4]. Runs reach `awaiting_review` and anchors can be reviewed[cite: 1].                                                                                                                                           |
-| **Checkpoint 2**     | Day 3 EOD            | Full pipeline working: Confirm anchors -> Tavily discovery (live or fixture) -> Evidence persistence -> Task C (`assess_lead`) -> Deterministic scoring & tiering -> Buyer Leads UI -> Task D (`draft_outreach`) -> Outreach Studio UI[cite: 1, 2, 3, 4].                                                                                                                                                         |
-| **Hardening & Demo** | Day 4                | Failure-injection tests (invalid JSON, timeouts, empty Tavily, hostile webpage excerpt), RLS isolation test matrix, 20–30 retailer`eval/` run, Playwright smoke test, `docs/readiness.md`[cite: 1, 2, 3, 4].                                                                                                                                                                                                     |
-| **Qloo Key Arrival** | When key arrives     | WS3 implements live Qloo client/mappings behind`get_taste_provider()` per runbook; WS2 sets `QLOO_API_KEY` (`taste: live`); WS1 verifies real signals render while old demo runs stay badged `Demo data`[cite: 1, 2, 3, 4].                                                                                                                                                                                   |
+<div align="justify">
+
+* **Contract Freeze (Day 1 - first 90 min):** Confirm `contracts/` v0.1 schemas, resolve Section 11 (D1 to D20) in `docs/decisions.md`, select UI library for WS1, confirm DB driver for WS2.
+* **End of Day 1 (Day 1 EOD):** WS1 runs on mocks (`VITE_USE_MOCK=true`) with shell, Dashboard, and Product Passport form. WS2 serves `/health`, `/integrations/status`, `/openapi.json`, and contract-shaped stub routes. WS3 commits interfaces, factories, and labelled fixtures in `fixtures/`. App runs end-to-end with zero secret keys.
+* **Checkpoint 1 (Day 2 EOD):** Real Auth + Products CRUD + Image upload working between WS1 and WS2. WS3 Task A (`structure_product`), Task B (`plan_research`), and `MockTasteProvider` integrated. Runs reach `awaiting_review` and anchors can be reviewed.
+* **Checkpoint 2 (Day 3 EOD):** Full pipeline working: Confirm anchors -> Tavily discovery (live or fixture) -> Evidence persistence -> Task C (`assess_lead`) -> Deterministic scoring & tiering -> Buyer Leads UI -> Task D (`draft_outreach`) -> Outreach Studio UI.
+* **Hardening & Demo (Day 4):** Failure-injection tests (invalid JSON, timeouts, empty Tavily, hostile webpage excerpt), RLS isolation test matrix, 20-30 retailer eval run, Playwright smoke test, `docs/readiness.md`.
+* **Live Key Activation:** Real provider enabled behind `get_taste_provider()` per runbook; WS2 sets API keys (`taste: live`); WS1 verifies real signals render while old demo runs stay badged demo data.
+
+</div>
 
 ---
 

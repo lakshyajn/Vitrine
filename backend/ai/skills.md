@@ -1,6 +1,6 @@
 # WS3 Operational Playbook (`backend/ai/`, `backend/research/`, `backend/integrations/qloo/`)
 
-> **Owner:** Workstream 3 — AI Tasks (Nebius/Nemotron), Tavily Research Pipeline, Deduplication, Counterparty Trust & Qloo Adapter[cite: 5]
+> **Owner:** Workstream 3: AI Tasks (Nebius/Nemotron), Tavily Research Pipeline, Deduplication, Counterparty Trust & Qloo Adapter[cite: 5]
 > **Contract Authority:** `contracts/schemas.py` (Rank 1), `AGENT.md`, and `docs/decisions.md`[cite: 1, 7]. Always import contract models and enums from `contracts.schemas`[cite: 7].
 
 ## 1. Commands (Run from Repository Root)
@@ -14,9 +14,9 @@
 
 ## 2. Provider Keys & Multi-Option Fallbacks
 
-- **`NEBIUS_API_KEY` (`backend/ai/client.py`):** Uses OpenAI-compatible `/chat/completions` JSON mode[cite: 5]. Can point `NEBIUS_BASE_URL` to Nebius AI Studio (`https://api.studio.nebius.com/v1`), NVIDIA NIM (`https://integrate.api.nvidia.com/v1`), OpenRouter, or local Ollama (`http://localhost:11434/v1`). When empty, `get_ai_service()` returns `FixtureAIService`[cite: 5, 8].
-- **`TAVILY_API_KEY` (`backend/research/tavily_client.py`):** Calls Tavily `/search` and `/extract` with caps (`<=8` queries, `<=10` results/query, `<=30` extractions, `20s` timeout, `2` retries)[cite: 5]. When empty, `get_research_pipeline()` returns `FixtureResearchPipeline`[cite: 5, 9].
-- **`QLOO_API_KEY` (`backend/integrations/qloo/provider.py`):** Returns `MockTasteProvider` (`is_demo=True`, `demo-...` IDs, plus weak and empty signal cases) until the live Qloo key arrives[cite: 5, 10].
+- **`NEBIUS_API_KEY` (`backend/ai/client.py`):** Uses OpenAI-compatible `/chat/completions` JSON mode. Points to Nebius Token Factory (`https://api.tokenfactory.nebius.com/v1`), NVIDIA NIM (`https://integrate.api.nvidia.com/v1`), or local Ollama. In `APP_ENV=dev`, when empty, `get_ai_service()` returns `FixtureAIService`. In `APP_ENV=production`, missing keys strictly raise `AppError("ai_generation_failed", ..., status_code=503)` (Decision D23).
+- **`TAVILY_API_KEY` (`backend/research/tavily_client.py`):** Calls Tavily `/search` and `/extract` with caps (`<=8` queries, `<=10` results/query, `<=30` extractions, `20s` timeout, `2` retries). In `APP_ENV=dev`, when empty, `get_research_pipeline()` returns `FixtureResearchPipeline`. In `APP_ENV=production`, missing keys strictly raise `AppError("upstream_unavailable", ..., status_code=503)` (Decision D23).
+- **`QLOO_API_KEY` (`backend/integrations/qloo/provider.py`):** Returns `MockTasteProvider` (`is_demo=True`, `demo-...` IDs, plus weak and empty signal cases) in dev when unset, and calls live Qloo Taste Graph API when configured.
 
 ## 3. Validation, Claim Checks & Counterparty Safety Rules
 

@@ -26,7 +26,7 @@ function renderAt(path: string, initialUser?: User | null) {
   );
 }
 
-describe("Vitrine — Public Landing Page & Route Architecture", () => {
+describe("Vitrine: Public Landing Page & Route Architecture", () => {
   it("renders public landing page at the root route '/' with apparel headline and CTAs", () => {
     renderAt("/");
     // Brand name appears in header and footer

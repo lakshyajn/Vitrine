@@ -283,9 +283,11 @@ export function NewRunModal({
             <span>AI Verification & Time Expectations</span>
           </div>
           <p className="text-[11px] leading-relaxed text-amber-900/90">
-            Unlike generic directory dumps, Vitrine performs{" "}
-            <strong className="font-semibold text-amber-950">deep reasoning with NVIDIA Nemotron 3 Ultra (550B)</strong>{" "}
-            and <strong className="font-semibold text-amber-950">Super VL (120B)</strong> over live retailer websites to corroborate store catalogs and aesthetic alignment.
+            Unlike generic directory dumps, Vitrine combines{" "}
+            <strong className="font-semibold text-amber-950">Qloo cultural taste mapping</strong> with{" "}
+            <strong className="font-semibold text-amber-950">NVIDIA Nemotron 3 Ultra (550B)</strong>{" "}
+            and <strong className="font-semibold text-amber-950">Super VL (120B)</strong> reasoning alongside{" "}
+            <strong className="font-semibold text-amber-950">Tavily live store verification</strong> over live retailer websites to corroborate store catalogs and aesthetic alignment.
           </p>
           <p className="text-[11px] leading-relaxed text-amber-800">
             ⚡ <em>Choosing more leads or multiple regions increases search crawls and model latency (~15–20s per verified retailer). You can also confirm more anchors later on a completed run to expand your leads anytime!</em>

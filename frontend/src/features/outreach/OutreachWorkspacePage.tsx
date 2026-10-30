@@ -286,7 +286,7 @@ export function OutreachWorkspacePage() {
         if (targetStatus === "contacted" && activeLeadIdRef.current) {
           try {
             await updateLead(activeLeadIdRef.current, { review_status: "contacted" });
-            if (lead) setLead({ ...lead, review_status: "contacted" });
+            setLead((prev) => (prev ? { ...prev, review_status: "contacted" } : null));
           } catch (e) {
             console.warn("Could not sync lead review_status to contacted", e);
           }
@@ -510,10 +510,14 @@ export function OutreachWorkspacePage() {
             <p className="mt-0.5 text-xs text-muted">
               Grounded wholesale correspondence for {product?.name || "Product Passport"}.
             </p>
-            <div className="mt-1 flex items-center gap-2">
+            <div className="mt-1 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-800 border border-emerald-200">
                 <Sparkles className="size-3 text-emerald-600" />
                 <span>NVIDIA Nemotron 3 Ultra (550B) • Nebius Token Factory</span>
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-800 border border-blue-200">
+                <ShieldCheck className="size-3 text-blue-600" />
+                <span>Tavily Grounded Evidence</span>
               </span>
             </div>
           </div>

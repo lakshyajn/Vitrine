@@ -662,7 +662,7 @@ export const MOCK_OUTREACH_DRAFTS: OutreachDraft[] = [
 
 I have long admired your dedicated curation of tactile, slow-crafted textiles on Kinnerton Street. Your journal feature highlighting the depth of natural madder root resonated deeply with our studio's philosophy.
 
-At Atelier Solenne, we produce limited-edition mulberry silk scarves kettle-dyed with raw botanical extracts—madder root, logwood, and wild weld flowers. Each piece is hand-rolled with hand-stitched hems in our London studio, creating organic shade variegation that complements Egg Trading's quiet, architectural silhouettes.
+At Atelier Solenne, we produce limited-edition mulberry silk scarves kettle-dyed with raw botanical extracts: madder root, logwood, and wild weld flowers. Each piece is hand-rolled with hand-stitched hems in our London studio, creating organic shade variegation that complements Egg Trading's quiet, architectural silhouettes.
 
 Our wholesale minimum is modest (12 units per order), allowing for curated assortment testing ahead of the upcoming season.
 
@@ -710,7 +710,7 @@ https://ateliersolenne.com`,
 
 Following your commitment to thoughtful maker narratives and curated artisanal accessories on Boulevard Beaumarchais, I am writing to introduce Atelier Solenne.
 
-We handcraft small-batch mulberry silk scarves dyed exclusively with whole plant matter—madder root, weld, and logwood. The resulting palette carries subtle natural variations and an organic hand feel that aligns with Merci's lifestyle and home aesthetic.
+We handcraft small-batch mulberry silk scarves dyed exclusively with whole plant matter (madder root, weld, and logwood). The resulting palette carries subtle natural variations and an organic hand feel that aligns with Merci's lifestyle and home aesthetic.
 
 Our studio accommodates initial wholesale orders from 12 to 50 pieces with dedicated lead times.
 

@@ -249,7 +249,7 @@ async def test_per_run_quota_cap(monkeypatch):
 async def test_graceful_degradation_on_qloo_errors(monkeypatch, error_factory, err_name):
     """
     When the Qloo provider raises a timeout, 401, or 429 error,
-    the research run does NOT fail—it falls back to ai_proposed anchors and completes.
+    the research run does NOT fail; it falls back to ai_proposed anchors and completes.
     """
     monkeypatch.setenv("QLOO_CACHE_TTL_HOURS", "0")
     get_settings.cache_clear()

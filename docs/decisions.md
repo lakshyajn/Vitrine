@@ -117,3 +117,33 @@ This document records the foundational architecture decisions, technology select
 - **Resolution:**
   - Add `created_at` timestamp to `ResearchRun` and `Lead`.
   - Add `parent_draft_id: UUID | None` and `updated_at: datetime` to `OutreachDraft` to support version history navigation.
+
+### DECISION-D21: Complete Removal of AG Studio & Insights in Favor of Lean Maker Workbenches
+- **Resolution:**
+  - Excised `ag-studio` and `ag-studio-react` packages, related navigation links, routes (`/app/insights`), and mock analytics canvases.
+  - Vitrine focuses exclusively on core maker-led workflows: Product Passport, Market Discovery, Buyer Leads, and Outreach Studio.
+  - Eliminates developer-dashboard bloat and heavy third-party canvas bundles in favor of lean, responsive, craft-focused UI.
+
+### DECISION-D22: Centralized Viewport-Centered Portal Modal Architecture
+- **Resolution:**
+  - Resolved CSS transform containing-block bug where ancestor animations (`@keyframes enter-up`) trapped `position: fixed` modals inside scrollable containers. Concluded `@keyframes enter-up` at `transform: none`.
+  - Built centralized `Modal.tsx` and `ConfirmationModal.tsx` rendering exclusively via `createPortal(..., document.body)` with keyboard focus trapping, background scroll-lock (`document.body.style.overflow = 'hidden'`), and native `Escape` key handling.
+  - Migrated all application dialogs (Product deletion, Lead rejection, Outreach regeneration, AI extraction, New Run, Onboarding) to this shared component.
+
+### DECISION-D23: Production Safeguard Against Silent Fixture Fallbacks
+- **Resolution:**
+  - When running in production (`APP_ENV=production` or `APP_ENV=prod`), if `QLOO_API_KEY` or `NEBIUS_API_KEY` are unset or empty, the backend must **not** silently fall back to `FixtureResearchPipeline` or `FixtureAIService`.
+  - Missing credentials in production immediately raise `AppError("upstream_unavailable", ..., status_code=503)` or `AppError("ai_generation_failed", ..., status_code=503)`.
+  - Offline development and testing (`APP_ENV=dev` or `APP_ENV=test`) continue to support fixture fallbacks.
+
+### DECISION-D24: Multi-Currency Pricing & Honest Initial States
+- **Resolution:**
+  - Added multi-currency selector (`USD`, `EUR`, `GBP`) to the Product Passport form.
+  - Eliminated arbitrary prepopulated price defaults ("85", "140") and default mock imagery in favor of clean, honest empty states.
+  - Enabled direct "Start Discovery" creation from product cards.
+
+### DECISION-D25: Purge of Demo Data & Demo Badges from User-Facing Surfaces
+- **Resolution:**
+  - Removed demo badges, demo login pills, and hardcoded demo credentials across the frontend application.
+  - Removed fictional match scores (`92/100`) and fake retailer names from the public landing page walkthrough to maintain 100% evidence-grounded credibility.
+

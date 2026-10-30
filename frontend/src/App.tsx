@@ -90,7 +90,7 @@ export default function App() {
       />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Workspace routes — guarded by RequireAuth, wrapped in Shell */}
+      {/* Workspace routes: guarded by RequireAuth, wrapped in Shell */}
       <Route
         path="/app"
         element={

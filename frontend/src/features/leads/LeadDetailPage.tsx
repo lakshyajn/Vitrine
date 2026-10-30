@@ -500,12 +500,16 @@ export function LeadDetailPage() {
 
         return (
           <div className="rounded-2xl border border-border bg-surface p-6 shadow-card space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="size-4 text-purple-600" />
                 <h2 className="font-display text-base font-semibold text-ink">
                   Audience Taste & Shopper Affinity
                 </h2>
+                <span className="inline-flex items-center gap-1 rounded bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-800 border border-purple-200">
+                  <Sparkles className="size-3 text-purple-600" />
+                  <span>Qloo Taste Graph API</span>
+                </span>
               </div>
             </div>
 

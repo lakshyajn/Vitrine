@@ -8,10 +8,18 @@ This guide documents how to configure, run, and verify authentication and databa
 
 Vitrine supports two primary local operating modes:
 
-| Mode | Backend Auth & DB | Frontend Client | Best For |
-| :--- | :--- | :--- | :--- |
-| **Offline Mock Mode** | SQLite in-memory or file (`vitrine.db`); no Supabase required | `VITE_USE_MOCK=true`; pre-seeded demo user (`studio@ateliersolenne.com`) | Rapid frontend development, UI/UX prototyping, offline demos |
-| **Live Supabase Mode** | Asymmetric (ES256/RS256) or symmetric (HS256) token verification; SQLite file (`vitrine.db`) | Supabase auth client with 1-step signup, login, password recovery, session refresh | Production, staging, team multi-tenant testing |
+<div align="justify">
+
+* **Offline Mock Mode:**
+  * **Backend Auth & DB:** SQLite in-memory or file (`vitrine.db`); no Supabase required.
+  * **Frontend Client:** `VITE_USE_MOCK=true`; pre-seeded demo user (`studio@ateliersolenne.com`).
+  * **Best For:** Rapid frontend development, UI/UX prototyping, offline demos.
+* **Live Supabase Mode:**
+  * **Backend Auth & DB:** Asymmetric (ES256/RS256) or symmetric (HS256) token verification; SQLite file (`vitrine.db`).
+  * **Frontend Client:** Supabase auth client with 1-step signup, login, password recovery, session refresh.
+  * **Best For:** Production, staging, team multi-tenant testing.
+
+</div>
 
 ---
 
@@ -21,24 +29,28 @@ Vitrine supports two primary local operating modes:
 
 ### Backend (`.env`)
 
-| Variable Name | Required In | Description & Format |
-| :--- | :--- | :--- |
-| `APP_ENV` | All | Application environment (`dev`, `test`, `production`). In `production`, demo seeding is disabled (returns 404). |
-| `ALLOW_DEV_TOKENS` | Testing only | Boolean flag (`true` or `false`). When `false`, all tokens must be cryptographically verified. Must be `false` outside unit tests. |
-| `SUPABASE_URL` | Live mode | Supabase project URL (e.g. `https://<project-ref>.supabase.co`). Normalized on startup by stripping any trailing slashes and whitespace. |
-| `SUPABASE_JWT_SECRET` | HS256 mode | Symmetric HMAC signing secret from Supabase Dashboard (API settings). Used for legacy HS256 tokens. Must not be an API key. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Admin only | Backend-only service role secret. NEVER expose to the browser or frontend. |
-| `DATABASE_URL` | All | Database connection string. For persistent local data across restarts, set to `sqlite+aiosqlite:///./vitrine.db`. For stateless test suites, use `sqlite+aiosqlite:///:memory:`. |
-| `CORS_ORIGINS` | All | Comma-separated list of permitted frontend origins (e.g. `http://localhost:5173,http://127.0.0.1:5173`). |
+<div align="justify">
+
+* `APP_ENV` (All modes): Application environment (`dev`, `test`, `production`). In `production`, demo seeding is disabled (returns 404).
+* `ALLOW_DEV_TOKENS` (Testing only): Boolean flag (`true` or `false`). When `false`, all tokens must be cryptographically verified. Must be `false` outside unit tests.
+* `SUPABASE_URL` (Live mode): Supabase project URL (e.g. `https://<project-ref>.supabase.co`). Normalized on startup by stripping any trailing slashes and whitespace.
+* `SUPABASE_JWT_SECRET` (HS256 mode): Symmetric HMAC signing secret from Supabase Dashboard (API settings). Used for legacy HS256 tokens. Must not be an API key.
+* `SUPABASE_SERVICE_ROLE_KEY` (Admin only): Backend-only service role secret. NEVER expose to the browser or frontend.
+* `DATABASE_URL` (All modes): Database connection string. For persistent local data across restarts, set to `sqlite+aiosqlite:///./vitrine.db`. For stateless test suites, use `sqlite+aiosqlite:///:memory:`.
+* `CORS_ORIGINS` (All modes): Comma-separated list of permitted frontend origins (e.g. `http://localhost:5173,http://127.0.0.1:5173`).
+
+</div>
 
 ### Frontend (`frontend/.env`)
 
-| Variable Name | Required In | Description & Format |
-| :--- | :--- | :--- |
-| `VITE_USE_MOCK` | Mock mode | Set to `"true"` to run offline without Supabase. Bypasses remote network requests and uses mock data stores. |
-| `VITE_SUPABASE_URL` | Live mode | Public Supabase project URL (matches backend `SUPABASE_URL`). |
-| `VITE_SUPABASE_ANON_KEY` | Live mode | Public anon key (publishable client key) from Supabase Dashboard. Safe for browser distribution. |
-| `VITE_DEV_AUTH_BYPASS` | Dev debug only | Explicit frontend dev bypass flag. Must remain `"false"` in normal operation and production. |
+<div align="justify">
+
+* `VITE_USE_MOCK` (Mock mode): Set to `"true"` to run offline without Supabase. Bypasses remote network requests and uses mock data stores.
+* `VITE_SUPABASE_URL` (Live mode): Public Supabase project URL (matches backend `SUPABASE_URL`).
+* `VITE_SUPABASE_ANON_KEY` (Live mode): Public anon key (publishable client key) from Supabase Dashboard. Safe for browser distribution.
+* `VITE_DEV_AUTH_BYPASS` (Dev debug only): Explicit frontend dev bypass flag. Must remain `"false"` in normal operation and production.
+
+</div>
 
 ---
 
@@ -88,13 +100,12 @@ Set `DATABASE_URL=sqlite+aiosqlite:///./vitrine.db` in `.env`.
 - Database tables are automatically initialized during startup via FastAPI lifespan.
 - Database files (`*.db`, `*.sqlite*`) are excluded from Git via `.gitignore`.
 
-### Seeding a New Workspace (`POST /api/v1/demo/seed`)
-When a new user signs up or starts with an empty catalog, they can populate a full demo scenario:
+### Seeding a Test Workspace (`POST /api/v1/demo/seed`)
+When running in local dev or automated test environments (`APP_ENV=dev`), an authenticated user can seed a reference catalog for verification:
 - **API Endpoint:** `POST /api/v1/demo/seed`
 - **Security:** Requires an authenticated session; records are scoped exclusively to the calling maker (`owner_id = user.id`).
-- **Environment Gate:** Returns HTTP 404 in `APP_ENV=production`.
+- **Environment Gate:** Strictly returns HTTP 404 in `APP_ENV=production`.
 - **Idempotency:** Safe to call multiple times; checks `(owner_id, product_id, canonical_domain)` before inserting to prevent duplicate records.
-- **UI Trigger:** On the Products List and Dashboard, when no products exist, an action button labeled **"Load demo catalogue"** automatically invokes this endpoint, notifies the user upon completion, and invalidates TanStack Query caches.
 
 ---
 
@@ -112,7 +123,7 @@ When a new user signs up or starts with an empty catalog, they can populate a fu
    # Ensure VITE_USE_MOCK=true is in frontend/.env
    npm run dev
    ```
-3. Open `http://localhost:5173`. Click **"Try the demo workspace"** on the login page to enter immediately.
+3. Open `http://localhost:5173`. In mock mode, entering any valid email (e.g. `studio@ateliersolenne.com`) and password (>= 6 characters) on the login page grants instant access to the offline mock workspace.
 
 ### Option B: Running with Real Supabase
 1. Configure `.env`:
@@ -144,13 +155,31 @@ When a new user signs up or starts with an empty catalog, they can populate a fu
 
 ## 7. Troubleshooting Guide
 
-| Issue | Cause | Solution |
-| :--- | :--- | :--- |
-| **Token rejected: 401 Unauthorized** | Token expired, wrong audience (`aud != "authenticated"`), or missing/wrong issuer claim. | Ensure your token was issued by the Supabase project matching `SUPABASE_URL`. If using HS256, ensure `SUPABASE_JWT_SECRET` matches your project. |
-| **Invalid authentication token after signup** | Reason code logged in backend (e.g. `secret_not_configured`, `jwks_unavailable`, `no_matching_key`, `bad_issuer`). | Check reason code in backend log; check `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, JWT keys type; restart backend; clear site data / browser storage. |
-| **Sign-up did not return a session** | Email confirmation is enabled for the Supabase project. | Turn off "Confirm email" in the Supabase dashboard (Authentication -> Providers -> Email -> Confirm email) and try again. |
-| **JWKS fetch failure: 401** | Backend cannot reach `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` or `SUPABASE_URL` is malformed. | Verify network connectivity to Supabase and verify `SUPABASE_URL` begins with `https://` without a trailing path. |
-| **SQLite DB locked (`database is locked`)** | Multiple processes accessing the SQLite file simultaneously or an open transaction. | Ensure you are using `sqlite+aiosqlite://` driver. Stop any orphaned uvicorn or script instances holding a file lock. |
-| **Schema mismatch / 500 error on restart** | Database file schema out of date with current SQLAlchemy models. | Delete the local `vitrine.db` file and restart uvicorn; tables will be cleanly recreated on startup. |
-| **Open redirect warning on login** | `?next=` parameter points to an external or untrusted URL. | Vitrine enforces same-origin `/app/*` redirect targets only. Check the query parameter format. |
-| **401 loop on token refresh** | Supabase refresh token is invalid or session was revoked. | `setUnauthorizedHandler` automatically clears the query cache and redirects to `/login`. Sign in again to obtain a fresh session. |
+<div align="justify">
+
+* **Token rejected: 401 Unauthorized:**
+  * *Cause:* Token expired, wrong audience (`aud != "authenticated"`), or missing/wrong issuer claim.
+  * *Solution:* Ensure your token was issued by the Supabase project matching `SUPABASE_URL`. If using HS256, ensure `SUPABASE_JWT_SECRET` matches your project.
+* **Invalid authentication token after signup:**
+  * *Cause:* Reason code logged in backend (e.g. `secret_not_configured`, `jwks_unavailable`, `no_matching_key`, `bad_issuer`).
+  * *Solution:* Check reason code in backend log; check `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, JWT keys type; restart backend; clear site data / browser storage.
+* **Sign-up did not return a session:**
+  * *Cause:* Email confirmation is enabled for the Supabase project.
+  * *Solution:* Turn off "Confirm email" in the Supabase dashboard (Authentication -> Providers -> Email -> Confirm email) and try again.
+* **JWKS fetch failure: 401:**
+  * *Cause:* Backend cannot reach `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` or `SUPABASE_URL` is malformed.
+  * *Solution:* Verify network connectivity to Supabase and verify `SUPABASE_URL` begins with `https://` without a trailing path.
+* **SQLite DB locked (`database is locked`):**
+  * *Cause:* Multiple processes accessing the SQLite file simultaneously or an open transaction.
+  * *Solution:* Ensure you are using `sqlite+aiosqlite://` driver. Stop any orphaned uvicorn or script instances holding a file lock.
+* **Schema mismatch / 500 error on restart:**
+  * *Cause:* Database file schema out of date with current SQLAlchemy models.
+  * *Solution:* Delete the local `vitrine.db` file and restart uvicorn; tables will be cleanly recreated on startup.
+* **Open redirect warning on login:**
+  * *Cause:* `?next=` parameter points to an external or untrusted URL.
+  * *Solution:* Vitrine enforces same-origin `/app/*` redirect targets only. Check the query parameter format.
+* **401 loop on token refresh:**
+  * *Cause:* Supabase refresh token is invalid or session was revoked.
+  * *Solution:* `setUnauthorizedHandler` automatically clears the query cache and redirects to `/login`. Sign in again to obtain a fresh session.
+
+</div>

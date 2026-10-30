@@ -162,7 +162,7 @@ class LiveResearchPipeline:
             return []
 
         raw_candidates: list[LeadCandidate] = []
-        for hit in hits[:12]:  # Cap at top 12 search extractions per run for fast hackathon throughput
+        for hit in hits[:12]:  # Cap at top 12 search extractions per run for fast interactive throughput
             url = str(hit["url"]).strip()
             excluded, _ = is_excluded_retailer_domain(url)
             if excluded:

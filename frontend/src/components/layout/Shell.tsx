@@ -18,14 +18,14 @@ export function Shell() {
       {/* First-run studio onboarding modal */}
       <OnboardingModal />
 
-      {/* Desktop sidebar — hidden below lg breakpoint */}
+      {/* Desktop sidebar: hidden below lg breakpoint */}
       <div className="hidden lg:flex lg:flex-shrink-0">
         <Sidebar />
       </div>
 
       {/* Main column: mobile nav + top bar + page canvas */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Mobile top bar — visible below lg */}
+        {/* Mobile top bar: visible below lg */}
         <div className="lg:hidden">
           <MobileNav />
         </div>

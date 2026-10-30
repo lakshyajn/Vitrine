@@ -1,12 +1,12 @@
-KARIGAR
+VITRINE
 Workstream 2
 Backend, Data & Workflow
-The spine of Karigar: data, security, research-run orchestration and transparent lead scoring.
+The spine of Vitrine: data, security, research-run orchestration and transparent lead scoring.
 Item	Detail
-Owner	Backend owner: ____________________
+Owner	Backend Engineering Team
 Window	Days 1–4 parallel build, plus the Qloo activation work now that the API key has arrived
 Scope rule	The Qloo API key has arrived, so real cultural-affinity integration is now in scope. It plugs into the interfaces already built. PayPal remains out of scope.
-Contract version	v0.2 — v0.1 plus the Qloo-live additions listed in Appendix A.9. Changes need a pull request reviewed by all three owners.
+Contract version	v0.2: v0.1 plus the Qloo-live additions listed in Appendix A.9. Changes need a pull request reviewed by all three owners.
 Companion files	WS1 Frontend & UX  |  WS2 Backend, Data & Workflow  |  WS3 AI & Research Integrations
 
 0. Your mission in one page
@@ -36,14 +36,14 @@ Read your own section in full. Skim the other two only where the Hand-offs table
 
 1.1 Phase-to-workstream map
 Roadmap phase	WS1	WS2	WS3
-Phase 1 — Product scope and demo scenario	Shared	Shared	Shared
-Phase 2 — Frontend	Owner	API support	—
-Phase 3 — Backend and database	Consumer	Owner	—
-Phase 4 — Nemotron via Nebius	Displays results	Calls the service	Owner
-Phase 5 — Tavily pipeline	Displays results	Persists + orchestrates	Owner
-Phase 6 — Qloo integration (key received)	Anchor-review UI, real-signal display	Config, caching, persistence	Real adapter (owner), mock kept for tests
-Phase 7 — Lead ranking	Detail panel UI	Scoring (owner)	Provides assessment labels
-Phase 8 — Outreach	Outreach Studio UI	Endpoints + versions	Draft generation (owner)
+Phase 1: Product scope and demo scenario	Shared	Shared	Shared
+Phase 2: Frontend	Owner	API support	-
+Phase 3: Backend and database	Consumer	Owner	-
+Phase 4: Nemotron via Nebius	Displays results	Calls the service	Owner
+Phase 5: Tavily pipeline	Displays results	Persists + orchestrates	Owner
+Phase 6: Qloo integration (key received)	Anchor-review UI, real-signal display	Config, caching, persistence	Real adapter (owner), mock kept for tests
+Phase 7: Lead ranking	Detail panel UI	Scoring (owner)	Provides assessment labels
+Phase 8: Outreach	Outreach Studio UI	Endpoints + versions	Draft generation (owner)
 
 1.2 Team sync points
 When	What happens	Output
@@ -66,7 +66,7 @@ Qloo key arrived (now)	Qloo activation: WS3 builds the real client from official
 •	Small, frequent pull requests. Merge to main at least twice a day so integration problems show up early. Branch names: ws1/..., ws2/..., ws3/....
 •	Do not over-polish. Product Passport, Market Discovery and Buyer Leads demonstrate the core value. They come before dashboard polish.
 1.4 Update: the Qloo key has arrived
-The app skeleton is built to take Qloo as one more provider behind TasteResearchProvider. Activating it is now the team’s shared priority. The aim is unchanged: add real cultural-affinity capability to a working Karigar, without letting Qloo output pass for verified retail evidence.
+The app skeleton is built to take Qloo as one more provider behind TasteResearchProvider. Activating it is now the team’s shared priority. The aim is unchanged: add real cultural-affinity capability to a working Vitrine, without letting Qloo output pass for verified retail evidence.
 Workstream	What changes now
 WS1 Frontend	Verify the anchor-review screen, hypotheses and lead detail panel with real Qloo data, including empty and weak results, provider errors and rate limits. Badge logic: Qloo for real results, Demo only for mock.
 WS2 Backend	Set the key, confirm /integrations/status, cache and rate-limit Qloo calls, store provider-call metadata, populate cultural_affinity only through the documented mapping, and keep older demo runs clearly demo.
@@ -79,8 +79,8 @@ Suggested activation order
 4.	WS1: run the demo scenario end to end; fix any display problems found with real data.
 5.	All three: a 30-minute review of what Qloo actually returned. Update the demo scenario, anchor wording and hypotheses mapping to match reality, not expectation.
 What we know and what we do not
-Third-party hackathon projects describe Qloo endpoints for entity search, tag lookup and insights, an X-Api-Key header, and entity types such as brand, place, destination, artist, movie, book, podcast, TV show, video game and person. These descriptions are not official.
-The official documentation is at docs.qloo.com. Treat it as the source of truth, and confirm the base URL for your key (a hackathon key may use a different host and limits). Do not assume Qloo returns a home-textile market ranking, predicts purchases or covers every entity type we want.
+Developer integration notes describe Qloo endpoints for entity search, tag lookup and insights, an X-Api-Key header, and entity types such as brand, place, destination, artist, movie, book, podcast, TV show, video game and person.
+The official documentation is at docs.qloo.com. Treat it as the source of truth, and confirm the base URL for your key (`https://api.qloo.com` or `https://hackathon.api.qloo.com`). Do not assume Qloo returns a home-textile market ranking, predicts purchases or covers every entity type we want.
 
 2. Project setup
 Concern	Choice	Notes
@@ -224,26 +224,26 @@ Server restart mid-run	Stuck-run recovery marks it failed with a clear message; 
 Rate limiting	Basic per-user limit on POST /research-runs and outreach generation; return rate_limited.
 
 9. Day-by-day plan
-Day 1 — Foundation
+Day 1: Foundation
 ☐  Contract meeting; freeze Appendix A and commit schemas to contracts/.
 ☐  Create FastAPI project, settings, logging with request ids, error handlers, CORS, /health.
 ☐  Create Supabase project; write migrations for all eight core tables; enable RLS and policies.
 ☐  JWT verification dependency and a test proving an invalid token returns unauthorized.
 ☐  Stub endpoints returning contract-shaped fixture data; publish /openapi.json for WS1.
 ☐  .env.example, README with run instructions, and CI running lint and tests.
-Day 2 — Persistence
+Day 2: Persistence
 ☐  Products CRUD with validation and ownership checks; image upload.
 ☐  POST /products/extract-profile wired to get_ai_service().structure_product (fixture-backed if WS3 is not ready).
 ☐  Research runs create, get, list; status and stage persisted; runner skeleton processing the planning stage.
 ☐  Authorization tests: user A cannot read, change or delete user B’s product or run.
 ☐  Integration checkpoint 1 with WS1 and WS3.
-Day 3 — Workflow, leads, outreach
+Day 3: Workflow, leads, outreach
 ☐  Full orchestration: planning, anchor proposal, awaiting_review, confirm-anchors, discovery, assessment, scoring, completion.
 ☐  Lead and evidence upsert with the uniqueness rules; saved-lead updates.
 ☐  Scoring module with unit tests.
 ☐  Outreach endpoints with versioning, edit and regenerate.
 ☐  Integration checkpoint 2: run the demo scenario from UI to database and back.
-Day 4 — Hardening and readiness
+Day 4: Hardening and readiness
 ☐  Timeouts, retries, stuck-run recovery, per-lead failure handling.
 ☐  Authorization test matrix across every resource.
 ☐  Failure-injection tests: AI invalid output, Tavily empty, Tavily timeout, taste provider empty.
@@ -294,10 +294,10 @@ Qloo quota used up during testing	Response cache, per-run call caps and recorded
 Key leaks into logs or git	Log scrubbing test, .env in .gitignore, secret scanning in CI; rotate immediately if exposed.
 
 
- Appendix A — Shared contract (v0.2)
+ Appendix A: Shared contract (v0.2)
 This appendix is identical in all three files. If the three copies ever differ, the version in contracts/ in the repository wins.
 A.1 Repository layout
-karigar/
+vitrine/
   contracts/              shared schemas + TypeScript types (PR review by all three)
   frontend/               WS1  React + TypeScript
   backend/

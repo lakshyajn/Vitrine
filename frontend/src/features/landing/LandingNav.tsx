@@ -5,7 +5,7 @@ import { BRAND_NAME, BRAND_TAGLINE } from "@/config/brand";
 import { useAuth } from "@/features/auth/AuthProvider";
 
 /**
- * Vitrine aperture mark — unified architectural framing glyph.
+ * Vitrine aperture mark: unified architectural framing glyph.
  * Loaded directly from the public SVG asset so favicon and navbar cannot drift.
  */
 export function VitrineMark({ className = "size-5" }: { className?: string }) {

@@ -1,129 +1,180 @@
-# 🪟 Vitrine — Devpost Hackathon Submission Package
+# Vitrine: Project Submission & Technical Dossier
 
-> **Submission for the Nebius × NVIDIA Global AI Hackathon on Devpost**  
-> **Track:** Best Apps and Agents Track  
-> **Primary Infrastructure:** Nebius Token Factory (Inference) & Supabase (Auth & Data)  
-> **Models:** NVIDIA Nemotron 3 Ultra (550B) & NVIDIA Nemotron 3.5 Super VL (120B)
+> **Core Capability:** Boutique stockist discovery, cultural taste evaluation, and wholesale outreach preparation for craft studios and physical product brands.  
+> **Architecture & Stack:** **Qloo Taste Graph API** (cultural taste & consumer affinity) &bull; **Dual NVIDIA Nemotron Models on Nebius Token Factory** (550B Ultra &amp; 120B Super VL) &bull; **Tavily AI Search** (live web discovery &amp; store evidence) &bull; **FastAPI** &bull; **Supabase** &bull; **React 18** &bull; **TypeScript 5.7**
 
 ---
 
-## 📋 Quick Submission Metadata
+## Submission Metadata
 
-| Field | Submission Details |
-| :--- | :--- |
-| **Project Title** | **Vitrine** |
-| **Tagline** | Boutique Wholesale Atelier for Independent Craft Brands, powered by NVIDIA Nemotron on Nebius Token Factory. |
-| **Category / Track** | **Best Apps and Agents Track** |
-| **Track Description Fit** | Leverages **Nemotron 3 Ultra (550B)** for deep strategic reasoning & outreach pitch generation, and **Nemotron 3.5 Super VL (120B)** for rapid multimodal structuring and concurrent lead evaluation on **Nebius Token Factory**, with Supabase for authentication and relational storage. |
-| **Built With** | Nebius Token Factory, NVIDIA Nemotron, Supabase, FastAPI, React 18, TypeScript, Tailwind CSS, Qloo Taste Graph, Tavily Search API, PostgreSQL/SQLite. |
-| **Repository URL** | [https://github.com/lakshyajn/Vitrine](https://github.com/lakshyajn/Vitrine) |
+<div align="justify">
+
+* **Project Title:** **Vitrine**
+* **Tagline:** Boutique wholesale studio for independent craft brands, combining cultural taste intelligence, dual foundation models, and live web discovery.
+* **Category / Focus Areas:** Autonomous AI Agents, Cultural Taste Intelligence, Grounded Web Discovery
+* **Built With:** Qloo Taste Graph API, NVIDIA Nemotron (120B & 550B), Nebius Token Factory, Tavily Search API, Supabase, FastAPI, React 18, TypeScript, Tailwind CSS v4, SQLite/PostgreSQL
+* **Repository URL:** [https://github.com/lakshyajn/Vitrine](https://github.com/lakshyajn/Vitrine)
+
+</div>
 
 ---
 
-## 💡 Project Description
+## Project Description
 
 ### 1. Inspiration
-Independent artisan workshops, heritage textile ateliers, and ceramicists make extraordinary physical goods, but scaling into international wholesale is fraught with friction:
-* **The Cold Spam Trap:** Generic AI B2B tools scrape massive email lists and blast buyers with robotic, hallucinated pitches. Wholesale buyers report them as spam, destroying the maker’s reputation.
-* **Cultural Context Blindness:** Independent concept boutiques and design stores curate based on **aesthetic affinity, provenance, and tactile curation**—not generic keywords indexed by standard search engines.
-* **Manual Discovery Overhead:** Finding authentic international stockists aligned with an atelier's design ethos takes hundreds of hours of manual research.
 
-We built **Vitrine** to give independent makers an agentic boutique wholesale studio that pairs **multimodal product extraction** with **cultural taste mapping** and **live web verification**—grounding every recommendation in verified retailer facts, with zero automated spam.
+<div align="justify">
+
+Independent craft studios, textile ateliers, and ceramicists make physical products, but finding overseas stockists manually is slow and difficult:
+
+* **Cold email spam hurts reputations:** Generic sales tools scrape directory lists and blast retail buyers with mass templates. Independent concept stores report them as spam, which burns the maker's reputation before a conversation even starts.
+* **Keyword search misses aesthetic context:** Curated concept boutiques and design stores choose collections based on aesthetic alignment, craft traditions, and design philosophy (such as wabi-sabi, botanical dyeing, or mid-century modern). Traditional search engines index keyword density rather than curated retail aesthetics.
+* **Manual verification takes weeks:** Researching individual stores across different countries, checking whether they are currently open, reviewing their price tiers against wholesale margins, and finding the right contact details takes hours for each store.
+
+We built Vitrine to give independent makers a structured wholesale workspace. It connects multimodal product attribute extraction with cultural taste mapping and live web verification, grounding every recommendation in verified store facts without automated mass-mailing.
+
+</div>
+
+<div align="center">
+  <img src="../diagrams/01-vitrine-maker-journey.png" alt="Vitrine End-to-End Maker Journey" width="100%" />
+</div>
 
 ---
 
 ### 2. What It Does
-Vitrine is an autonomous boutique discovery and wholesale preparation platform:
 
-1. **Multimodal Product Passport:** The maker uploads product photography or pastes atelier notes. **NVIDIA Nemotron 3.5 Super VL (120B)** structures materials, artisan motifs, price segment, and export MOQ.
-2. **Market Hypothesis & Anchor Planning:** **NVIDIA Nemotron 3 Ultra (550B)** formulates strategic market hypotheses and proposes cultural/design anchors (e.g., *wabi-sabi homewares, botanical dyes, artisan tableware*).
-3. **Cultural Taste Graph Resolution:** Confirmed taste anchors resolve through the **Qloo Taste Graph**, mapping design movements to boutique demographics across target regions.
-4. **Selective Web Discovery:** The **Tavily Pipeline** searches live web sources for authentic independent boutiques, canonicalizes domains, and deduplicates retailers.
-5. **Seller-in-the-Loop Confirmation & Selective Scraping:** The artisan reviews candidate stockists. Vitrine prioritizes live excerpt scraping *only for confirmed boutiques*, ensuring fast execution.
-6. **Concurrent Fit Assessment:** **Nemotron 3.5 Super VL** concurrently assesses category alignment, aesthetic vector, and commercial compatibility against stored web excerpts.
-7. **Strict Grounded Outreach:** **Nemotron 3 Ultra (550B)** drafts personalized, fluent buyer correspondence citing real store context without technical IDs or hallucinated claims. The maker reviews, edits, copies to clipboard, and tracks status manually.
+<div align="justify">
+
+Vitrine is a boutique discovery and wholesale preparation platform:
+
+1. **Multimodal Product Passport:** The maker uploads product photography or pastes workshop notes. **NVIDIA Nemotron 3.5 Super VL (120B)** extracts materials, motifs, price tiers (in `USD`, `EUR`, and `GBP`), and export capacity in under two seconds.
+2. **Market Hypothesis & Anchor Planning:** **NVIDIA Nemotron 3 Ultra (550B)** formulates strategic market hypotheses and proposes cultural design anchors (such as wabi-sabi homewares, botanical dyes, or heritage tableware).
+3. **Cultural Taste Graph Resolution:** Confirmed taste anchors resolve through the **Qloo Taste Graph API**, mapping design movements to boutique demographics, cultural entities, and aesthetic affinities across target regions (Western Europe, North America, Scandinavia, Japan).
+4. **Targeted Web Discovery:** The **Tavily Pipeline** searches live web sources for independent boutiques, canonicalizes domains, and removes duplicate retailers.
+5. **Seller-in-the-Loop Confirmation & Selective Scraping:** The artisan reviews candidate stockists. Vitrine extracts live website text only for confirmed boutiques, keeping pipeline execution fast.
+6. **Concurrent Fit Assessment:** **Nemotron 3.5 Super VL** concurrently evaluates category alignment, aesthetic vector, and commercial compatibility against stored web excerpts.
+7. **Strict Grounded Outreach:** **Nemotron 3 Ultra (550B)** drafts personalized, human-fluent buyer correspondence citing real store context without technical IDs or unsupported claims. The maker reviews, edits, copies to clipboard, and tracks status manually. No automated emails are ever sent.
+
+</div>
 
 ---
 
-### 3. How We Built It: Nebius Token Factory & Supabase
+### 3. Technical Architecture
 
-#### A. Dual-Model Nemotron Architecture on Nebius Token Factory
-Vitrine routes inference through the standard **Nebius Token Factory API** (`https://api.tokenfactory.nebius.com/v1`), matching the track prompt's model allocation:
-- **NVIDIA Nemotron 3 Ultra (550B) on Nebius Token Factory:** Reserved for high-touch reasoning tasks:
-  - *Task B (Research Planning):* Derives nuanced international market hypotheses.
-  - *Task D (Outreach Copywriting):* Crafts compelling, human-fluent wholesale pitches.
-- **NVIDIA Nemotron 3.5 Super VL (120B) on Nebius Token Factory:** Deployed for high-throughput fast calls:
-  - *Task A (Product Passport):* Rapid multimodal extraction (<2s) of product attributes.
-  - *Task C (Lead Assessment):* High-throughput, concurrent per-lead assessment across candidate batches.
+<div align="center">
+  <img src="../diagrams/02-vitrine-system-architecture.png" alt="Vitrine Full-Stack System Architecture" width="100%" />
+</div>
 
-#### B. Supabase Auth & Relational Persistence
-Vitrine integrates **Supabase** for secure JWT authentication, user session management, and PostgreSQL cloud storage (with persistent SQLite for local development). Contract-first validation ensures 100% type safety between backend and frontend.
+#### A. Cultural Taste Graph & Aesthetic Affinity (Qloo API)
+
+<div align="justify">
+
+Curated concept stores in cities like London, Paris, Tokyo, and Stockholm stock products based on aesthetic resonance and cultural overlap rather than generic keywords. Vitrine integrates the **Qloo Taste Graph API** (`backend/integrations/qloo.py` & `backend/research/pipeline.py`) to connect physical craftsmanship with retail culture:
+
+- **Entity Resolution & Taste Anchors:** Artisan design motifs extracted by our vision models (such as madder root dyes, wabi-sabi ceramics, or Bauhaus tableware) resolve through Qloo's `/search` and `/v2/insights` endpoints into structured cultural anchors.
+- **Cross-Domain Demographic Mapping:** Qloo identifies overlaps between cultural design movements, high-affinity destinations, and boutique consumer demographics.
+- **Hypothesis Attachment:** Discovered cultural taste signals attach directly to each `MarketHypothesis` and populate the `cultural_affinity` metadata on discovered buyer leads, giving makers clear context on why a specific stockist aligns with their collection.
+
+</div>
+
+#### B. Dual-Model Foundation AI (NVIDIA Nemotron on Nebius Token Factory)
+
+<div align="center">
+  <img src="../diagrams/04-nemotron-nebius-model-routing.png" alt="Dual Nemotron Model Routing on Nebius Token Factory" width="100%" />
+</div>
+
+<div align="justify">
+
+Vitrine routes inference through the OpenAI-compatible **Nebius Token Factory API** (`https://api.tokenfactory.nebius.com/v1`), matching computational capacity to specific pipeline tasks:
+
+- **NVIDIA Nemotron 3 Ultra (550B) on Nebius Token Factory:** Reserved for high-touch reasoning tasks: market hypothesis generation (Task B) and human-fluent wholesale outreach copywriting (Task D) citing verified store excerpts.
+- **NVIDIA Nemotron 3.5 Super VL (120B) on Nebius Token Factory:** Deployed for high-throughput calls: fast multimodal extraction (<2s) of product attributes (Task A) and concurrent lead assessment across candidate batches using async worker semaphores (Task C).
+- **Model Fallback Resilience:** In the event of transient upstream rate limits, Vitrine features automated cross-model fallback between 550B and 120B endpoints to prevent failed runs.
+
+</div>
+
+#### C. Live Web Discovery & Store Evidence Extraction (Tavily AI Search)
+
+<div align="center">
+  <img src="../diagrams/05-evidence-and-deterministic-scoring.png" alt="Evidence Grounding and Deterministic Lead Scoring" width="100%" />
+</div>
+
+<div align="justify">
+
+To prevent outdated directories or fabricated store details, Vitrine integrates **Tavily AI Search**:
+
+- **Targeted Boutique Search:** Executes queries combining confirmed product categories, target regions, and Qloo-derived taste vectors to discover operational boutique stockists.
+- **Domain Canonicalization & Deduplication:** Normalizes domain names (stripping subdomains, trailing paths, and tracking parameters) and identifies secondary branch stores or sister domains to eliminate duplicates.
+- **Untrusted Web Isolation:** Scraped retailer text is strictly encapsulated inside `<untrusted_retailer_evidence>` envelopes within prompt templates to safeguard against prompt injection.
+- **Zero Hallucination Grounding:** Real store excerpts are stored in database records (`lead_evidence`) and directly linked to every generated fit score and outreach claim.
+
+</div>
+
+#### D. Full-Stack Foundation, Security & UI (FastAPI, Supabase & React 18)
+
+<div align="justify">
+
+- **FastAPI Asynchronous Backend:** High-performance async Python 3.11 with SQLAlchemy 2.0 and Pydantic v2 schemas.
+- **Supabase Authentication & Multi-Tenant Data Isolation:** Secure JWT authentication supporting asymmetric ES256/RS256 with PyJWKClient dynamic key retrieval, and multi-tenant scoping (`WHERE owner_id = :caller_id`) across all data entities.
+- **Centralized Viewport Modal Architecture:** Built with React portals mounted directly to `document.body` with focus trapping and body scroll locking, completely eliminating CSS transform containing-block bugs.
+- **Contract-First Synchronization:** Both frontend and backend adhere strictly to shared wire schemas defined in `contracts/schemas.py`.
+
+</div>
 
 ---
 
 ### 4. Challenges We Overcame
-1. **Zero Hallucination Enforcement:** LLMs tend to invent stockist details. We implemented deterministic claim validators (`validate_lead_assessment_claims`, `validate_and_ground_outreach_draft`) that strictly cross-examine every assertion against stored excerpts.
-2. **Preserving "Unknown" Truths:** In B2B wholesale, missing evidence is not a negative finding. If a retailer's MOQ isn't public, Vitrine reports *"Not enough evidence"* rather than coercing scores to zero.
-3. **Hackathon Pipeline Concurrency:** Scraping dozens of websites sequentially is too slow. We introduced seller-in-the-loop candidate confirmation so live scraping only targets confirmed boutiques, evaluated concurrently with async semaphores.
+
+<div align="justify">
+
+1. **Enforcing Zero Hallucinations:** Language models can invent stockist details or make claims about wholesale policies that do not exist. We wrote deterministic claim validators (`validate_lead_assessment_claims`, `validate_and_ground_outreach_draft`) that strictly cross-examine every assertion against stored web excerpts.
+2. **Preserving Unknown Truths:** In wholesale evaluation, absent information is not a negative score. If a retailer's minimum order quantity or wholesale margin is not publicly disclosed on their website, Vitrine explicitly reports *"Not enough evidence"* (`null`) rather than coercing scores to zero.
+3. **Connecting Physical Craft to Cultural Taste:** Raw textile terms like *"indigo dabu mud resist"* mean nothing to keyword search algorithms. Integrating Qloo allows Vitrine to map artisan heritage techniques into cultural affinity vectors and boutique taste demographics.
+4. **Pipeline Concurrency & Efficiency:** Scraping dozens of websites sequentially is slow. We introduced seller-in-the-loop candidate confirmation so live scraping only targets confirmed boutiques, evaluated concurrently with async semaphores.
+5. **Production Fallback Safeguards:** Many platforms silently switch to mock fixtures when API keys are absent in production. We implemented strict production safeguards in `backend/research/pipeline.py` and `backend/ai/service.py` that raise explicit HTTP 503 errors (`upstream_unavailable`, `ai_generation_failed`) in production, guaranteeing zero fabricated data reaches real users.
+6. **Viewport-Centered Modal Architecture:** Resolved a subtle CSS transform containing-block issue where ancestor animations trapped fixed modals. Built a shared React portal modal framework mounted to `document.body` with focus trapping and body scroll locking.
+
+</div>
 
 ---
 
-### 5. Accomplishments That We're Proud Of
-- **135/135 Passing Tests:** 122 backend unit/integration tests and 13 frontend tests verifying contracts, scoring, and secret redaction.
-- **Production-Grade Architecture:** Full separation of concerns with contract-first schemas ([contracts/schemas.py](../contracts/schemas.py)).
-- **Anti-Spam Pledge:** Real wholesale buyers appreciate genuine craftsmanship; Vitrine protects buyer goodwill by keeping the artisan in control with zero automated emailing.
+### 5. Verified Accomplishments
+
+<div align="justify">
+
+- **167/167 Passing Tests:** 130 backend unit/integration tests and 37 frontend unit/integration tests verifying contracts, scoring, security, and component workflows.
+- **Tri-Engine Synergy:** Cohesive integration of Qloo Taste Graph API, NVIDIA Nemotron foundation models on Nebius Token Factory, and Tavily Live Search into an intuitive maker workspace.
+- **Direct Maker Control:** Real wholesale buyers appreciate genuine craftsmanship. Vitrine keeps the artisan in control with zero automated emailing.
+- **Production-Grade Architecture:** Full separation of concerns with contract-first schemas ([contracts/schemas.py](../contracts/schemas.py)), zero lint errors, and 0 TypeScript errors.
+
+</div>
+
+<div align="center">
+  <img src="../diagrams/06-grounded-outreach-workflow.png" alt="Grounded Wholesale Outreach Studio Workflow" width="100%" />
+</div>
 
 ---
 
-## 🎥 3-Minute Video Demo Script
-
-Follow this structured script when recording your demonstration video:
-
-### Scene 1: The Problem & The Solution (0:00 - 0:30)
-- **On Screen:** Vitrine Landing / Dashboard.
-- **Script:** *"Independent artisan workshops craft incredible physical goods, but reaching overseas boutiques is almost impossible without spending hundreds of hours searching, or worse, using AI spam tools that ruin buyer relationships. Meet Vitrine: a boutique wholesale atelier powered by NVIDIA Nemotron models on Nebius Token Factory."*
-
-### Scene 2: Product Passport & Nemotron Super VL (0:30 - 1:00)
-- **On Screen:** Navigate to `/app/products/new`. Upload product photo or paste description (e.g., Hand block-printed linen cushions).
-- **Script:** *"First, the maker sets up their Product Passport. Using NVIDIA Nemotron 3.5 Super VL on Nebius Token Factory, Vitrine extracts materials, motifs, price segment, and export capacity in under two seconds. The maker confirms their specifications."*
-
-### Scene 3: Research Run & Qloo Cultural Mapping (1:00 - 1:40)
-- **On Screen:** Launch Research Run, review proposed anchors.
-- **Script:** *"Next, Nemotron 3 Ultra formulates market hypotheses. Instead of generic keyword searches, confirmed anchors resolve through the Qloo Taste Graph to map cultural design movements in target markets like Western Europe and Japan."*
-
-### Scene 4: Live Web Discovery & Fit Scoring (1:40 - 2:20)
-- **On Screen:** Live discovery queue, candidate confirmation, and Lead Detail page.
-- **Script:** *"Vitrine queries live web sources via Tavily, finding authentic independent concept boutiques. The maker confirms candidate boutiques, and Vitrine extracts verified store text. Nemotron Super VL concurrently scores each retailer across Category Alignment, Aesthetic Vector, and Commercial Wholesale Compatibility. Notice how unknown data is transparently flagged rather than faked."*
-
-### Scene 5: Grounded Outreach Studio with Nemotron Ultra 550B (2:20 - 2:50)
-- **On Screen:** Navigate to Outreach Studio for a qualified lead.
-- **Script:** *"Finally, in the Outreach Studio, Nemotron 3 Ultra on Nebius Token Factory drafts a human-fluent wholesale inquiry. Every paragraph cites verified store excerpts and approved product facts. There's no automated send button—the artisan reviews, personalizes, and copies the pitch directly to their clipboard."*
-
-### Scene 6: Nebius Token Factory & Conclusion (2:50 - 3:00)
-- **On Screen:** Show the architecture diagram or Dashboard with Nebius Token Factory indicator.
-- **Script:** *"Powered by NVIDIA Nemotron on Nebius Token Factory. Empowering independent makers to reach the international boutiques where their craftsmanship belongs."*
-
----
-
-## 🚀 How to Run the Working Demo
+## How to Run the Working Demo
 
 ### Quick Local Verification (3 Minutes):
+
 ```bash
 # Clone and enter directory
 git clone https://github.com/lakshyajn/Vitrine.git
 cd Vitrine
 
-# Configure environment with Nebius Token Factory template
+# Configure environment with template
 cp .env.example .env
 cp .env.example frontend/.env
 
-# Start Backend
-python -m uvicorn backend.app.main:app --port 8000 --reload
+# Start Backend (FastAPI on port 8000)
+uvicorn backend.app.main:app --port 8000 --reload
 
 # Start Frontend (in a separate terminal)
 cd frontend
 npm install
 npm run dev
 ```
-Open **[http://localhost:5173](http://localhost:5173)** to explore the running atelier.
 
+Open **[http://localhost:5173](http://localhost:5173)** to explore the running atelier.
