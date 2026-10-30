@@ -7,6 +7,7 @@
 [![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg?style=flat&logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5+-3178C6.svg?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![NVIDIA Nemotron](https://img.shields.io/badge/NVIDIA-Dual%20Nemotron%20AI-76B900.svg?style=flat&logo=nvidia&logoColor=white)](https://build.nvidia.com)
+[![Nebius Token Factory](https://img.shields.io/badge/Nebius-Token%20Factory-00E5FF.svg?style=flat&logo=cloud&logoColor=black)](https://tokenfactory.nebius.com)
 [![Qloo Taste Graph](https://img.shields.io/badge/Qloo-Taste%20Intelligence-6C5CE7.svg?style=flat)](https://qloo.com)
 [![Tavily Search](https://img.shields.io/badge/Tavily-Live%20Discovery-00B894.svg?style=flat)](https://tavily.com)
 [![Tests Passing](https://img.shields.io/badge/Tests-135%2F135%20Passed-brightgreen.svg?style=flat)]()
@@ -100,10 +101,12 @@ Instead of matching naive keyword queries, Vitrine queries the **Qloo Taste Grap
 - **Security:** Supabase JWT verification, timing-safe tokens, automated secret redaction logging filter
 - **Testing:** Pytest + AnyIO (122/122 unit & integration tests passed)
 
-### External Integrations
-- **AI Reasoning:** NVIDIA Cloud Functions / Nebius (`nemotron-3-ultra-550b`, `nemotron-3.5-super-vl-120b`)
-- **Taste Graph:** Qloo API (`/search`, `/v2/insights`)
+### External Integrations & Infrastructure
+- **AI Inference Engine:** Nebius Token Factory (`https://api.tokenfactory.nebius.com/v1`) & NVIDIA Nemotron (`nemotron-3-ultra-550b`, `nemotron-3.5-super-vl-120b`)
+- **Auth & Database:** Supabase (Auth & Database) / Local SQLite Persistence (`./vitrine.db`)
+- **Taste Intelligence:** Qloo Taste Graph API (`/search`, `/v2/insights`)
 - **Web Discovery:** Tavily AI Search API
+- **Devpost Submission Guide:** [docs/DEVPOST_SUBMISSION.md](docs/DEVPOST_SUBMISSION.md)
 
 ---
 

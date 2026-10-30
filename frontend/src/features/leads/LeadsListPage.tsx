@@ -11,6 +11,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  CheckCircle2,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   getLeads,
@@ -38,6 +41,7 @@ export function LeadsListPage() {
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
+  const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,7 +95,7 @@ export function LeadsListPage() {
     updateParam("q", searchInput.trim() || null);
   };
 
-  const handleQuickStatus = async (leadId: string, status: "saved" | "rejected" | "new") => {
+  const handleQuickStatus = async (leadId: string, status: "saved" | "rejected" | "contacted" | "new") => {
     try {
       const updated = await updateLead(leadId, { review_status: status });
       setLeads((prev) => prev.map((l) => (l.id === leadId ? updated : l)));
@@ -119,6 +123,12 @@ export function LeadsListPage() {
     } finally {
       setIsRejecting(false);
     }
+  };
+
+  const handleCopyEmail = (leadId: string, email: string) => {
+    navigator.clipboard.writeText(email);
+    setCopiedEmailId(leadId);
+    setTimeout(() => setCopiedEmailId(null), 2000);
   };
 
   const totalPages = Math.max(1, Math.ceil(total / 10));
@@ -197,6 +207,45 @@ export function LeadsListPage() {
           </div>
         </div>
 
+        {/* Quick Filter Chips */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border-subtle text-xs">
+          <span className="text-muted font-medium mr-1 flex items-center gap-1">
+            <Filter className="size-3" /> Filter:
+          </span>
+          {[
+            { label: "All Leads", key: "review_status", val: "all" },
+            { label: "Needs Outreach", key: "review_status", val: "new" },
+            { label: "Contacted", key: "review_status", val: "contacted" },
+            { label: "Saved", key: "review_status", val: "saved" },
+            { label: "Qualified Only", key: "tier", val: "qualified" },
+          ].map((chip) => {
+            const isActive =
+              chip.key === "review_status"
+                ? (chip.val === "all" && reviewStatusParam === "all") || reviewStatusParam === chip.val
+                : tierParam === chip.val;
+            return (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() => {
+                  if (chip.key === "review_status") {
+                    updateParam("review_status", chip.val);
+                  } else {
+                    updateParam("tier", tierParam === chip.val ? "all" : chip.val);
+                  }
+                }}
+                className={`rounded-full px-3 py-1 font-medium transition-colors ${
+                  isActive
+                    ? "bg-primary text-white shadow-xs"
+                    : "bg-surface-subtle text-muted hover:bg-surface-subtle/80 hover:text-ink border border-border"
+                }`}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Active run or product banner */}
         {(runId || productId) && (
           <div className="flex items-center justify-between pt-2 border-t border-border-subtle text-xs text-muted">
@@ -211,7 +260,7 @@ export function LeadsListPage() {
                 next.delete("product_id");
                 setSearchParams(next);
               }}
-              className="font-semibold text-primary hover:underline"
+              className="font-semibold text-primary hover:underline self-start sm:self-auto"
             >
               Clear Filter
             </button>
@@ -314,6 +363,28 @@ export function LeadsListPage() {
                     <span>{lead.canonical_domain}</span>
                     <ExternalLink className="size-3" />
                   </a>
+                  <span>·</span>
+                  <div className="inline-flex items-center gap-1 font-mono text-muted bg-surface-subtle px-2 py-0.5 rounded border border-border">
+                    <Mail className="size-3 text-primary" />
+                    <span>{lead.contact_email || `wholesale@${lead.canonical_domain}`}</span>
+                    {lead.contact_email && (
+                      <span className="rounded bg-emerald-100 px-1 py-0.2 text-[9px] font-sans font-semibold text-emerald-800 ml-0.5">
+                        Tavily
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleCopyEmail(lead.id, lead.contact_email || `wholesale@${lead.canonical_domain}`)}
+                      className="ml-1 text-primary hover:text-ink"
+                      title="Copy contact email"
+                    >
+                      {copiedEmailId === lead.id ? (
+                        <Check className="size-3 text-emerald-600" />
+                      ) : (
+                        <Copy className="size-3" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {lead.assessment?.summary && (
@@ -333,6 +404,29 @@ export function LeadsListPage() {
 
               {/* Right: Actions */}
               <div className="flex flex-wrap items-center gap-2 pt-3 lg:pt-0 border-t lg:border-t-0 border-border">
+                {/* Contacted status toggle */}
+                {lead.review_status === "contacted" ? (
+                  <button
+                    type="button"
+                    onClick={() => handleQuickStatus(lead.id, "new")}
+                    className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 border border-emerald-300 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-xs"
+                    title="Marked as Contacted. Click to reset."
+                  >
+                    <CheckCircle2 className="size-3.5 text-emerald-600" />
+                    <span>Contacted ✓</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleQuickStatus(lead.id, "contacted")}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-xs"
+                    title="Mark as Contacted"
+                  >
+                    <CheckCircle2 className="size-3.5 text-emerald-600" />
+                    <span>Mark Contacted</span>
+                  </button>
+                )}
+
                 {lead.review_status !== "saved" && (
                   <button
                     type="button"

@@ -7,3 +7,9 @@ export const BRAND_SUBHEAD =
 export const BRAND_EVIDENCE_PLEDGE =
   "Zero automated cold-email spam. Evidence-backed boutique discovery. Unknown facts remain unknown and are never coerced to zero.";
 export const WORKSPACE_NAME = "Studio Workspace";
+
+// AI Platform & Foundation Models (Nebius Token Factory & NVIDIA Nemotron)
+export const AI_PLATFORM_NAME = "Nebius Token Factory";
+export const AI_PRIMARY_MODEL = "NVIDIA Nemotron 3 Ultra (550B)";
+export const AI_FAST_MODEL = "NVIDIA Nemotron 3.5 Super VL (120B)";
+export const AI_INFRASTRUCTURE_TAGLINE = "Powered by Nebius Token Factory & NVIDIA Nemotron";

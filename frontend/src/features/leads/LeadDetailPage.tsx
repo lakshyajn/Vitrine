@@ -10,11 +10,13 @@ import {
   HelpCircle,
   AlertTriangle,
   Bookmark,
+  Copy,
 } from "lucide-react";
 import {
   getLead,
   updateLead,
   getLeadEvidence,
+  scrapeLeadContact,
   type Lead,
   type EvidenceItem,
 } from "@/api";
@@ -37,6 +39,23 @@ export function LeadDetailPage() {
   const [notes, setNotes] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [notesSavedAlert, setNotesSavedAlert] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const [isScrapingContact, setIsScrapingContact] = useState(false);
+
+  const handleScrapeContact = async () => {
+    if (!id || !lead) return;
+    setIsScrapingContact(true);
+    try {
+      const res = await scrapeLeadContact(id);
+      if (res.email) {
+        setLead({ ...lead, contact_email: res.email });
+      }
+    } catch (e) {
+      console.warn("Scraping contact failed", e);
+    } finally {
+      setIsScrapingContact(false);
+    }
+  };
 
   // Reject confirmation modal
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -168,12 +187,67 @@ export function LeadDetailPage() {
                   <AlertTriangle className="size-3" /> Unverified Website
                 </span>
               )}
+              <span>·</span>
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-subtle px-2 py-0.5 text-xs font-mono text-ink">
+                <Mail className="size-3 text-primary" />
+                <span>{lead.contact_email || `wholesale@${lead.canonical_domain}`}</span>
+                {lead.contact_email && (
+                  <span className="rounded bg-emerald-100 px-1.5 py-0.2 text-[10px] font-sans font-semibold text-emerald-800">
+                    Tavily Verified
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(lead.contact_email || `wholesale@${lead.canonical_domain}`);
+                    setCopiedEmail(true);
+                    setTimeout(() => setCopiedEmail(false), 2000);
+                  }}
+                  className="ml-1 text-primary hover:underline flex items-center gap-0.5 text-[11px]"
+                  title="Copy contact email"
+                >
+                  {copiedEmail ? <span className="text-emerald-700 font-sans">Copied!</span> : <Copy className="size-3" />}
+                </button>
+                <button
+                  type="button"
+                  disabled={isScrapingContact}
+                  onClick={handleScrapeContact}
+                  className="ml-1 text-primary hover:underline text-[11px] font-sans font-semibold flex items-center gap-1"
+                  title="Scrape official recipient email with Tavily"
+                >
+                  <Sparkles className={`size-3 text-purple-600 ${isScrapingContact ? "animate-spin" : ""}`} />
+                  <span>{isScrapingContact ? "Scraping..." : lead.contact_email ? "Re-scrape (Tavily)" : "Scrape Email (Tavily)"}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Action CTAs */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Contacted status toggle */}
+          {lead.review_status === "contacted" ? (
+            <button
+              type="button"
+              onClick={() => handleUpdateStatus("new")}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-xs"
+              title="Currently marked as Contacted. Click to reset."
+            >
+              <CheckCircle className="size-3.5 text-emerald-600" />
+              <span>Contacted ✓</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleUpdateStatus("contacted")}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-xs"
+              title="Mark as Contacted"
+            >
+              <CheckCircle className="size-3.5 text-emerald-600" />
+              <span>Mark as Contacted</span>
+            </button>
+          )}
+
           {/* Status buttons */}
           {lead.review_status !== "saved" && (
             <button
@@ -302,6 +376,10 @@ export function LeadDetailPage() {
             <h2 className="font-display text-base font-semibold text-ink">
               Retailer Synthesis & Assessment
             </h2>
+            <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-800 border border-emerald-200">
+              <Sparkles className="size-3 text-emerald-600" />
+              <span>NVIDIA Nemotron 3.5 Super VL • Nebius Token Factory</span>
+            </span>
           </div>
 
           <p className="text-xs leading-relaxed text-ink bg-canvas p-3.5 rounded-xl border border-border">

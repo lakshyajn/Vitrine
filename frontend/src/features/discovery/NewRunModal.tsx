@@ -78,7 +78,10 @@ export function NewRunModal({
 
   const handleStart = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProductId) {
+    const effectiveProductId =
+      selectedProductId || initialProductId || (products.length > 0 ? products[0].id : "");
+
+    if (!effectiveProductId) {
       setError("Please select a product for market discovery.");
       return;
     }
@@ -90,7 +93,7 @@ export function NewRunModal({
     setIsLoading(true);
     setError(null);
     try {
-      const selectedProd = products.find((p) => p.id === selectedProductId);
+      const selectedProd = products.find((p) => p.id === effectiveProductId);
       const retailerTypes = selectedProd?.target_retailer_types?.length
         ? selectedProd.target_retailer_types
         : [
@@ -99,7 +102,7 @@ export function NewRunModal({
           ];
 
       const run = await createResearchRun({
-        product_id: selectedProductId,
+        product_id: effectiveProductId,
         inputs: {
           regions: selectedRegions,
           retailer_types: retailerTypes,
@@ -149,7 +152,7 @@ export function NewRunModal({
             ) : (
               <select
                 id="modal-prod"
-                value={selectedProductId}
+                value={selectedProductId || (products.length > 0 ? products[0].id : "")}
                 onChange={(e) => setSelectedProductId(e.target.value)}
                 className="w-full rounded-xl border border-border bg-canvas px-3.5 py-2.5 text-xs sm:text-sm text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
               >

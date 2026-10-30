@@ -20,6 +20,7 @@ from contracts.schemas import (
     ErrorCode,
     EvidenceItem,
     EvidenceSourceType,
+    ContactScrapeResult,
     Lead,
     LeadAssessment,
     LeadLocation,
@@ -33,6 +34,7 @@ from contracts.schemas import (
 from backend.app.auth.deps import CurrentUser, current_user
 from backend.app.core.errors import AppError
 from backend.app.db.models import LeadEvidenceModel, LeadModel
+from backend.research.contact_scraper import scrape_contact_email
 from backend.app.db.session import get_db_session
 
 logger = logging.getLogger(__name__)
@@ -92,6 +94,7 @@ def _lead_model_to_schema(model: LeadModel) -> Lead:
         name=model.name,
         website=model.website,
         canonical_domain=model.canonical_domain,
+        contact_email=getattr(model, "contact_email", None),
         location=location_obj,
         retailer_type=model.retailer_type,
         website_verified=model.website_verified,
@@ -265,11 +268,52 @@ async def update_lead(
         )
     if payload.notes is not None:
         lead.notes = payload.notes
+    if payload.contact_email is not None:
+        lead.contact_email = payload.contact_email.strip() or None
 
     lead.updated_at = datetime.now(timezone.utc)
     await session.commit()
     await session.refresh(lead)
     return _lead_model_to_schema(lead)
+
+
+@leads_router.post("/{id}/scrape-contact", response_model=ContactScrapeResult)
+async def scrape_lead_contact(
+    id: UUID,
+    user: CurrentUser = Depends(current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> ContactScrapeResult:
+    """Scrape receiver wholesale/buyer contact email using live Tavily Search & Extract."""
+    stmt = select(LeadModel).where(LeadModel.id == id, LeadModel.owner_id == user.id)
+    lead = (await session.execute(stmt)).scalar_one_or_none()
+    if not lead:
+        raise AppError(
+            code=ErrorCode.NOT_FOUND,
+            message=f"Lead with id '{id}' not found",
+            status_code=404,
+        )
+
+    result = await scrape_contact_email(
+        canonical_domain=lead.canonical_domain,
+        website=lead.website,
+    )
+
+    scraped_email = result.get("email")
+    if scraped_email:
+        lead.contact_email = scraped_email
+        lead.updated_at = datetime.now(timezone.utc)
+        await session.commit()
+        await session.refresh(lead)
+
+    return ContactScrapeResult(
+        lead_id=lead.id,
+        email=scraped_email or f"wholesale@{lead.canonical_domain}",
+        source=result.get("source", "tavily_scraped"),
+        source_url=result.get("source_url"),
+        is_fallback=result.get("is_fallback", False),
+        confidence=result.get("confidence", 0.9),
+        all_candidates=result.get("all_candidates", []),
+    )
 
 
 @leads_router.get("/{id}/evidence", response_model=list[EvidenceItem])

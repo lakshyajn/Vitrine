@@ -384,9 +384,26 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                 await session.commit()
                 return
 
-            # Apply lead cap (default 40)
+            # Apply lead cap (respecting user effort/max_leads parameter)
             settings = get_settings()
-            max_leads = getattr(settings, "max_leads_per_run", 40)
+            max_leads = getattr(settings, "max_leads_per_run", 6)
+            if run.inputs and isinstance(run.inputs, dict):
+                notes = run.inputs.get("notes") or ""
+                import re
+                match = re.search(r"\[max_leads:\s*(\d+)\]", notes, re.IGNORECASE)
+                if match:
+                    max_leads = int(match.group(1))
+                elif "[effort:quick]" in notes.lower():
+                    max_leads = 3
+                elif "[effort:standard]" in notes.lower():
+                    max_leads = 6
+                elif "[effort:deep]" in notes.lower():
+                    max_leads = 12
+                elif "max_leads" in run.inputs and run.inputs["max_leads"]:
+                    try:
+                        max_leads = int(run.inputs["max_leads"])
+                    except (ValueError, TypeError):
+                        pass
             candidates = candidates[:max_leads]
 
             # 4. Handle 0 candidates cleanly (AGENT.md Section 9)
@@ -482,6 +499,8 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                         lead_model.name = candidate.name
                     if candidate.location:
                         lead_model.location = candidate.location.model_dump(mode="json")
+                    if candidate.contact_email:
+                        lead_model.contact_email = candidate.contact_email
                     lead_model.cultural_affinity = lead_cultural_affinity
                 else:
                     lead_model = LeadModel(
@@ -503,6 +522,7 @@ async def run_research_run_phase2(run_id: UUID) -> None:
                         review_status="new",
                         notes=None,
                         duplicate_of=None,
+                        contact_email=candidate.contact_email,
                         is_demo=getattr(candidate, "is_demo", False),
                     )
                     session.add(lead_model)

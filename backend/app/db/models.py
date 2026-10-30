@@ -153,6 +153,7 @@ class LeadModel(Base):
     review_status: Mapped[str] = mapped_column(String, default="new", nullable=False, index=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     duplicate_of: Mapped[UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("leads.id", ondelete="SET NULL"), nullable=True)
+    contact_email: Mapped[str | None] = mapped_column(String, nullable=True)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, onupdate=_utc_now, nullable=False)

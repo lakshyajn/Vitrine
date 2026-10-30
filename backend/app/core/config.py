@@ -35,14 +35,17 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./vitrine.db"
 
     # AI Provider 1 (Ultra 550B - Deep Reasoning & Outreach)
-    nebius_base_url: str = "https://integrate.api.nvidia.com/v1"
+    nebius_base_url: str = "https://api.tokenfactory.nebius.com/v1"
     nebius_api_key: str | None = None
+    nebius_token_factory_api_key: str | None = None
     nebius_model_id: str = "nvidia/nemotron-3-ultra-550b-a55b"
+    nebius_fallback_base_url: str = "https://integrate.api.nvidia.com/v1"
 
     # AI Provider 2 (Super VL 120B - Fast Extraction & Lead Assessment)
-    nemotron_fast_base_url: str = "https://integrate.api.nvidia.com/v1"
+    nemotron_fast_base_url: str = "https://api.tokenfactory.nebius.com/v1"
     nemotron_fast_api_key: str | None = None
     nemotron_fast_model_id: str = "nvidia/nemotron-3.5-super-vl-120b-a12b"
+    nemotron_fast_fallback_base_url: str = "https://integrate.api.nvidia.com/v1"
 
     # Research Provider (Tavily)
     tavily_api_key: str | None = None
@@ -82,7 +85,8 @@ class Settings(BaseSettings):
 
     @property
     def is_ai_live(self) -> bool:
-        return bool(self.nebius_api_key and self.nebius_api_key.strip())
+        key = self.nebius_api_key or self.nebius_token_factory_api_key or self.nemotron_fast_api_key
+        return bool(key and key.strip())
 
     @property
     def is_search_live(self) -> bool:
@@ -99,6 +103,7 @@ class Settings(BaseSettings):
             self.supabase_service_role_key,
             self.supabase_jwt_secret,
             self.nebius_api_key,
+            self.nebius_token_factory_api_key,
             self.nemotron_fast_api_key,
             self.tavily_api_key,
             self.qloo_api_key,

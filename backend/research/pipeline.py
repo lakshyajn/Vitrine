@@ -18,6 +18,7 @@ from backend.research.evidence import (
 )
 from backend.research.queries import build_research_queries
 from backend.research.tavily_client import TavilyClient
+from backend.research.contact_scraper import extract_emails_from_text, score_and_rank_email, scrape_contact_email
 from contracts.schemas import (
     EvidenceItem,
     EvidenceSourceType,
@@ -70,6 +71,7 @@ class FixtureResearchPipeline:
             retailer_type="Independent Home Decor Boutique",
             website_verified=True,
             possible_duplicate_of_domain=None,
+            contact_email="contact@atelierlivingdemo.com",
             evidence=[
                 EvidenceItem(
                     id=uuid4(),
@@ -102,6 +104,7 @@ class FixtureResearchPipeline:
             retailer_type="Lifestyle & Botanical Boutique",
             website_verified=True,
             possible_duplicate_of_domain=None,
+            contact_email="contact@atelierlivingdemo.com",
             evidence=[
                 EvidenceItem(
                     id=uuid4(),
@@ -174,6 +177,14 @@ class LiveResearchPipeline:
             title = str(hit.get("title") or dom).split("|")[0].split("–")[0].strip()[:100]
             source_type = classify_evidence_source_type(url, excerpt)
 
+            # Check if email is directly in Tavily search snippet
+            cand_email = None
+            found_emails = extract_emails_from_text(f"{excerpt} {title}", dom)
+            if found_emails:
+                scored = sorted([(e, score_and_rank_email(e, dom)) for e in found_emails], key=lambda x: x[1], reverse=True)
+                if scored and scored[0][1] > 20:
+                    cand_email = scored[0][0]
+
             raw_candidates.append(
                 LeadCandidate(
                     name=title or dom,
@@ -186,6 +197,7 @@ class LiveResearchPipeline:
                         else "independent boutique"
                     ),
                     website_verified=False,
+                    contact_email=cand_email,
                     evidence=[
                         EvidenceItem(
                             id=uuid4(),
@@ -203,13 +215,33 @@ class LiveResearchPipeline:
 
         deduped = deduplicate_lead_candidates(raw_candidates)[: self.lead_cap]
 
-        async def _verify(cand: LeadCandidate) -> LeadCandidate:
+        async def _verify_and_scrape(cand: LeadCandidate) -> LeadCandidate:
             async with sem:
                 alive, _ = await verify_website_http(cand.website)
                 cand.website_verified = alive
+                if not cand.contact_email:
+                    try:
+                        scraped = await scrape_contact_email(cand.canonical_domain, cand.website, self.client)
+                        if scraped.get("email") and not scraped.get("is_fallback"):
+                            cand.contact_email = scraped["email"]
+                            if scraped.get("source_url"):
+                                cand.evidence.append(
+                                    EvidenceItem(
+                                        id=uuid4(),
+                                        lead_id=uuid4(),
+                                        url=scraped["source_url"],
+                                        excerpt=f"Verified boutique recipient contact: {scraped['email']} (scraped via Tavily)",
+                                        source_type=EvidenceSourceType.OFFICIAL_SITE,
+                                        domain_matches_lead=True,
+                                        provenance=ProvenanceTag.VERIFIED_FACT,
+                                        is_demo=False,
+                                    )
+                                )
+                    except Exception as e:
+                        pass
                 return cand
 
-        verified = await asyncio.gather(*[_verify(c) for c in deduped])
+        verified = await asyncio.gather(*[_verify_and_scrape(c) for c in deduped])
         if on_progress:
             on_progress(
                 "discovery",

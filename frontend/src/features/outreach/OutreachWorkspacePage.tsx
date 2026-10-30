@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
+  Mail,
   Copy,
   Check,
   RefreshCw,
@@ -21,6 +22,8 @@ import {
   generateOutreachDraft,
   updateOutreachDraft,
   regenerateOutreachDraft,
+  updateLead,
+  scrapeLeadContact,
   type Lead,
   type Product,
   type OutreachDraft,
@@ -48,6 +51,13 @@ export function OutreachWorkspacePage() {
   const [body, setBody] = useState("");
   const [status, setStatus] = useState<OutreachDraftStatus>("draft");
   const [followupNotes, setFollowupNotes] = useState("");
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [isScrapingEmail, setIsScrapingEmail] = useState(false);
+  const [scrapedInfo, setScrapedInfo] = useState<{
+    source?: string;
+    source_url?: string | null;
+    is_fallback?: boolean;
+  } | null>(null);
 
   // Regeneration confirmation modal
   const [showRegenConfirm, setShowRegenConfirm] = useState(false);
@@ -84,7 +94,7 @@ export function OutreachWorkspacePage() {
 
   // Helper to persist edits into local storage for offline resilience
   const persistLocalEdits = useCallback(
-    (newSub: string, newBody: string, newNotes: string, newStatus: OutreachDraftStatus) => {
+    (newSub: string, newBody: string, newNotes: string, newStatus: OutreachDraftStatus, newRecipient?: string) => {
       const targetId = activeLeadIdRef.current;
       if (!targetId) return;
       try {
@@ -95,6 +105,7 @@ export function OutreachWorkspacePage() {
             body: newBody,
             followup_notes: newNotes,
             status: newStatus,
+            recipient_email: newRecipient ?? recipientEmail,
             updated_at: Date.now(),
           })
         );
@@ -103,7 +114,7 @@ export function OutreachWorkspacePage() {
         console.warn("Could not save offline backup to localStorage", e);
       }
     },
-    []
+    [recipientEmail]
   );
 
   const fetchWorkspace = useCallback(async () => {
@@ -131,6 +142,27 @@ export function OutreachWorkspacePage() {
       setLead(leadData);
       setIsLoadingLead(false);
 
+      if (leadData.contact_email) {
+        setRecipientEmail(leadData.contact_email);
+        setScrapedInfo({ is_fallback: false });
+      } else {
+        const defaultDerivedEmail = `wholesale@${leadData.canonical_domain}`;
+        setRecipientEmail(defaultDerivedEmail);
+        // Auto-fetch scraped contact from Tavily in background
+        scrapeLeadContact(leadData.id)
+          .then((res) => {
+            if (res.email && !res.is_fallback) {
+              setRecipientEmail(res.email);
+              setScrapedInfo({
+                source: res.source,
+                source_url: res.source_url,
+                is_fallback: false,
+              });
+            }
+          })
+          .catch(() => null);
+      }
+
       if (leadData.product_id) {
         getProduct(leadData.product_id)
           .then((p) => setProduct(p))
@@ -143,6 +175,7 @@ export function OutreachWorkspacePage() {
         body?: string;
         followup_notes?: string;
         status?: OutreachDraftStatus;
+        recipient_email?: string;
         updated_at?: number;
       } | null = null;
       try {
@@ -161,6 +194,7 @@ export function OutreachWorkspacePage() {
           setBody(localBackup.body ?? initialDraft.body);
           setStatus(localBackup.status ?? initialDraft.status);
           setFollowupNotes(localBackup.followup_notes ?? initialDraft.followup_notes ?? "");
+          if (localBackup.recipient_email) setRecipientEmail(localBackup.recipient_email);
           setHasOfflineBackup(true);
           setSyncNotice("Restored offline draft edits from local device.");
         } else {
@@ -181,6 +215,7 @@ export function OutreachWorkspacePage() {
             setBody(localBackup.body ?? active.body);
             setStatus(localBackup.status ?? active.status);
             setFollowupNotes(localBackup.followup_notes ?? active.followup_notes ?? "");
+          if (localBackup.recipient_email) setRecipientEmail(localBackup.recipient_email);
             setHasOfflineBackup(true);
             setSyncNotice("Restored offline draft edits from local device.");
           } else {
@@ -248,6 +283,15 @@ export function OutreachWorkspacePage() {
         setHasOfflineBackup(false);
         setSyncNotice(null);
 
+        if (targetStatus === "contacted" && activeLeadIdRef.current) {
+          try {
+            await updateLead(activeLeadIdRef.current, { review_status: "contacted" });
+            if (lead) setLead({ ...lead, review_status: "contacted" });
+          } catch (e) {
+            console.warn("Could not sync lead review_status to contacted", e);
+          }
+        }
+
         // Clean storage after successful sync
         if (activeLeadIdRef.current) {
           try {
@@ -291,6 +335,32 @@ export function OutreachWorkspacePage() {
   }, [hasOfflineBackup, draft, handleSave]);
 
   // Field change handlers with automatic local persistence
+  const handleScrapeEmail = async () => {
+    if (!lead) return;
+    setIsScrapingEmail(true);
+    try {
+      const res = await scrapeLeadContact(lead.id);
+      if (res.email) {
+        setRecipientEmail(res.email);
+        setScrapedInfo({
+          source: res.source,
+          source_url: res.source_url,
+          is_fallback: res.is_fallback,
+        });
+        persistLocalEdits(subject, body, followupNotes, status, res.email);
+      }
+    } catch (err: unknown) {
+      console.warn("Tavily contact scraping failed", err);
+    } finally {
+      setIsScrapingEmail(false);
+    }
+  };
+
+  const handleRecipientChange = (val: string) => {
+    setRecipientEmail(val);
+    persistLocalEdits(subject, body, followupNotes, status, val);
+  };
+
   const handleSubjectChange = (val: string) => {
     setSubject(val);
     persistLocalEdits(val, body, followupNotes, status);
@@ -440,6 +510,12 @@ export function OutreachWorkspacePage() {
             <p className="mt-0.5 text-xs text-muted">
               Grounded wholesale correspondence for {product?.name || "Product Passport"}.
             </p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-800 border border-emerald-200">
+                <Sparkles className="size-3 text-emerald-600" />
+                <span>NVIDIA Nemotron 3 Ultra (550B) • Nebius Token Factory</span>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -456,6 +532,19 @@ export function OutreachWorkspacePage() {
               <span>Local Edits Saved</span>
             </span>
           ) : null}
+
+          {/* Draft in Email App (mailto) */}
+          {lead && (
+            <a
+              href={`mailto:${recipientEmail.trim() || `wholesale@${lead.canonical_domain}`}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`}
+              onClick={() => void handleSave("contacted")}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-100 transition-colors shadow-xs"
+              title="Open draft in your local email app (Gmail, Outlook, Mail) with To, Subject, and Body pre-filled and automatically marks lead as Contacted"
+            >
+              <ExternalLink className="size-3.5 text-emerald-700" />
+              <span>Draft in Email App</span>
+            </a>
+          )}
 
           <button
             type="button"
@@ -615,6 +704,64 @@ export function OutreachWorkspacePage() {
 
               {/* Editor Form Card */}
               <div className="rounded-2xl border border-border bg-surface p-6 shadow-card space-y-4">
+                {/* Recipient Contact Email */}
+                <div className="space-y-1.5 rounded-xl border border-border-subtle bg-surface-subtle/30 p-3.5">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="outreach-recipient" className="block text-xs font-semibold text-ink flex items-center gap-1.5">
+                      <Mail className="size-3.5 text-primary" />
+                      <span>Recipient Contact Email (Buyer / Wholesale)</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={isScrapingEmail}
+                        onClick={handleScrapeEmail}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline disabled:opacity-50"
+                        title="Search and extract official buyer email via Tavily"
+                      >
+                        <Sparkles className={`size-3 text-purple-600 ${isScrapingEmail ? "animate-spin" : ""}`} />
+                        <span>{isScrapingEmail ? "Scraping Tavily..." : "Scrape via Tavily"}</span>
+                      </button>
+                      {recipientEmail && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(recipientEmail, "recipient")}
+                          className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline ml-1"
+                        >
+                          {copiedType === "recipient" ? (
+                            <span className="text-emerald-700 font-medium">✓ Copied</span>
+                          ) : (
+                            <>
+                              <Copy className="size-3" />
+                              <span>Copy Email</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <input
+                    id="outreach-recipient"
+                    type="email"
+                    value={recipientEmail}
+                    onChange={(e) => handleRecipientChange(e.target.value)}
+                    placeholder={`e.g. wholesale@${lead.canonical_domain} or buyers@${lead.canonical_domain}`}
+                    className="w-full rounded-xl border border-border bg-canvas px-3.5 py-2 text-xs sm:text-sm font-medium text-ink focus:border-primary focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] text-muted leading-tight">
+                    {scrapedInfo?.is_fallback === false || (lead.contact_email && recipientEmail === lead.contact_email) ? (
+                      <span className="inline-flex items-center gap-1 text-emerald-800 font-medium">
+                        <CheckCircle className="size-3 text-emerald-600" />
+                        <span>Official email scraped from web via Tavily {scrapedInfo?.source_url ? `(${scrapedInfo.source_url})` : ""}</span>
+                      </span>
+                    ) : (
+                      <span>
+                        Recipient email for <strong>{lead.canonical_domain}</strong>. Click &ldquo;Scrape via Tavily&rdquo; to extract official buyer email from citations.
+                      </span>
+                    )}
+                  </div>
+                </div>
+
                 {/* Subject Line */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">

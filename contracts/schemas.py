@@ -427,6 +427,7 @@ class Lead(ContractModel):
     review_status: LeadReviewStatus = LeadReviewStatus.NEW
     notes: str | None = None
     duplicate_of: UUID | None = None
+    contact_email: str | None = None
     is_demo: bool = False  # DECISION-D1
     created_at: datetime = Field(default_factory=_utc_now)  # DECISION-D20
 
@@ -440,6 +441,7 @@ class LeadCandidate(ContractModel):
     website_verified: bool = False
     evidence: list[EvidenceItem] = Field(default_factory=list)
     possible_duplicate_of_domain: str | None = None  # DECISION-D9
+    contact_email: str | None = None
 
 
 class FactUsed(ContractModel):
@@ -601,6 +603,17 @@ class ConfirmAnchorsRequest(ContractModel):
 class UpdateLeadRequest(ContractModel):
     review_status: LeadReviewStatus | None = None
     notes: str | None = None
+    contact_email: str | None = None
+
+
+class ContactScrapeResult(ContractModel):
+    lead_id: UUID
+    email: str
+    source: str
+    source_url: str | None = None
+    is_fallback: bool = False
+    confidence: float = 1.0
+    all_candidates: list[str] = Field(default_factory=list)
 
 
 class UpdateOutreachDraftRequest(ContractModel):

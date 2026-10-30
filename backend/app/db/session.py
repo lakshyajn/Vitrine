@@ -72,6 +72,12 @@ async def init_db(engine_override: AsyncEngine | None = None) -> None:
     target_engine = engine_override or engine
     async with target_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Defensive migration for contact_email column on leads table
+        try:
+            from sqlalchemy import text
+            await conn.execute(text("ALTER TABLE leads ADD COLUMN contact_email VARCHAR"))
+        except Exception:
+            pass
 
 
 async def close_db(engine_override: AsyncEngine | None = None) -> None:

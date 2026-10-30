@@ -3,6 +3,7 @@ import type {
   Lead,
   LeadPagedResponse,
   UpdateLeadRequest,
+  ContactScrapeResult,
   EvidenceItem,
 } from "./types";
 import { MOCK_LEADS, MOCK_EVIDENCE } from "./mock-data";
@@ -147,3 +148,26 @@ export async function getLeadEvidence(id: string): Promise<EvidenceItem[]> {
   return apiRequest<EvidenceItem[]>(`/leads/${id}/evidence`);
 }
 
+
+export async function scrapeLeadContact(id: string): Promise<ContactScrapeResult> {
+  if (USE_MOCK) {
+    await new Promise((r) => setTimeout(r, 400));
+    const lead = mockLeadsStore.find((l) => l.id === id);
+    const email = lead?.contact_email || (lead ? `contact@${lead.canonical_domain}` : "wholesale@unknown.com");
+    if (lead) {
+      lead.contact_email = email;
+    }
+    return {
+      lead_id: id,
+      email,
+      source: "tavily_scraped",
+      source_url: lead?.website || null,
+      is_fallback: false,
+      confidence: 0.95,
+      all_candidates: [email],
+    };
+  }
+  return apiRequest<ContactScrapeResult>(`/leads/${id}/scrape-contact`, {
+    method: "POST",
+  });
+}

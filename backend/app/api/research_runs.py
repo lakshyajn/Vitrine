@@ -440,11 +440,11 @@ async def confirm_run_anchors(
             status_code=404,
         )
 
-    # 2. Must be in awaiting_review
-    if run.status != "awaiting_review":
+    # 2. Must be in awaiting_review or completed (allows confirming more anchors & expanding leads)
+    if run.status not in ("awaiting_review", "completed"):
         raise AppError(
             code=ErrorCode.CONFLICT,
-            message=f"Run '{id}' is not in awaiting_review status (currently '{run.status}')",
+            message=f"Run '{id}' is not in awaiting_review or completed status (currently '{run.status}')",
             status_code=409,
         )
 

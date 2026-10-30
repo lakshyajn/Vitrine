@@ -1,4 +1,10 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1").replace(/\/$/, "");
+let activeBaseUrl = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1").replace(/\/$/, "");
+
+function getAlternativeUrl(url: string): string | null {
+  if (url.includes(":8000")) return url.replace(":8000", ":8080");
+  if (url.includes(":8080")) return url.replace(":8080", ":8000");
+  return null;
+}
 type ErrorBody = { error?: { code?: string; message?: string; details?: unknown; request_id?: string } };
 
 type AccessTokenProvider = () => Promise<string | null>;
@@ -48,14 +54,30 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}, isRetr
   }
 
   let response: Response;
+  const targetPath = path.startsWith("/") ? path : "/" + path;
   try {
-    response = await fetch(API_BASE_URL + (path.startsWith("/") ? path : "/" + path), { ...init, headers });
+    response = await fetch(activeBaseUrl + targetPath, { ...init, headers });
   } catch {
-    throw new ApiError({
-      message: "Could not reach the application server. Check your connection and try again.",
-      code: "network_error",
-      status: 0,
-    });
+    // If connection failed, check alternative dev port (8000 <-> 8080)
+    const altBase = getAlternativeUrl(activeBaseUrl);
+    if (altBase) {
+      try {
+        response = await fetch(altBase + targetPath, { ...init, headers });
+        activeBaseUrl = altBase; // Switch active base URL for subsequent calls
+      } catch {
+        throw new ApiError({
+          message: "Could not reach the application server. Check your connection and try again.",
+          code: "network_error",
+          status: 0,
+        });
+      }
+    } else {
+      throw new ApiError({
+        message: "Could not reach the application server. Check your connection and try again.",
+        code: "network_error",
+        status: 0,
+      });
+    }
   }
 
   // Handle 401 unauthorized: attempt single token refresh and retry

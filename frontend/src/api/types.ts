@@ -332,6 +332,7 @@ export interface Lead {
   review_status: LeadReviewStatus;
   notes?: string | null;
   duplicate_of?: string | null;
+  contact_email?: string | null;
   is_demo: boolean;
   created_at: string;
 }
@@ -346,6 +347,17 @@ export interface LeadPagedResponse {
 export interface UpdateLeadRequest {
   review_status?: LeadReviewStatus | null;
   notes?: string | null;
+  contact_email?: string | null;
+}
+
+export interface ContactScrapeResult {
+  lead_id: string;
+  email: string;
+  source: string;
+  source_url?: string | null;
+  is_fallback: boolean;
+  confidence: number;
+  all_candidates: string[];
 }
 
 export interface FactUsed {

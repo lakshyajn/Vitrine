@@ -321,8 +321,8 @@ export function RunDetailPage() {
             </p>
           </div>
 
-          {/* Confirm & Resume action button */}
-          {run.status === "awaiting_review" && (
+          {/* Confirm & Resume action button (available in review or to expand leads on completed run) */}
+          {(run.status === "awaiting_review" || run.status === "completed") && (
             <button
               type="button"
               disabled={isConfirmingAnchors || confirmedAnchorsCount === 0}
@@ -333,17 +333,34 @@ export function RunDetailPage() {
               {isConfirmingAnchors ? (
                 <>
                   <Loader2 className="size-3.5 animate-spin" />
-                  <span>Resuming Pipeline...</span>
+                  <span>{run.status === "completed" ? "Searching More Leads..." : "Resuming Pipeline..."}</span>
                 </>
               ) : (
                 <>
                   <Check className="size-3.5" />
-                  <span>Confirm ({confirmedAnchorsCount}) & Resume Discovery</span>
+                  <span>
+                    {run.status === "completed"
+                      ? `Confirm (${confirmedAnchorsCount}) & Discover More Leads`
+                      : `Confirm (${confirmedAnchorsCount}) & Resume Discovery`}
+                  </span>
                 </>
               )}
             </button>
           )}
         </div>
+
+        {/* Completed Run Expansion Guidance */}
+        {run.status === "completed" && (
+          <div className="rounded-xl border border-primary/20 bg-primary-light/40 p-3.5 text-xs text-ink flex items-start gap-2.5 animate-fade-in">
+            <Sparkles className="size-4 text-primary flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-ink">Want to discover more buyer leads from this run?</p>
+              <p className="text-muted mt-0.5 leading-relaxed">
+                You can confirm additional taste anchors below or add your own custom brand references, then click <strong>"Confirm & Discover More Leads"</strong>. Vitrine will search for complementary retailers and add them to your discovered leads without losing existing results.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Accessible Undo Notification */}
         {lastAction && (

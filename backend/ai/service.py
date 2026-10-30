@@ -328,10 +328,11 @@ class LiveAIService:
         messages = build_task_a_prompt(description, known_input)
 
         def _parse(data: dict[str, Any]) -> ProductAttributes:
-            # Prefer seller's own provided fields
-            for key, val in known_input.model_dump(exclude_none=True).items():
-                if val:
-                    data[key] = val
+            # Prefer seller's own provided fields (only if explicitly set)
+            if known:
+                for key, val in known.model_dump(exclude_unset=True).items():
+                    if val is not None and val != [] and val != "":
+                        data[key] = val
             return ProductAttributes.model_validate(data)
 
         # Fast model (Super VL 120B) first for rapid product structuring, fallback to primary
@@ -536,66 +537,195 @@ class LiveAIService:
 
 
 def get_ai_service() -> AIService:
-    """Factory returning LiveAIService if NEBIUS_API_KEY is configured, else FixtureAIService (dev/test only)."""
-    api_key = os.environ.get("NEBIUS_API_KEY", "").strip()
-    model_id = os.environ.get("NEBIUS_MODEL_ID", "").strip() or "nvidia/nemotron-3-ultra-550b-a55b"
-    base_url = os.environ.get("NEBIUS_BASE_URL", "").strip() or "https://integrate.api.nvidia.com/v1"
-
-    fast_api_key = os.environ.get("NEMOTRON_FAST_API_KEY", "").strip()
-    fast_model_id = (
-        os.environ.get("NEMOTRON_FAST_MODEL_ID", "").strip()
-        or "nvidia/nemotron-3.5-super-vl-120b-a12b"
-    )
-    fast_base_url = (
-        os.environ.get("NEMOTRON_FAST_BASE_URL", "").strip()
-        or "https://integrate.api.nvidia.com/v1"
-    )
-
-    try:
-        from backend.app.core.config import get_settings
-
-        settings = get_settings()
-        api_key = api_key or getattr(settings, "nebius_api_key", None)
-        model_id = getattr(settings, "nebius_model_id", None) or model_id
-        base_url = getattr(settings, "nebius_base_url", None) or base_url
-
-        fast_api_key = fast_api_key or getattr(settings, "nemotron_fast_api_key", None)
-        fast_model_id = getattr(settings, "nemotron_fast_model_id", None) or fast_model_id
-        fast_base_url = getattr(settings, "nemotron_fast_base_url", None) or fast_base_url
-    except Exception:
-        pass
-
-    # If primary key is absent but fast key is present, use fast key as primary as well
-    if not api_key and fast_api_key:
-        api_key = fast_api_key
-        model_id = fast_model_id
-        base_url = fast_base_url
-
-    if api_key and str(api_key).strip():
-        primary_client = NebiusClient(
-            api_key=str(api_key).strip(),
-            model_id=str(model_id).strip(),
-            base_url=str(base_url).strip(),
-        )
-        fast_client = None
-        if fast_api_key and str(fast_api_key).strip():
-            fast_client = NebiusClient(
-                api_key=str(fast_api_key).strip(),
-                model_id=str(fast_model_id).strip(),
-                base_url=str(fast_base_url).strip(),
-            )
-        return LiveAIService(primary_client, fast_client=fast_client)
+    """
+    Factory returning LiveAIService configured for Nebius Token Factory with automatic
+    NVIDIA NIM fallback, or directly NVIDIA NIM if Token Factory is not configured.
+    Falls back to FixtureAIService when no keys are provided or APP_ENV=test.
+    Enforces production safeguards against unconfigured providers in production.
+    """
+    if os.environ.get("APP_ENV") == "test":
+        return FixtureAIService()
 
     app_env = "dev"
     try:
         from backend.app.core.config import get_settings
-
         settings = get_settings()
         app_env = getattr(settings, "app_env", "dev") or "dev"
     except Exception:
-        pass
+        settings = None
 
-    if str(app_env).strip().lower() in ("production", "prod"):
-        raise AppError("ai_generation_failed", "AI service provider is unconfigured or unavailable in production.")
+    # 1. Nebius Token Factory Key
+    tf_key = (
+        os.environ.get("NEBIUS_TOKEN_FACTORY_API_KEY", "").strip()
+        or (getattr(settings, "nebius_token_factory_api_key", None) or "").strip()
+    )
+    # If a user accidentally placed an nvapi-* key into NEBIUS_TOKEN_FACTORY_API_KEY, treat it as NVIDIA key
+    nvidia_ultra_override = ""
+    if tf_key.startswith("nvapi-"):
+        nvidia_ultra_override = tf_key
+        tf_key = ""
 
-    return FixtureAIService()
+    # 2. Respective NVIDIA NIM keys for Ultra 550B and Super VL 120B
+    nvidia_ultra_key = (
+        os.environ.get("NEBIUS_API_KEY", "").strip()
+        or (getattr(settings, "nebius_api_key", None) or "").strip()
+        or nvidia_ultra_override
+    )
+    nvidia_fast_key = (
+        os.environ.get("NEMOTRON_FAST_API_KEY", "").strip()
+        or (getattr(settings, "nemotron_fast_api_key", None) or "").strip()
+    )
+
+    # 3. Model IDs
+    model_id = (
+        os.environ.get("NEBIUS_MODEL_ID", "").strip()
+        or getattr(settings, "nebius_model_id", "nvidia/nemotron-3-ultra-550b-a55b")
+    )
+    fast_model_id = (
+        os.environ.get("NEMOTRON_FAST_MODEL_ID", "").strip()
+        or getattr(settings, "nemotron_fast_model_id", "nvidia/nemotron-3.5-super-vl-120b-a12b")
+    )
+
+    # 4. Base URLs
+    tf_base_url = (
+        os.environ.get("NEBIUS_BASE_URL", "").strip()
+        or getattr(settings, "nebius_base_url", "https://api.tokenfactory.nebius.com/v1")
+    )
+    nvidia_base_url = "https://integrate.api.nvidia.com/v1"
+
+    # If neither Token Factory nor NVIDIA keys are available, check production safeguard or fallback to fixture
+    if not tf_key and not nvidia_ultra_key and not nvidia_fast_key:
+        if str(app_env).strip().lower() in ("production", "prod"):
+            raise AppError("ai_generation_failed", "AI service provider is unconfigured or unavailable in production.")
+        return FixtureAIService()
+
+    # --------------------------------------------------------------------------
+    # Fallback Case: Token Factory Key is NOT found / not configured.
+    # Runs exactly as before Token Factory: calls Ultra & Super via NVIDIA NIM.
+    # --------------------------------------------------------------------------
+    if not tf_key:
+        primary_key = nvidia_ultra_key or nvidia_fast_key
+        fast_key = nvidia_fast_key or nvidia_ultra_key
+
+        primary_client = NebiusClient(
+            api_key=primary_key,
+            model_id=model_id,
+            base_url=nvidia_base_url,
+        )
+        fast_client = None
+        if fast_key:
+            fast_client = NebiusClient(
+                api_key=fast_key,
+                model_id=fast_model_id,
+                base_url=nvidia_base_url,
+            )
+        return LiveAIService(primary_client, fast_client=fast_client)
+
+    # --------------------------------------------------------------------------
+    # Token Factory Case: Token Factory Key IS found.
+    # Targets Token Factory with transparent runtime fallback to NVIDIA NIM.
+    # --------------------------------------------------------------------------
+    primary_client = NebiusClient(
+        api_key=tf_key,
+        model_id=model_id,
+        base_url=tf_base_url,
+        fallback_api_key=nvidia_ultra_key or None,
+        fallback_base_url=nvidia_base_url,
+    )
+
+    fast_client = NebiusClient(
+        api_key=tf_key,
+        model_id=fast_model_id,
+        base_url=tf_base_url,
+        fallback_api_key=nvidia_fast_key or nvidia_ultra_key or None,
+        fallback_base_url=nvidia_base_url,
+    )
+
+    return LiveAIService(primary_client, fast_client=fast_client)
+
+    # 1. Nebius Token Factory Key
+    tf_key = (
+        os.environ.get("NEBIUS_TOKEN_FACTORY_API_KEY", "").strip()
+        or (getattr(settings, "nebius_token_factory_api_key", None) or "").strip()
+    )
+    # If a user accidentally placed an nvapi-* key into NEBIUS_TOKEN_FACTORY_API_KEY, treat it as NVIDIA key
+    nvidia_ultra_override = ""
+    if tf_key.startswith("nvapi-"):
+        nvidia_ultra_override = tf_key
+        tf_key = ""
+
+    # 2. Respective NVIDIA NIM keys for Ultra 550B and Super VL 120B
+    nvidia_ultra_key = (
+        os.environ.get("NEBIUS_API_KEY", "").strip()
+        or (getattr(settings, "nebius_api_key", None) or "").strip()
+        or nvidia_ultra_override
+    )
+    nvidia_fast_key = (
+        os.environ.get("NEMOTRON_FAST_API_KEY", "").strip()
+        or (getattr(settings, "nemotron_fast_api_key", None) or "").strip()
+    )
+
+    # 3. Model IDs
+    model_id = (
+        os.environ.get("NEBIUS_MODEL_ID", "").strip()
+        or getattr(settings, "nebius_model_id", "nvidia/nemotron-3-ultra-550b-a55b")
+    )
+    fast_model_id = (
+        os.environ.get("NEMOTRON_FAST_MODEL_ID", "").strip()
+        or getattr(settings, "nemotron_fast_model_id", "nvidia/nemotron-3.5-super-vl-120b-a12b")
+    )
+
+    # 4. Base URLs
+    tf_base_url = (
+        os.environ.get("NEBIUS_BASE_URL", "").strip()
+        or getattr(settings, "nebius_base_url", "https://api.tokenfactory.nebius.com/v1")
+    )
+    nvidia_base_url = "https://integrate.api.nvidia.com/v1"
+
+    # If neither Token Factory nor NVIDIA keys are available, use Fixture service
+    if not tf_key and not nvidia_ultra_key and not nvidia_fast_key:
+        return FixtureAIService()
+
+    # --------------------------------------------------------------------------
+    # Fallback Case: Token Factory Key is NOT found / not configured.
+    # Runs exactly as before Token Factory: calls Ultra & Super via NVIDIA NIM.
+    # --------------------------------------------------------------------------
+    if not tf_key:
+        primary_key = nvidia_ultra_key or nvidia_fast_key
+        fast_key = nvidia_fast_key or nvidia_ultra_key
+
+        primary_client = NebiusClient(
+            api_key=primary_key,
+            model_id=model_id,
+            base_url=nvidia_base_url,
+        )
+        fast_client = None
+        if fast_key:
+            fast_client = NebiusClient(
+                api_key=fast_key,
+                model_id=fast_model_id,
+                base_url=nvidia_base_url,
+            )
+        return LiveAIService(primary_client, fast_client=fast_client)
+
+    # --------------------------------------------------------------------------
+    # Token Factory Case: Token Factory Key IS found.
+    # Targets Token Factory with transparent runtime fallback to NVIDIA NIM.
+    # --------------------------------------------------------------------------
+    primary_client = NebiusClient(
+        api_key=tf_key,
+        model_id=model_id,
+        base_url=tf_base_url,
+        fallback_api_key=nvidia_ultra_key or None,
+        fallback_base_url=nvidia_base_url,
+    )
+
+    fast_client = NebiusClient(
+        api_key=tf_key,
+        model_id=fast_model_id,
+        base_url=tf_base_url,
+        fallback_api_key=nvidia_fast_key or nvidia_ultra_key or None,
+        fallback_base_url=nvidia_base_url,
+    )
+
+    return LiveAIService(primary_client, fast_client=fast_client)
